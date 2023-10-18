@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_safety_info/vpn_state.dart';
 
-class VPNCheck{
+class VPNCheck {
   // Singleton Part
   // Creates or retrieves an instance of the VPNDetector.
   factory VPNCheck() {
@@ -21,7 +21,7 @@ class VPNCheck{
   }
 
   final StreamController<VPNState> _streamController =
-  StreamController.broadcast();
+      StreamController.broadcast();
   StreamSubscription<ConnectivityResult>? _streamSubscription;
 
   //check weather VPN connection
@@ -29,9 +29,8 @@ class VPNCheck{
     try {
       final networkInterfaces = await NetworkInterface.list();
 
-      return networkInterfaces.any((interface) =>
-          _interfaceNamePatterns.any(
-                  (pattern) => interface.name.toLowerCase().contains(pattern)));
+      return networkInterfaces.any((interface) => _interfaceNamePatterns
+          .any((pattern) => interface.name.toLowerCase().contains(pattern)));
     } catch (e) {
       return false;
     }

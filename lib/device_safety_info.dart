@@ -4,13 +4,12 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 
 class DeviceSafetyInfo {
-
   static const MethodChannel _channel = MethodChannel('device_safety_info');
 
   // only for android detect if application is running on external storage
   static Future<bool> get isExternalStorage async {
     final bool isExternalStorage =
-    await _channel.invokeMethod('isExternalStorage');
+        await _channel.invokeMethod('isExternalStorage');
     return isExternalStorage;
   }
 
@@ -28,14 +27,13 @@ class DeviceSafetyInfo {
 
   // check developer mode android only
   static Future<bool> get isDeveloperMode async {
-    bool? isDeveloperMode = await _channel.invokeMethod<bool>('isDeveloperMode');
+    bool? isDeveloperMode =
+        await _channel.invokeMethod<bool>('isDeveloperMode');
     return isDeveloperMode ?? true;
   }
-
 
   static Future<bool> get isScreenLock async {
     final bool isScreenLock = await _channel.invokeMethod('isScreenLock');
     return isScreenLock;
   }
-
 }

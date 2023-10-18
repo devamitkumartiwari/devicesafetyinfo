@@ -53,8 +53,11 @@ bool isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
 ```
 
 Checks VPN status on device
-
+For checking VPN status device must need to connected with the internet
+For android need to declare <uses-permission android:name="android.permission.INTERNET"/>
+permission inside the manifest file
 ```
+
 final vpnCheck = VPNCheck();
 
 vpnCheck.vpnState.listen((state) {
@@ -72,6 +75,9 @@ vpnCheck.vpnState.listen((state) {
 ```
 
 Checks if new version available
+For checking app new version device must need to connected with the internet.
+For android need to declare <uses-permission android:name="android.permission.INTERNET"/> 
+permission inside the manifest file
 
 ```
 appVersionStatus(){

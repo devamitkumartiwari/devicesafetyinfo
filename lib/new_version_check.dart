@@ -7,9 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
 
-
 class VersionStatus {
-
   final String? localVersion;
 
   final String? storeVersion;
@@ -17,7 +15,6 @@ class VersionStatus {
   final String? originalStoreVersion;
 
   final String? appStoreLink;
-
 
   bool get canUpdate {
     final local = localVersion?.split('.').map(int.parse).toList();
@@ -74,7 +71,6 @@ class NewVersionChecker {
     this.androidPlayStoreCountry,
   });
 
-
   Future<VersionStatus?> getVersionStatus() async {
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
     if (Platform.isIOS) {
@@ -112,14 +108,13 @@ class NewVersionChecker {
     return VersionStatus._(
       localVersion: _getCleanVersion(packageInfo.version),
       storeVersion:
-      _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
+          _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
       originalStoreVersion: forceAppVersion ?? jsonObj['results'][0]['version'],
       appStoreLink: jsonObj['results'][0]['trackViewUrl'],
     );
   }
 
-  Future<VersionStatus> _getAndroidStoreVersion(
-      PackageInfo packageInfo) async {
+  Future<VersionStatus> _getAndroidStoreVersion(PackageInfo packageInfo) async {
     final id = androidId ?? packageInfo.packageName;
     final uri = Uri.https("play.google.com", "/store/apps/details",
         {"id": id.toString(), "hl": androidPlayStoreCountry ?? "en_US"});
@@ -129,7 +124,7 @@ class NewVersionChecker {
     }
 
     final regexp =
-    RegExp(r'\[\[\[\"(\d+\.\d+(\.[a-z]+)?(\.([^"]|\\")*)?)\"\]\]');
+        RegExp(r'\[\[\[\"(\d+\.\d+(\.[a-z]+)?(\.([^"]|\\")*)?)\"\]\]');
     final storeVersion = regexp.firstMatch(response.body)?.group(1);
 
     return VersionStatus._(
@@ -139,8 +134,6 @@ class NewVersionChecker {
       appStoreLink: uri.toString(),
     );
   }
-
-
 }
 
 enum LaunchModeVersion { normal, external }

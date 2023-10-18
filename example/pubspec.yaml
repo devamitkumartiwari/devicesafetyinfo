@@ -1,0 +1,30 @@
+name: device_safety_info_example
+description: Demonstrates how to use the device_safety_info plugin.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+environment:
+  sdk: '>=3.1.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  device_safety_info:
+
+    path: ../
+
+
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  integration_test:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+
+  uses-material-design: true
+

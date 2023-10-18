@@ -1,0 +1,73 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:device_safety_info/vpn_state.dart';
+
+class VPNCheck{
+  // Singleton Part
+  // Creates or retrieves an instance of the VPNDetector.
+  factory VPNCheck() {
+    _instance ??= VPNCheck._private();
+    return _instance!;
+  }
+
+  VPNCheck._private() {
+    _streamSubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) async {
+      await _checkVPNStatus();
+    });
+  }
+
+  final StreamController<VPNState> _streamController =
+  StreamController.broadcast();
+  StreamSubscription<ConnectivityResult>? _streamSubscription;
+
+  //check weather VPN connection
+  static Future<bool> isVPNActive() async {
+    try {
+      final networkInterfaces = await NetworkInterface.list();
+
+      return networkInterfaces.any((interface) =>
+          _interfaceNamePatterns.any(
+                  (pattern) => interface.name.toLowerCase().contains(pattern)));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // singleton instance
+  static VPNCheck? _instance;
+
+  // get VPN state
+  Stream<VPNState> get vpnState => _streamController.stream.asBroadcastStream();
+
+  Future<void> _checkVPNStatus() async {
+    final currentVpnStatus = await isVPNActive();
+    if (currentVpnStatus) {
+      _streamController.add(VPNState.connectedState);
+    } else {
+      _streamController.add(VPNState.disconnectedState);
+    }
+  }
+
+  // dispose all streams
+  void dispose() {
+    _streamController.close();
+    _streamSubscription?.cancel();
+  }
+
+  static final List<String> _interfaceNamePatterns = [
+    'tun',
+    'tap',
+    'ppp',
+    'pptp',
+    'l2tp',
+    'ipsec',
+    'vpn',
+    'wireguard',
+    'openvpn',
+    'softether',
+  ];
+}

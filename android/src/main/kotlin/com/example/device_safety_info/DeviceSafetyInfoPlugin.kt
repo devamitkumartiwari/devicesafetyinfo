@@ -6,6 +6,7 @@ import com.example.device_safety_info.externalstorage.ExternalStorageCheck
 import com.example.device_safety_info.realdevice.RealDeviceCheck
 import com.example.device_safety_info.rooted.RootedDeviceCheck
 import com.example.device_safety_info.screenlock.ScreenLockCheck
+import com.example.device_safety_info.vpn_check.VpnCheck
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -39,6 +40,8 @@ class DeviceSafetyInfoPlugin: FlutterPlugin, MethodCallHandler {
       result.success(context?.let { DevelopmentModeCheck.isDevMode(it) })
     }  else if (call.method.equals("isScreenLock")) {
       result.success(context?.let { ScreenLockCheck.isDeviceScreenLocked(it) })
+    }else if (call.method.equals("isVPNCheck")) {
+      result.success(context?.let { VpnCheck.isActiveVPN(context) })
     }else {
       result.notImplemented()
     }

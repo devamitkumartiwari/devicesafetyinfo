@@ -2,8 +2,13 @@ import Flutter
 import UIKit
 import IOSSecuritySuite
 import LocalAuthentication
+// import VpnChecker
 
 public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
+
+private let vpnProtocolsKeysIdentifiers = [
+            "tap", "tun", "ppp", "ipsec", "utun"
+        ]
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "device_safety_info", binaryMessenger: registrar.messenger())
@@ -35,10 +40,29 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
         }
 
       break
+    case "isVPNCheck":
+        let isVPN = isVpnActive()
+        result(isVPN)
+        break
     default:
       result(FlutterMethodNotImplemented)
     }
   }
     
-    
+    func isVpnActive() -> Bool {
+               guard let cfDict = CFNetworkCopySystemProxySettings() else { return false }
+               let nsDict = cfDict.takeRetainedValue() as NSDictionary
+               guard let keys = nsDict["__SCOPED__"] as? NSDictionary,
+                   let allKeys = keys.allKeys as? [String] else { return false }
+
+               // Checking for tunneling protocols in the keys
+               for key in allKeys {
+                   for protocolId in vpnProtocolsKeysIdentifiers
+                       where key.starts(with: protocolId) {
+                       return true
+                   }
+               }
+               return false
+           }
+
 }

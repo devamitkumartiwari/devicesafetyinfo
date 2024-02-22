@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_safety_info/vpn_state.dart';
+import 'package:flutter/services.dart';
 
 class VPNCheck {
+  static const MethodChannel _channel = MethodChannel('device_safety_info');
   // Singleton Part
   // Creates or retrieves an instance of the VPNDetector.
   factory VPNCheck() {
@@ -26,14 +27,12 @@ class VPNCheck {
 
   //check weather VPN connection
   static Future<bool> isVPNActive() async {
-    try {
-      final networkInterfaces = await NetworkInterface.list();
+   return isVPNCheck;
+  }
 
-      return networkInterfaces.any((interface) => _interfaceNamePatterns
-          .any((pattern) => interface.name.toLowerCase().contains(pattern)));
-    } catch (e) {
-      return false;
-    }
+  static Future<bool> get isVPNCheck async {
+    final bool isVPNCheck = await _channel.invokeMethod('isVPNCheck');
+    return isVPNCheck;
   }
 
   // singleton instance
@@ -57,16 +56,4 @@ class VPNCheck {
     _streamSubscription?.cancel();
   }
 
-  static final List<String> _interfaceNamePatterns = [
-    'tun',
-    'tap',
-    'ppp',
-    'pptp',
-    'l2tp',
-    'ipsec',
-    'vpn',
-    'wireguard',
-    'openvpn',
-    'softether',
-  ];
 }

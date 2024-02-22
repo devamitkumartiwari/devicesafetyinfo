@@ -36,4 +36,10 @@ class DeviceSafetyInfo {
     final bool isScreenLock = await _channel.invokeMethod('isScreenLock');
     return isScreenLock;
   }
+
+  static Future<bool> get isVPNCheck async {
+    final bool isVPNCheck = await _channel.invokeMethod('isVPNCheck');
+    return isVPNCheck;
+  }
+
 }

@@ -9,6 +9,8 @@ PODS:
   - integration_test (0.0.1):
     - Flutter
   - IOSSecuritySuite (1.9.9)
+  - package_info_plus (0.4.5):
+    - Flutter
   - ReachabilitySwift (5.0.0)
 
 DEPENDENCIES:
@@ -16,6 +18,7 @@ DEPENDENCIES:
   - device_safety_info (from `.symlinks/plugins/device_safety_info/ios`)
   - Flutter (from `Flutter`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
 
 SPEC REPOS:
   trunk:
@@ -31,6 +34,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   integration_test:
     :path: ".symlinks/plugins/integration_test/ios"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
 
 SPEC CHECKSUMS:
   connectivity_plus: bf0076dd84a130856aa636df1c71ccaff908fa1d
@@ -38,8 +43,9 @@ SPEC CHECKSUMS:
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
   integration_test: 13825b8a9334a850581300559b8839134b124670
   IOSSecuritySuite: 72c55371aafe586196c325a8348319c36d385ce4
+  package_info_plus: 115f4ad11e0698c8c1c5d8a689390df880f47e85
   ReachabilitySwift: 985039c6f7b23a1da463388634119492ff86c825
 
 PODFILE CHECKSUM: a57f30d18f102dd3ce366b1d62a55ecbef2158e5
 
-COCOAPODS: 1.13.0
+COCOAPODS: 1.14.3

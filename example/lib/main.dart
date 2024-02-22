@@ -38,6 +38,7 @@ class _MyAppState extends State<MyApp> {
       isRootedDevice = await DeviceSafetyInfo.isRootedDevice;
       isScreenLock = await DeviceSafetyInfo.isScreenLock;
       isRealDevice = await DeviceSafetyInfo.isRealDevice;
+      // isVPN = await DeviceSafetyInfo.isVPNCheck;
 
       if(Platform.isAndroid){
         isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
@@ -54,6 +55,7 @@ class _MyAppState extends State<MyApp> {
       isRealDevice = isRealDevice;
       isExternalStorage = isExternalStorage;
       isDeveloperMode = isDeveloperMode;
+      // isVPN = isVPN;
     });
   }
 

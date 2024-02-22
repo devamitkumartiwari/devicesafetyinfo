@@ -8,8 +8,8 @@ In your flutter project add the dependency:
 
 ```yml
 dependencies:
-  ...
-  device_safety_info: ^0.0.1
+  
+  device_safety_info: ^0.0.3
 ```
 
 ## Usage

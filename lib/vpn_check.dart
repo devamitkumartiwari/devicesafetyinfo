@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:devicesafetyinfo/vpn_state.dart';
+import 'package:device_safety_info/vpn_state.dart';
 import 'package:flutter/services.dart';
 
 class VPNCheck {

@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.realdevice
+package com.devamitkumartiwari.device_safety_info.realdevice
 
 import android.os.Build
 

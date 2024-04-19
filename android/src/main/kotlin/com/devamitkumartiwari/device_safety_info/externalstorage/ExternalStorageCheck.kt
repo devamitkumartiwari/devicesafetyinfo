@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.externalstorage
+package com.devamitkumartiwari.device_safety_info.externalstorage
 
 import android.content.Context
 import android.content.pm.ApplicationInfo

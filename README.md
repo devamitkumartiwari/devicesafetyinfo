@@ -1,4 +1,4 @@
-# devicesafetyinfo (Null-Safety)
+# device_safety_info (Null-Safety)
 
 Flutter JailBreak, Rooted, Emulator/Simulator, External storage and Screen Lock detection.
 

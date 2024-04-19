@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.devamitkumartiwari.devicesafetyinfo_example"
+    namespace "com.devamitkumartiwari.device_safety_info_example"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.devamitkumartiwari.devicesafetyinfo_example"
+        applicationId "com.devamitkumartiwari.device_safety_info_example"
         minSdkVersion 24
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()

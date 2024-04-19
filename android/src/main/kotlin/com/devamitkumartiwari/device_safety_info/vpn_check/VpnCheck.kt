@@ -1,5 +1,5 @@
 
-package com.devamitkumartiwari.devicesafetyinfo.vpn_check
+package com.devamitkumartiwari.device_safety_info.vpn_check
 
 import android.content.Context
 import android.net.ConnectivityManager

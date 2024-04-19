@@ -1,6 +1,6 @@
 
-name: devicesafetyinfo_example
-description: Demonstrates how to use the devicesafetyinfo plugin.
+name: device_safety_info_example
+description: Demonstrates how to use the device_safety_info plugin.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:
@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  devicesafetyinfo:
+  device_safety_info:
 
     path: ../
 

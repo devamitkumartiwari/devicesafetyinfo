@@ -1,12 +1,12 @@
-package com.devamitkumartiwari.devicesafetyinfo
+package com.devamitkumartiwari.device_safety_info
 
 import android.content.Context
-import com.devamitkumartiwari.devicesafetyinfo.developmentmode.DevelopmentModeCheck
-import com.devamitkumartiwari.devicesafetyinfo.externalstorage.ExternalStorageCheck
-import com.devamitkumartiwari.devicesafetyinfo.realdevice.RealDeviceCheck
-import com.devamitkumartiwari.devicesafetyinfo.rooted.RootedDeviceCheck
-import com.devamitkumartiwari.devicesafetyinfo.screenlock.ScreenLockCheck
-import com.devamitkumartiwari.devicesafetyinfo.vpn_check.VpnCheck
+import com.devamitkumartiwari.device_safety_info.developmentmode.DevelopmentModeCheck
+import com.devamitkumartiwari.device_safety_info.externalstorage.ExternalStorageCheck
+import com.devamitkumartiwari.device_safety_info.realdevice.RealDeviceCheck
+import com.devamitkumartiwari.device_safety_info.rooted.RootedDeviceCheck
+import com.devamitkumartiwari.device_safety_info.screenlock.ScreenLockCheck
+import com.devamitkumartiwari.device_safety_info.vpn_check.VpnCheck
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

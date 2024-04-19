@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.developmentmode
+package com.devamitkumartiwari.device_safety_info.developmentmode
 
 import android.content.Context
 import android.os.Build

@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.screenlock
+package com.devamitkumartiwari.device_safety_info.screenlock
 
 import android.annotation.TargetApi
 import android.app.KeyguardManager

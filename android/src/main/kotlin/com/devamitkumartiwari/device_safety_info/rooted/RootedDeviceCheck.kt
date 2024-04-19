@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.rooted
+package com.devamitkumartiwari.device_safety_info.rooted
 
 import android.content.Context
 import android.os.Build
@@ -32,7 +32,6 @@ class RootedDeviceCheck {
                 )
             ) {
                 rootBeer.isRootedWithBusyBoxCheck
-//            rootBeer.isRootedWithoutBusyBoxCheck
             } else {
                 rootBeer.isRooted
             }

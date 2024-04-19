@@ -1,4 +1,4 @@
-library devicesafetyinfo;
+library device_safety_info;
 
 import 'package:flutter/services.dart';
 import 'dart:async';

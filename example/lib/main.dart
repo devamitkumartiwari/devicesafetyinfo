@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:devicesafetyinfo/device_safety_info.dart';
-import 'package:devicesafetyinfo/new_version_check.dart';
-import 'package:devicesafetyinfo/vpn_check.dart';
-import 'package:devicesafetyinfo/vpn_state.dart';
+import 'package:device_safety_info/device_safety_info.dart';
+import 'package:device_safety_info/new_version_check.dart';
+import 'package:device_safety_info/vpn_check.dart';
+import 'package:device_safety_info/vpn_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -38,14 +38,15 @@ class _MyAppState extends State<MyApp> {
       isRootedDevice = await DeviceSafetyInfo.isRootedDevice;
       isScreenLock = await DeviceSafetyInfo.isScreenLock;
       isRealDevice = await DeviceSafetyInfo.isRealDevice;
-      // isVPN = await DeviceSafetyInfo.isVPNCheck;
 
       if (Platform.isAndroid) {
         isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
         isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
       }
     } catch (error) {
-      print(error);
+      if (kDebugMode) {
+        print(error);
+      }
     }
 
     setState(() {

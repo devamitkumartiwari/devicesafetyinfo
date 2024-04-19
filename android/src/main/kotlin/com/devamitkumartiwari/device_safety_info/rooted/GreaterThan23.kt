@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.rooted
+package com.devamitkumartiwari.device_safety_info.rooted
 
 import java.io.BufferedReader
 import java.io.File

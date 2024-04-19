@@ -1,4 +1,4 @@
-group 'com.devamitkumartiwari.devicesafetyinfo'
+group 'com.devamitkumartiwari.device_safety_info'
 version '1.0-SNAPSHOT'
 
 buildscript {

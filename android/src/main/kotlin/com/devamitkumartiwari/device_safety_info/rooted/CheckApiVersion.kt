@@ -1,4 +1,4 @@
-package com.devamitkumartiwari.devicesafetyinfo.rooted
+package com.devamitkumartiwari.device_safety_info.rooted
 
 interface CheckApiVersion {
 

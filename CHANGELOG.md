@@ -15,3 +15,4 @@
 * Dependency updated
 * AGP version updated
 * Kotlin version updated
+* Code refactoring

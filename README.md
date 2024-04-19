@@ -40,13 +40,15 @@ Checks whether screen lock enabled or disabled
 bool isScreenLock = await DeviceSafetyInfo.isScreenLock;
 ```
 
-Checks whether application is running on external storage (Android Only)
+Checks whether application is running on external storage (Android Only).
+This feature will not works with the iOS device.
 
 ```
 bool isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
 ```
 
-Checks whether development Options is enable on device (Android Only)
+Checks whether development Options is enable on device (Android Only).
+This feature will not works with the iOS device.
 
 ```
 bool isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;

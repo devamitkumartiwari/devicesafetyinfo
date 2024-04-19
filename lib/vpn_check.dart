@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 class VPNCheck {
   static const MethodChannel _channel = MethodChannel('device_safety_info');
+
   // Singleton Part
   // Creates or retrieves an instance of the VPNDetector.
   factory VPNCheck() {
@@ -16,18 +17,21 @@ class VPNCheck {
   VPNCheck._private() {
     _streamSubscription = Connectivity()
         .onConnectivityChanged
-        .listen((ConnectivityResult result) async {
+        .listen((List<ConnectivityResult> result) async {
       await _checkVPNStatus();
     });
+
   }
 
   final StreamController<VPNState> _streamController =
       StreamController.broadcast();
-  StreamSubscription<ConnectivityResult>? _streamSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _streamSubscription;
+
+  // StreamSubscription<ConnectivityResult>? _streamSubscription;
 
   //check weather VPN connection
   static Future<bool> isVPNActive() async {
-   return isVPNCheck;
+    return isVPNCheck;
   }
 
   static Future<bool> get isVPNCheck async {
@@ -55,5 +59,4 @@ class VPNCheck {
     _streamController.close();
     _streamSubscription?.cancel();
   }
-
 }

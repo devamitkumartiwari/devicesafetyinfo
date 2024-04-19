@@ -41,5 +41,4 @@ class DeviceSafetyInfo {
     final bool isVPNCheck = await _channel.invokeMethod('isVPNCheck');
     return isVPNCheck;
   }
-
 }

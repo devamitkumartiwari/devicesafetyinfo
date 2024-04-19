@@ -7,16 +7,18 @@ import 'package:device_safety_info/vpn_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() {
+    return MyAppState();
+  }
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   bool isRootedDevice = false;
   bool isScreenLock = false;
   bool isRealDevice = true;
@@ -38,15 +40,15 @@ class _MyAppState extends State<MyApp> {
       isRootedDevice = await DeviceSafetyInfo.isRootedDevice;
       isScreenLock = await DeviceSafetyInfo.isScreenLock;
       isRealDevice = await DeviceSafetyInfo.isRealDevice;
-      // isVPN = await DeviceSafetyInfo.isVPNCheck;
 
-      if(Platform.isAndroid){
+      if (Platform.isAndroid) {
         isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
         isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
       }
-
     } catch (error) {
-      print(error);
+      if (kDebugMode) {
+        print(error);
+      }
     }
 
     setState(() {
@@ -55,7 +57,6 @@ class _MyAppState extends State<MyApp> {
       isRealDevice = isRealDevice;
       isExternalStorage = isExternalStorage;
       isDeveloperMode = isDeveloperMode;
-      // isVPN = isVPN;
     });
   }
 
@@ -80,18 +81,13 @@ class _MyAppState extends State<MyApp> {
                 infoTile(
                     methodRequest: 'isRealDevice',
                     methodResponse: isRealDevice),
-
                 infoTile(
                     methodRequest: 'isExternalStorage',
                     methodResponse: isExternalStorage),
                 infoTile(
                     methodRequest: 'isDeveloperMode',
                     methodResponse: isDeveloperMode),
-
-                infoTile(
-                    methodRequest: 'isVPN',
-                    methodResponse: isVPN),
-
+                infoTile(methodRequest: 'isVPN', methodResponse: isVPN),
               ],
             ),
           ),
@@ -125,7 +121,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  vpnStatus(){
+  vpnStatus() {
     vpnCheck.vpnState.listen((state) {
       if (state == VPNState.connectedState) {
         if (kDebugMode) {
@@ -144,8 +140,8 @@ class _MyAppState extends State<MyApp> {
       }
     });
   }
-  appVersionStatus(){
 
+  appVersionStatus() {
     final newVersion = NewVersionChecker(
       iOSId: '',
       androidId: '',
@@ -165,7 +161,7 @@ class _MyAppState extends State<MyApp> {
         debugPrint(status.canUpdate.toString());
 
         if (status.canUpdate) {
-         // new version available
+          // new version available
         }
       }
     } catch (e) {

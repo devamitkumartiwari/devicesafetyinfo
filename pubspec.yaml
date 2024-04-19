@@ -13,6 +13,7 @@ dependencies:
   plugin_platform_interface: ^2.1.8
   connectivity_plus: ^6.0.2
   package_info_plus: ^7.0.0
+  http: ^1.2.1
 
 
 dev_dependencies:

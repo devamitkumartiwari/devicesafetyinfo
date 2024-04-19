@@ -40,11 +40,10 @@ class _MyAppState extends State<MyApp> {
       isRealDevice = await DeviceSafetyInfo.isRealDevice;
       // isVPN = await DeviceSafetyInfo.isVPNCheck;
 
-      if(Platform.isAndroid){
+      if (Platform.isAndroid) {
         isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
         isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
       }
-
     } catch (error) {
       print(error);
     }
@@ -80,18 +79,13 @@ class _MyAppState extends State<MyApp> {
                 infoTile(
                     methodRequest: 'isRealDevice',
                     methodResponse: isRealDevice),
-
                 infoTile(
                     methodRequest: 'isExternalStorage',
                     methodResponse: isExternalStorage),
                 infoTile(
                     methodRequest: 'isDeveloperMode',
                     methodResponse: isDeveloperMode),
-
-                infoTile(
-                    methodRequest: 'isVPN',
-                    methodResponse: isVPN),
-
+                infoTile(methodRequest: 'isVPN', methodResponse: isVPN),
               ],
             ),
           ),
@@ -125,7 +119,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  vpnStatus(){
+  vpnStatus() {
     vpnCheck.vpnState.listen((state) {
       if (state == VPNState.connectedState) {
         if (kDebugMode) {
@@ -144,8 +138,8 @@ class _MyAppState extends State<MyApp> {
       }
     });
   }
-  appVersionStatus(){
 
+  appVersionStatus() {
     final newVersion = NewVersionChecker(
       iOSId: '',
       androidId: '',

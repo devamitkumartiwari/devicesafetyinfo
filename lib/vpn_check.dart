@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:device_safety_info/vpn_state.dart';
+import 'package:devicesafetyinfo/vpn_state.dart';
 import 'package:flutter/services.dart';
 
 class VPNCheck {
@@ -16,18 +16,18 @@ class VPNCheck {
   VPNCheck._private() {
     _streamSubscription = Connectivity()
         .onConnectivityChanged
-        .listen((ConnectivityResult result) async {
+        .listen((List<ConnectivityResult> result) async {
       await _checkVPNStatus();
     });
   }
 
   final StreamController<VPNState> _streamController =
       StreamController.broadcast();
-  StreamSubscription<ConnectivityResult>? _streamSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _streamSubscription;
 
   //check weather VPN connection
   static Future<bool> isVPNActive() async {
-   return isVPNCheck;
+    return isVPNCheck;
   }
 
   static Future<bool> get isVPNCheck async {
@@ -55,5 +55,4 @@ class VPNCheck {
     _streamController.close();
     _streamSubscription?.cancel();
   }
-
 }

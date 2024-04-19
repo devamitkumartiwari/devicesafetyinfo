@@ -1,5 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.example.device_safety_info">
-
+  package="com.devamitkumartiwari.devicesafetyinfo">
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest>

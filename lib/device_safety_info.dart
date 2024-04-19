@@ -1,4 +1,4 @@
-library device_safety_info;
+library devicesafetyinfo;
 
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -41,5 +41,4 @@ class DeviceSafetyInfo {
     final bool isVPNCheck = await _channel.invokeMethod('isVPNCheck');
     return isVPNCheck;
   }
-
 }

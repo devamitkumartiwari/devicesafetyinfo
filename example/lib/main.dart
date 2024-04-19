@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:device_safety_info/device_safety_info.dart';
-import 'package:device_safety_info/new_version_check.dart';
-import 'package:device_safety_info/vpn_check.dart';
-import 'package:device_safety_info/vpn_state.dart';
+import 'package:devicesafetyinfo/device_safety_info.dart';
+import 'package:devicesafetyinfo/new_version_check.dart';
+import 'package:devicesafetyinfo/vpn_check.dart';
+import 'package:devicesafetyinfo/vpn_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -165,7 +165,7 @@ class _MyAppState extends State<MyApp> {
         debugPrint(status.canUpdate.toString());
 
         if (status.canUpdate) {
-         // new version available
+          // new version available
         }
       }
     } catch (e) {

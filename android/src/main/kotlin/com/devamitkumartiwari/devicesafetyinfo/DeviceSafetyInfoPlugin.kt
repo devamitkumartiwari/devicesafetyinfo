@@ -1,0 +1,54 @@
+package com.devamitkumartiwari.devicesafetyinfo
+
+import android.content.Context
+import com.devamitkumartiwari.devicesafetyinfo.developmentmode.DevelopmentModeCheck
+import com.devamitkumartiwari.devicesafetyinfo.externalstorage.ExternalStorageCheck
+import com.devamitkumartiwari.devicesafetyinfo.realdevice.RealDeviceCheck
+import com.devamitkumartiwari.devicesafetyinfo.rooted.RootedDeviceCheck
+import com.devamitkumartiwari.devicesafetyinfo.screenlock.ScreenLockCheck
+import com.devamitkumartiwari.devicesafetyinfo.vpn_check.VpnCheck
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import io.flutter.plugin.common.MethodChannel.Result
+
+
+/** DeviceSafetyInfoPlugin */
+class DeviceSafetyInfoPlugin: FlutterPlugin, MethodCallHandler {
+
+  private lateinit var channel : MethodChannel
+  private var context: Context? = null
+
+
+  override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    context = flutterPluginBinding.getApplicationContext()
+    channel = MethodChannel(flutterPluginBinding.binaryMessenger, "device_safety_info")
+    channel.setMethodCallHandler(this)
+  }
+
+  override fun onMethodCall(call: MethodCall, result: Result) {
+    if (call.method == "getPlatformVersion") {
+      result.success("Android ${android.os.Build.VERSION.RELEASE}")
+    } else if (call.method.equals("isRootedDevice")) {
+      result.success(context?.let { RootedDeviceCheck.isRootedDevice(it) })
+    } else if (call.method.equals("isRealDevice")) {
+      result.success(!RealDeviceCheck.isRealDevice())
+    } else if (call.method.equals("isExternalStorage")) {
+      result.success(context?.let { ExternalStorageCheck.isExternalStorage(it) })
+    } else if (call.method.equals("isDeveloperMode")) {
+      result.success(context?.let { DevelopmentModeCheck.isDevMode(it) })
+    }  else if (call.method.equals("isScreenLock")) {
+      result.success(context?.let { ScreenLockCheck.isDeviceScreenLocked(it) })
+    }else if (call.method.equals("isVPNCheck")) {
+      result.success(context?.let { VpnCheck.isActiveVPN(context) })
+    }else {
+      result.notImplemented()
+    }
+  }
+
+  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    channel.setMethodCallHandler(null)
+  }
+
+}

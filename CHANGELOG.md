@@ -9,3 +9,9 @@
 ## 0.0.3
 
 * VPN detection issue fixed in iOS
+
+## 0.0.4
+
+* Dependency updated
+* AGP version updated
+* Kotlin version updated

@@ -2,7 +2,6 @@ import Flutter
 import UIKit
 import IOSSecuritySuite
 import LocalAuthentication
-// import VpnChecker
 
 public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
 
@@ -48,7 +47,7 @@ private let vpnProtocolsKeysIdentifiers = [
       result(FlutterMethodNotImplemented)
     }
   }
-    
+
     func isVpnActive() -> Bool {
                guard let cfDict = CFNetworkCopySystemProxySettings() else { return false }
                let nsDict = cfDict.takeRetainedValue() as NSDictionary

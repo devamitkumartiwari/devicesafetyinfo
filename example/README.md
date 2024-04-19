@@ -1,6 +1,6 @@
-# device_safety_info_example
+# devicesafetyinfo_example
 
-Demonstrates how to use the device_safety_info plugin.
+Demonstrates how to use the devicesafetyinfo plugin.
 
 ## Getting Started
 

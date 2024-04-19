@@ -1,21 +1,20 @@
 PODS:
   - connectivity_plus (0.0.1):
     - Flutter
-    - ReachabilitySwift
-  - device_safety_info (0.0.1):
+    - FlutterMacOS
+  - devicesafetyinfo (0.0.1):
     - Flutter
     - IOSSecuritySuite
   - Flutter (1.0.0)
   - integration_test (0.0.1):
     - Flutter
-  - IOSSecuritySuite (1.9.9)
+  - IOSSecuritySuite (1.9.11)
   - package_info_plus (0.4.5):
     - Flutter
-  - ReachabilitySwift (5.0.0)
 
 DEPENDENCIES:
-  - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
-  - device_safety_info (from `.symlinks/plugins/device_safety_info/ios`)
+  - connectivity_plus (from `.symlinks/plugins/connectivity_plus/darwin`)
+  - devicesafetyinfo (from `.symlinks/plugins/devicesafetyinfo/ios`)
   - Flutter (from `Flutter`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
@@ -23,13 +22,12 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - IOSSecuritySuite
-    - ReachabilitySwift
 
 EXTERNAL SOURCES:
   connectivity_plus:
-    :path: ".symlinks/plugins/connectivity_plus/ios"
-  device_safety_info:
-    :path: ".symlinks/plugins/device_safety_info/ios"
+    :path: ".symlinks/plugins/connectivity_plus/darwin"
+  devicesafetyinfo:
+    :path: ".symlinks/plugins/devicesafetyinfo/ios"
   Flutter:
     :path: Flutter
   integration_test:
@@ -38,14 +36,13 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/package_info_plus/ios"
 
 SPEC CHECKSUMS:
-  connectivity_plus: bf0076dd84a130856aa636df1c71ccaff908fa1d
-  device_safety_info: 4237843a334634c48ae7bfafade161d4453ea046
-  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  connectivity_plus: ddd7f30999e1faaef5967c23d5b6d503d10434db
+  devicesafetyinfo: 3aef7d7d3f1d438ce2fbea23e3f48d8b361ad1c4
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   integration_test: 13825b8a9334a850581300559b8839134b124670
-  IOSSecuritySuite: 72c55371aafe586196c325a8348319c36d385ce4
-  package_info_plus: 115f4ad11e0698c8c1c5d8a689390df880f47e85
-  ReachabilitySwift: 985039c6f7b23a1da463388634119492ff86c825
+  IOSSecuritySuite: b51056d5411aee567153ca86ce7f6edfdc5d2654
+  package_info_plus: 58f0028419748fad15bf008b270aaa8e54380b1c
 
-PODFILE CHECKSUM: a57f30d18f102dd3ce366b1d62a55ecbef2158e5
+PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796
 
-COCOAPODS: 1.14.3
+COCOAPODS: 1.15.2

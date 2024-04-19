@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 import XCTest
 
-@testable import device_safety_info
+@testable import devicesafetyinfo
 
 // This demonstrates a simple unit test of the Swift portion of this plugin's implementation.
 //
@@ -11,7 +11,7 @@ import XCTest
 class RunnerTests: XCTestCase {
 
   func testGetPlatformVersion() {
-    let plugin = DeviceSafetyInfoPlugin()
+    let plugin = DevicesafetyinfoPlugin()
 
     let call = FlutterMethodCall(methodName: "getPlatformVersion", arguments: [])
 

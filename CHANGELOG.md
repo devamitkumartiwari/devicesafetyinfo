@@ -16,3 +16,25 @@
 * AGP version updated
 * Kotlin version updated
 * Code refactoring
+
+
+## 0.0.5
+
+* Dependency updated
+* AGP version updated
+* Kotlin version updated
+* Code refactoring
+
+## 0.0.6
+
+* Dependency updated
+* VPN module modification
+
+## 0.0.7
+
+* Dependency updated
+* iOS issue fixed
+
+## 0.0.8
+
+* iOS issue fixed

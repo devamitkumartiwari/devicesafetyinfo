@@ -38,3 +38,11 @@
 ## 0.0.8
 
 * iOS issue fixed
+
+## 0.0.9
+* Dependency updated
+* iOS issue fixed
+* @jiazeh thank you for contributing
+* AndroidManifest.xml issue fixed
+
+

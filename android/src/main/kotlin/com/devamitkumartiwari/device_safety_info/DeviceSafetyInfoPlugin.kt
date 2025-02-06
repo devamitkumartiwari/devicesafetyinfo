@@ -6,12 +6,15 @@ import com.devamitkumartiwari.device_safety_info.externalstorage.ExternalStorage
 import com.devamitkumartiwari.device_safety_info.realdevice.RealDeviceCheck
 import com.devamitkumartiwari.device_safety_info.rooted.RootedDeviceCheck
 import com.devamitkumartiwari.device_safety_info.screenlock.ScreenLockCheck
+import com.devamitkumartiwari.device_safety_info.storeinstallcheck.StoreInstallCheck
 import com.devamitkumartiwari.device_safety_info.vpn_check.VpnCheck
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+
 
 
 /** DeviceSafetyInfoPlugin */
@@ -42,7 +45,10 @@ class DeviceSafetyInfoPlugin: FlutterPlugin, MethodCallHandler {
       result.success(context?.let { ScreenLockCheck.isDeviceScreenLocked(it) })
     }else if (call.method.equals("isVPNCheck")) {
       result.success(context?.let { VpnCheck.isActiveVPN(context) })
-    }else {
+    }else if (call.method.equals("isInstalledFromStore")){
+      result.success(context?.let { StoreInstallCheck.isInstalledFromStore(context) })
+    }
+    else {
       result.notImplemented()
     }
   }

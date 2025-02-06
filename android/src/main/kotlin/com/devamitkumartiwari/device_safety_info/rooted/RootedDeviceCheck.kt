@@ -16,11 +16,8 @@ class RootedDeviceCheck {
         private val LENOVO = "lenovo"
 
         fun isRootedDevice(context: Context): Boolean {
-            val check: CheckApiVersion = if (Build.VERSION.SDK_INT >= 23) {
+            val check: CheckApiVersion =
                 GreaterThan23()
-            } else {
-                LessThan23()
-            }
             return check.checkRootedDevice() || rootBeerCheck(context)
         }
 

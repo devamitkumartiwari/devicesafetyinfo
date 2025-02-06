@@ -43,6 +43,9 @@ private let vpnProtocolsKeysIdentifiers = [
         let isVPN = isVpnActive()
         result(isVPN)
         break
+        case "isInstalledFromStore":
+        let  isInstalledFromStore = IntegrityChecker.isValidApp()
+        break
     default:
       result(FlutterMethodNotImplemented)
     }

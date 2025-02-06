@@ -150,6 +150,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   statusCheck(NewVersionChecker newVersion) async {
+
+
     try {
       final status = await newVersion.getVersionStatus();
 

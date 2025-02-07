@@ -4,27 +4,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="06b38f4a-86c7-4ed1-91c3-41558f331e24" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/storeinstallcheck/StoreInstallCheck.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ios/Classes/StoreInstallCheck.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config_subset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.dart_tool/version" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/version" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/other.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/other.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_07_10_24,_9_13_pm_[Changes]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_07_10_24__9_13_pm__Changes_.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/DeviceSafetyInfoPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/DeviceSafetyInfoPlugin.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/rooted/LessThan23.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/rooted/RootedDeviceCheck.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/rooted/RootedDeviceCheck.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/example/lib/main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/example/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ios/Classes/DeviceSafetyInfoPlugin.swift" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Classes/DeviceSafetyInfoPlugin.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/device_safety_info.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/device_safety_info.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/new_version_check.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/new_version_check.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
-    </list>
+    <list default="true" id="06b38f4a-86c7-4ed1-91c3-41558f331e24" name="Changes" comment="store check install check" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -97,6 +77,15 @@
       <option name="presentableId" value="Default" />
       <updated>1728355090303</updated>
     </task>
+    <task id="LOCAL-00001" summary="store check install check">
+      <option name="closed" value="true" />
+      <created>1738817042484</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1738817042484</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -109,5 +98,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="store check install check" />
+    <option name="LAST_COMMIT_MESSAGE" value="store check install check" />
   </component>
 </project>

@@ -10,10 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  plugin_platform_interface: any
-  connectivity_plus: any
-  package_info_plus: any
-  http: any
+  plugin_platform_interface: ^2.1.8
+  connectivity_plus: ^6.1.4
+  package_info_plus: ^8.3.0
+  http: ^1.4.0
 
 
 dev_dependencies:

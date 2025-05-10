@@ -43,8 +43,8 @@ class DeviceSafetyInfo {
   }
 
   static Future<bool> get isInstalledFromStore async {
-    final bool isInstalledFromStore = await _channel.invokeMethod('isInstalledFromStore');
+    final bool isInstalledFromStore =
+        await _channel.invokeMethod('isInstalledFromStore');
     return isInstalledFromStore;
   }
-
 }

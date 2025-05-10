@@ -78,17 +78,20 @@ class NewVersionChecker {
     } else if (Platform.isAndroid) {
       return _getAndroidStoreVersion(packageInfo);
     } else {
-      debugPrint('The target platform "${Platform.operatingSystem}" is not yet supported by this package.');
+      debugPrint(
+          'The target platform "${Platform.operatingSystem}" is not yet supported by this package.');
       return null;
     }
   }
 
   Future<String> getLocalVersion() async {
     PackageInfo localPackageInfo = await PackageInfo.fromPlatform();
-    return RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(localPackageInfo.version) ?? '0.0.0';
+    return RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(localPackageInfo.version) ??
+        '0.0.0';
   }
 
-  String _getCleanVersion(String version) => RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(version) ?? '0.0.0';
+  String _getCleanVersion(String version) =>
+      RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(version) ?? '0.0.0';
 
   Future<VersionStatus?> _getiOSStoreVersion(PackageInfo packageInfo) async {
     final id = iOSId ?? packageInfo.packageName;
@@ -110,7 +113,8 @@ class NewVersionChecker {
     }
     return VersionStatus._(
       localVersion: _getCleanVersion(packageInfo.version),
-      storeVersion: _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
+      storeVersion:
+          _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
       originalStoreVersion: forceAppVersion ?? jsonObj['results'][0]['version'],
       appStoreLink: jsonObj['results'][0]['trackViewUrl'],
     );
@@ -118,13 +122,15 @@ class NewVersionChecker {
 
   Future<VersionStatus> _getAndroidStoreVersion(PackageInfo packageInfo) async {
     final id = androidId ?? packageInfo.packageName;
-    final uri = Uri.https("play.google.com", "/store/apps/details", {"id": id.toString(), "hl": androidPlayStoreCountry ?? "en_US"});
+    final uri = Uri.https("play.google.com", "/store/apps/details",
+        {"id": id.toString(), "hl": androidPlayStoreCountry ?? "en_US"});
     final response = await http.get(uri);
     if (response.statusCode != 200) {
       throw Exception("Invalid response code: ${response.statusCode}");
     }
 
-    final regexp = RegExp(r'\[\[\[\"(\d+\.\d+(\.[a-z]+)?(\.([^"]|\\")*)?)\"\]\]');
+    final regexp =
+        RegExp(r'\[\[\[\"(\d+\.\d+(\.[a-z]+)?(\.([^"]|\\")*)?)\"\]\]');
     final storeVersion = regexp.firstMatch(response.body)?.group(1);
 
     return VersionStatus._(

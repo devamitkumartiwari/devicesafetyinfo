@@ -6,26 +6,20 @@ import android.provider.Settings
 
 class DevelopmentModeCheck {
 
-    companion object{
+    companion object {
 
         fun isDevMode(context: Context): Boolean {
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Settings.Secure.getInt(
-                    context.contentResolver,
-                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+            return try {
+                val contentResolver = context.contentResolver
+                val devModeEnabled = Settings.Secure.getInt(
+                    contentResolver,
+                    Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED,
                     0
-                ) != 0
-            } else {
-                Settings.Secure.getInt(
-                    context.contentResolver,
-                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-                    1
-                ) != 0
+                )
+                devModeEnabled != 0
+            } catch (e: Exception) {
+                false // Return false on failure (e.g., SecurityException or SettingNotFoundException)
             }
         }
-
     }
-
-
-
 }

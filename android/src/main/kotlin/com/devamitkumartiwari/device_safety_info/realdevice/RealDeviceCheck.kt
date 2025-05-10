@@ -4,21 +4,29 @@ import android.os.Build
 
 class RealDeviceCheck {
 
-    companion object{
+    companion object {
 
         fun isRealDevice(): Boolean {
-            return (Build.FINGERPRINT.startsWith("generic")
-                    || Build.FINGERPRINT.startsWith("unknown")
-                    || Build.MODEL.contains("google_sdk")
-                    || Build.MODEL.contains("Emulator")
-                    || Build.MODEL.contains("Android SDK built for x86")
-                    || Build.MANUFACTURER.contains("Genymotion")
-                    || Build.MODEL.startsWith("sdk_")
-                    || Build.DEVICE.startsWith("emulator"))
-                    || Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")
-                    || "google_sdk" == Build.PRODUCT
+            // List of device properties to check for emulator-related patterns
+            val buildProps = listOf(
+                Build.FINGERPRINT?.lowercase() ?: "",
+                Build.MODEL?.lowercase() ?: "",
+                Build.MANUFACTURER?.lowercase() ?: "",
+                Build.DEVICE?.lowercase() ?: "",
+                Build.BRAND?.lowercase() ?: "",
+                Build.PRODUCT?.lowercase() ?: ""
+            )
+
+            // Emulator indicators
+            val emulatorIndicators = listOf(
+                "generic", "unknown", "google_sdk", "emulator",
+                "android sdk built for x86", "genymotion", "sdk_", "sdk"
+            )
+
+            // Return true for real device (none of the properties should match emulator indicators)
+            return buildProps.none { prop ->
+                emulatorIndicators.any { indicator -> prop.contains(indicator) }
+            }
         }
-
     }
-
 }

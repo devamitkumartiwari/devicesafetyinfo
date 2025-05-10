@@ -46,3 +46,11 @@
 * AndroidManifest.xml issue fixed
 
 
+## 1.0.0
+* Dependency updated
+* iOS issue fixed
+* Application is installed from store check feature added 
+* Local and store version check feature added
+
+
+

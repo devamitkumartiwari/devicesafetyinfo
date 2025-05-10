@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:device_safety_info/new_version_check.dart';
 import 'package:device_safety_info/vpn_check.dart';
@@ -22,71 +21,125 @@ class _MyAppState extends State<MyApp> {
   bool isRealDevice = true;
   bool isExternalStorage = false;
   bool isDeveloperMode = false;
-  final vpnCheck = VPNCheck();
   bool isVPN = false;
+  bool isInstalledFromStore = false;
+
+  final vpnCheck = VPNCheck();
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
-    vpnStatus();
+    _initializeDeviceInfo();
+    _vpnStatus();
   }
 
-  Future<void> initPlatformState() async {
+  // Initialize device safety information
+  Future<void> _initializeDeviceInfo() async {
     if (!mounted) return;
     try {
-      isRootedDevice = await DeviceSafetyInfo.isRootedDevice;
-      isScreenLock = await DeviceSafetyInfo.isScreenLock;
-      isRealDevice = await DeviceSafetyInfo.isRealDevice;
+      // Create the list of device info based on platform
+      final deviceInfo = await Future.wait([
+        DeviceSafetyInfo.isRootedDevice,
+        DeviceSafetyInfo.isScreenLock,
+        DeviceSafetyInfo.isRealDevice,
+        if (Platform.isAndroid) ...[
+          DeviceSafetyInfo.isExternalStorage,
+          DeviceSafetyInfo.isDeveloperMode,
+        ],
+        DeviceSafetyInfo.isInstalledFromStore,
+      ]);
 
-      if (Platform.isAndroid) {
-        isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
-        isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
-      }
-    } catch (error) {
+      setState(() {
+        isRootedDevice = deviceInfo[0];
+        isScreenLock = deviceInfo[1];
+        isRealDevice = deviceInfo[2];
+        isExternalStorage = Platform.isAndroid && deviceInfo.length > 3
+            ? deviceInfo[3]
+            : false; // Only access for Android
+        isDeveloperMode = Platform.isAndroid && deviceInfo.length > 4
+            ? deviceInfo[4]
+            : false; // Only access for Android
+        isInstalledFromStore =
+            deviceInfo.last; // Use last element for isInstalledFromStore
+      });
+    } catch (e) {
       if (kDebugMode) {
-        print(error);
+        print("Error fetching device info: $e");
       }
     }
+  }
 
-    setState(() {
-      isRootedDevice = isRootedDevice;
-      isScreenLock = isScreenLock;
-      isRealDevice = isRealDevice;
-      isExternalStorage = isExternalStorage;
-      isDeveloperMode = isDeveloperMode;
-      // isVPN = isVPN;
+  // Check VPN status
+  void _vpnStatus() {
+    vpnCheck.vpnState.listen((state) {
+      final vpnConnected = state == VPNState.connectedState;
+      if (kDebugMode) {
+        print(vpnConnected ? "VPN connected." : "VPN disconnected.");
+      }
+      setState(() {
+        isVPN = vpnConnected;
+      });
     });
   }
 
+  // App version status check
+  Future<void> _appVersionStatus() async {
+    final newVersion = NewVersionChecker(iOSId: '', androidId: '');
+    try {
+      final status = await newVersion.getVersionStatus();
+      if (status != null && status.canUpdate) {
+        if (kDebugMode) {
+          print("New version available: ${status.storeVersion}");
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error checking app version: $e");
+      }
+    }
+  }
+
+  // Build the UI layout
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Device Safety Info'),
-        ),
+        appBar: AppBar(title: const Text('Device Safety Info')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: ListView(
               children: [
-                infoTile(
-                    methodRequest: 'isRootedDevice',
-                    methodResponse: isRootedDevice),
-                infoTile(
-                    methodRequest: 'isScreenLock',
-                    methodResponse: isScreenLock),
-                infoTile(
-                    methodRequest: 'isRealDevice',
-                    methodResponse: isRealDevice),
-                infoTile(
+                _infoTile(
+                  methodRequest: 'isRootedDevice',
+                  methodResponse: isRootedDevice,
+                ),
+                _infoTile(
+                  methodRequest: 'isScreenLock',
+                  methodResponse: isScreenLock,
+                ),
+                _infoTile(
+                  methodRequest: 'isRealDevice',
+                  methodResponse: isRealDevice,
+                ),
+                if (Platform.isAndroid) ...[
+                  _infoTile(
                     methodRequest: 'isExternalStorage',
-                    methodResponse: isExternalStorage),
-                infoTile(
+                    methodResponse: isExternalStorage,
+                  ),
+                  _infoTile(
                     methodRequest: 'isDeveloperMode',
-                    methodResponse: isDeveloperMode),
-                infoTile(methodRequest: 'isVPN', methodResponse: isVPN),
+                    methodResponse: isDeveloperMode,
+                  ),
+                ],
+                _infoTile(
+                  methodRequest: 'isVPN',
+                  methodResponse: isVPN,
+                ),
+                _infoTile(
+                  methodRequest: 'isInstalledFromStore',
+                  methodResponse: isInstalledFromStore,
+                ),
               ],
             ),
           ),
@@ -95,22 +148,15 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  infoTile({required String methodRequest, required bool methodResponse}) {
-    if (kDebugMode) {
-      print(methodResponse);
-    }
+  // Reusable infoTile widget
+  Widget _infoTile(
+      {required String methodRequest, required bool methodResponse}) {
     return Container(
       height: 60,
-      width: MediaQuery.of(context).size.width,
       margin: const EdgeInsets.only(bottom: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(methodRequest),
-          const SizedBox(
-            width: 10,
-          ),
+          Expanded(child: Text(methodRequest)),
           Text(
             methodResponse ? "Yes" : "No",
             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -118,55 +164,5 @@ class _MyAppState extends State<MyApp> {
         ],
       ),
     );
-  }
-
-  vpnStatus() {
-    vpnCheck.vpnState.listen((state) {
-      if (state == VPNState.connectedState) {
-        if (kDebugMode) {
-          print("VPN connected.");
-        }
-        setState(() {
-          isVPN = true;
-        });
-      } else {
-        if (kDebugMode) {
-          print("VPN disconnected.");
-        }
-        setState(() {
-          isVPN = false;
-        });
-      }
-    });
-  }
-
-  appVersionStatus() {
-    final newVersion = NewVersionChecker(
-      iOSId: '',
-      androidId: '',
-    );
-
-    statusCheck(newVersion);
-  }
-
-  statusCheck(NewVersionChecker newVersion) async {
-    try {
-      final status = await newVersion.getVersionStatus();
-
-      if (status != null) {
-        debugPrint(status.appStoreLink);
-        debugPrint(status.localVersion);
-        debugPrint(status.storeVersion);
-        debugPrint(status.canUpdate.toString());
-
-        if (status.canUpdate) {
-          // new version available
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print(e.toString());
-      }
-    }
   }
 }

@@ -1,4 +1,3 @@
-
 package com.devamitkumartiwari.device_safety_info.vpn_check
 
 import android.content.Context
@@ -6,39 +5,36 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 
+class VpnCheck {
 
-class VpnCheck{
-
-    companion object{
+    companion object {
 
         fun isActiveVPN(context: Context?): Boolean {
-            var vpnInUse = false
+            context ?: return false // Return false if context is null
+
             val connectivityManager: ConnectivityManager =
-                context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+            // Check if VPN is active on the current active network
             val activeNetwork: Network? = connectivityManager.activeNetwork
-            val caps: NetworkCapabilities? =
+            val networkCapabilities: NetworkCapabilities? =
                 connectivityManager.getNetworkCapabilities(activeNetwork)
-            if (caps != null) {
-                return caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+
+            if (networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
+                return true
             }
+
+            // Check all networks to see if any are VPNs
             val networks: Array<Network> = connectivityManager.allNetworks
-            if (networks.isEmpty()){
-                 vpnInUse = false;
-            }else{
-                for (i in networks.indices) {
-                    val caps: NetworkCapabilities? = connectivityManager.getNetworkCapabilities(networks[i])
-                    if (caps != null) {
-                        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
-                            vpnInUse = true
-                            break
-                        }
-                    }
+            for (network in networks) {
+                val capabilities: NetworkCapabilities? =
+                    connectivityManager.getNetworkCapabilities(network)
+                if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
+                    return true
                 }
             }
 
-            return vpnInUse
+            return false
         }
-
     }
-
 }

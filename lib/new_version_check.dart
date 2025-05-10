@@ -84,6 +84,12 @@ class NewVersionChecker {
     }
   }
 
+  Future<String> getLocalVersion() async {
+    PackageInfo localPackageInfo = await PackageInfo.fromPlatform();
+    return RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(localPackageInfo.version) ??
+        '0.0.0';
+  }
+
   String _getCleanVersion(String version) =>
       RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(version) ?? '0.0.0';
 

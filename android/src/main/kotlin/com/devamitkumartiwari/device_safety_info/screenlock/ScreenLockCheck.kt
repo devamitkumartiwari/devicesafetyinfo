@@ -5,14 +5,15 @@ import android.app.KeyguardManager
 import android.content.ContentResolver
 import android.content.Context
 import android.os.Build
-import android.provider.Settings;
-
+import android.provider.Settings
 
 class ScreenLockCheck {
 
+    companion object {
 
-    companion object{
-
+        /**
+         * Check if the device is screen locked (either with pattern, PIN, or password).
+         */
         fun isDeviceScreenLocked(appCon: Context): Boolean {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 isDeviceLocked(appCon)
@@ -22,11 +23,12 @@ class ScreenLockCheck {
         }
 
         /**
-         * @return true if pattern set, false if not (or if an issue when checking)
+         * Check if the device has a pattern lock set.
+         * @return true if pattern is set, false if not or an error occurs.
          */
-       fun isPatternSet(appCon: Context): Boolean {
-            val cr: ContentResolver = appCon.contentResolver
+        fun isPatternSet(appCon: Context): Boolean {
             return try {
+                val cr: ContentResolver = appCon.contentResolver
                 val lockPatternEnable: Int =
                     Settings.Secure.getInt(cr, Settings.Secure.LOCK_PATTERN_ENABLED)
                 lockPatternEnable == 1
@@ -36,25 +38,25 @@ class ScreenLockCheck {
         }
 
         /**
-         * @return true if pass or pin set
+         * Check if the device has a PIN or password set.
+         * @return true if PIN or password is set, false if not.
          */
         fun isPassOrPinSet(appCon: Context): Boolean {
             val keyguardManager =
-                appCon.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager //api 16+
+                appCon.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
             return keyguardManager.isKeyguardSecure
         }
 
         /**
-         * @return true if pass or pin or pattern locks screen
+         * Check if the device is locked (securely locked, including PIN, pattern, or password).
+         * This method only works on API 23 and above.
+         * @return true if device is locked, false if not.
          */
         @TargetApi(23)
         fun isDeviceLocked(appCon: Context): Boolean {
             val keyguardManager =
-                appCon.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager //api 23+
+                appCon.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
             return keyguardManager.isDeviceSecure
         }
-
     }
-
-
 }

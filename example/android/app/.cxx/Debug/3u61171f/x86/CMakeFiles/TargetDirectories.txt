@@ -1,0 +1,2 @@
+/Users/amitkumartiwari/dis/devicesafetyinfo/example/android/app/.cxx/Debug/3u61171f/x86/CMakeFiles/edit_cache.dir
+/Users/amitkumartiwari/dis/devicesafetyinfo/example/android/app/.cxx/Debug/3u61171f/x86/CMakeFiles/rebuild_cache.dir

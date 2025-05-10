@@ -41,4 +41,10 @@ class DeviceSafetyInfo {
     final bool isVPNCheck = await _channel.invokeMethod('isVPNCheck');
     return isVPNCheck;
   }
+
+  static Future<bool> get isInstalledFromStore async {
+    final bool isInstalledFromStore =
+        await _channel.invokeMethod('isInstalledFromStore');
+    return isInstalledFromStore;
+  }
 }

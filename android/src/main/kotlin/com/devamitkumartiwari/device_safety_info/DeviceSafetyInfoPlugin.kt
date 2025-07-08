@@ -38,7 +38,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler {
             }
 
             "isRealDevice" -> {
-                result.success(!RealDeviceCheck.isRealDevice())
+                result.success(RealDeviceCheck.isRealDevice())
             }
 
             "isExternalStorage" -> {

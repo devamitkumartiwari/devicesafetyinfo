@@ -52,5 +52,8 @@
 * Application is installed from store check feature added 
 * Local and store version check feature added
 
+## 1.0.1
+* Android isRealDevice check issue fixed
+
 
 

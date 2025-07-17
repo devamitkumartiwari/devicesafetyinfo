@@ -1,7 +1,8 @@
 library device_safety_info;
 
-import 'package:flutter/services.dart';
 import 'dart:async';
+
+import 'package:flutter/services.dart';
 
 class DeviceSafetyInfo {
   static const MethodChannel _channel = MethodChannel('device_safety_info');

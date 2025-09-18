@@ -175,7 +175,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     final IconData displayIcon;
     final String label;
     if (unknown) {
-      bgColor = Theme.of(context).colorScheme.surfaceVariant;
+      bgColor = Theme.of(context).colorScheme.surfaceContainerHighest;
       displayIcon = Icons.help_outline;
       label = 'Unknown';
     } else if (positive) {

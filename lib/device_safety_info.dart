@@ -9,8 +9,7 @@ class DeviceSafetyInfo {
 
   // only for android detect if application is running on external storage
   static Future<bool> get isExternalStorage async {
-    final bool isExternalStorage =
-        await _channel.invokeMethod('isExternalStorage');
+    final bool isExternalStorage = await _channel.invokeMethod('isExternalStorage');
     return isExternalStorage;
   }
 
@@ -28,8 +27,7 @@ class DeviceSafetyInfo {
 
   // check developer mode android only
   static Future<bool> get isDeveloperMode async {
-    bool? isDeveloperMode =
-        await _channel.invokeMethod<bool>('isDeveloperMode');
+    bool? isDeveloperMode = await _channel.invokeMethod<bool>('isDeveloperMode');
     return isDeveloperMode ?? true;
   }
 
@@ -44,8 +42,7 @@ class DeviceSafetyInfo {
   }
 
   static Future<bool> get isInstalledFromStore async {
-    final bool isInstalledFromStore =
-        await _channel.invokeMethod('isInstalledFromStore');
+    final bool isInstalledFromStore = await _channel.invokeMethod('isInstalledFromStore');
     return isInstalledFromStore;
   }
 }

@@ -15,15 +15,12 @@ class VPNCheck {
   }
 
   VPNCheck._private() {
-    _streamSubscription = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) async {
+    _streamSubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) async {
       await _checkVPNStatus();
     });
   }
 
-  final StreamController<VPNState> _streamController =
-      StreamController.broadcast();
+  final StreamController<VPNState> _streamController = StreamController.broadcast();
   StreamSubscription<List<ConnectivityResult>>? _streamSubscription;
 
   //check weather VPN connection

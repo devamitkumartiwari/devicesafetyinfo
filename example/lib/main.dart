@@ -1,167 +1,317 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:device_safety_info/new_version_check.dart';
 import 'package:device_safety_info/vpn_check.dart';
 import 'package:device_safety_info/vpn_state.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  runApp(const MyApp());
+}
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Device Safety Info',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+      ),
+      home: const DeviceSafetyHome(),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
-  bool isRootedDevice = false;
-  bool isScreenLock = false;
-  bool isRealDevice = true;
-  bool isExternalStorage = false;
-  bool isDeveloperMode = false;
-  bool isVPN = false;
-  bool isInstalledFromStore = false;
+class DeviceSafetyHome extends StatefulWidget {
+  const DeviceSafetyHome({super.key});
+  @override
+  State<DeviceSafetyHome> createState() => _DeviceSafetyHomeState();
+}
 
-  final vpnCheck = VPNCheck();
+class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
+  bool? isRootedDevice;
+  bool? isScreenLock;
+  bool? isRealDevice;
+  bool? isExternalStorage;
+  bool? isDeveloperMode;
+  bool? isVPN;
+  bool? isInstalledFromStore;
+
+  bool _loading = false;
+  final VPNCheck _vpnCheck = VPNCheck();
+  late final Stream<VPNState> _vpnStream;
 
   @override
   void initState() {
     super.initState();
-    _initializeDeviceInfo();
-    _vpnStatus();
+    _vpnStream = _vpnCheck.vpnState;
+    _listenVpn();
+    _refreshAll();
   }
 
-  // Initialize device safety information
-  Future<void> _initializeDeviceInfo() async {
-    if (!mounted) return;
-    try {
-      // Create the list of device info based on platform
-      final deviceInfo = await Future.wait([
-        DeviceSafetyInfo.isRootedDevice,
-        DeviceSafetyInfo.isScreenLock,
-        DeviceSafetyInfo.isRealDevice,
-        if (Platform.isAndroid) ...[
-          DeviceSafetyInfo.isExternalStorage,
-          DeviceSafetyInfo.isDeveloperMode,
-        ],
-        DeviceSafetyInfo.isInstalledFromStore,
-      ]);
-
-      setState(() {
-        isRootedDevice = deviceInfo[0];
-        isScreenLock = deviceInfo[1];
-        isRealDevice = deviceInfo[2];
-        isExternalStorage = Platform.isAndroid && deviceInfo.length > 3
-            ? deviceInfo[3]
-            : false; // Only access for Android
-        isDeveloperMode = Platform.isAndroid && deviceInfo.length > 4
-            ? deviceInfo[4]
-            : false; // Only access for Android
-        isInstalledFromStore =
-            deviceInfo.last; // Use last element for isInstalledFromStore
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error fetching device info: $e");
-      }
-    }
+  @override
+  void dispose() {
+    super.dispose();
   }
 
-  // Check VPN status
-  void _vpnStatus() {
-    vpnCheck.vpnState.listen((state) {
-      final vpnConnected = state == VPNState.connectedState;
-      if (kDebugMode) {
-        print(vpnConnected ? "VPN connected." : "VPN disconnected.");
+  void _listenVpn() {
+    _vpnStream.listen((state) {
+      final connected = state == VPNState.connectedState;
+      if (mounted) {
+        setState(() => isVPN = connected);
       }
-      setState(() {
-        isVPN = vpnConnected;
-      });
+    }, onError: (e) {
+      if (kDebugMode) debugPrint('VPN listen error: $e');
     });
   }
 
-  // App version status check
-  Future<void> _appVersionStatus() async {
-    final newVersion = NewVersionChecker(iOSId: '', androidId: '');
+  Future<void> _refreshAll() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+    });
+
     try {
-      final status = await newVersion.getVersionStatus();
-      if (status != null && status.canUpdate) {
-        if (kDebugMode) {
-          print("New version available: ${status.storeVersion}");
-        }
+      final futures = <Future<Object>>[
+        DeviceSafetyInfo.isRootedDevice,
+        DeviceSafetyInfo.isScreenLock,
+        DeviceSafetyInfo.isRealDevice,
+      ];
+
+      if (Platform.isAndroid) {
+        futures.addAll([
+          DeviceSafetyInfo.isExternalStorage,
+          DeviceSafetyInfo.isDeveloperMode,
+        ]);
       }
+
+      futures.add(DeviceSafetyInfo.isInstalledFromStore);
+
+      final results = await Future.wait(futures);
+
+      int idx = 0;
+      setState(() {
+        isRootedDevice = _boolFrom(results[idx++]);
+        isScreenLock = _boolFrom(results[idx++]);
+        isRealDevice = _boolFrom(results[idx++]);
+
+        if (Platform.isAndroid) {
+          isExternalStorage = _boolFrom(results[idx++]);
+          isDeveloperMode = _boolFrom(results[idx++]);
+        } else {
+          isExternalStorage = null;
+          isDeveloperMode = null;
+        }
+
+        isInstalledFromStore = _boolFrom(results[idx++]);
+      });
     } catch (e) {
-      if (kDebugMode) {
-        print("Error checking app version: $e");
+      if (kDebugMode) debugPrint('Error fetching device info: $e');
+      if (mounted) {
+        setState(() {
+          isRootedDevice ??= false;
+          isScreenLock ??= false;
+          isRealDevice ??= true;
+          isExternalStorage ??= (Platform.isAndroid ? false : null);
+          isDeveloperMode ??= (Platform.isAndroid ? false : null);
+          isInstalledFromStore ??= false;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
       }
     }
   }
 
-  // Build the UI layout
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Device Safety Info')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ListView(
-              children: [
-                _infoTile(
-                  methodRequest: 'isRootedDevice',
-                  methodResponse: isRootedDevice,
+  bool _boolFrom(Object? o) {
+    if (o is bool) return o;
+    if (o is int) return o != 0;
+    if (o is String) return o.toLowerCase() == 'true';
+    return false;
+  }
+
+  Future<void> _checkAppVersion() async {
+    final checker = NewVersionChecker(iOSId: '', androidId: '');
+    try {
+      final status = await checker.getVersionStatus();
+      if (!mounted) return;
+      if (status != null && status.canUpdate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('New version available: ${status.storeVersion}')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('App is up to date')),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Version check error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Version check failed')),
+        );
+      }
+    }
+  }
+
+  Widget _statusTile({
+    required String title,
+    required bool? value,
+    String? subtitle,
+    IconData? leadingIcon,
+  }) {
+    final bool unknown = value == null;
+    final bool positive = value == true;
+
+    final Color bgColor;
+    final IconData displayIcon;
+    final String label;
+    if (unknown) {
+      bgColor = Theme.of(context).colorScheme.surfaceVariant;
+      displayIcon = Icons.help_outline;
+      label = 'Unknown';
+    } else if (positive) {
+      bgColor = Colors.green.shade50;
+      displayIcon = leadingIcon ?? Icons.check_circle;
+      label = 'Yes';
+    } else {
+      bgColor = Colors.red.shade50;
+      displayIcon = leadingIcon ?? Icons.cancel;
+      label = 'No';
+    }
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: CircleAvatar(
+          radius: 20,
+          backgroundColor: bgColor,
+          child: Icon(displayIcon, color: unknown ? Colors.orange : (positive ? Colors.green : Colors.red)),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: subtitle != null ? Text(subtitle) : null,
+        trailing: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+          child: unknown
+              ? Text('—', key: const ValueKey('unknown'))
+              : Chip(
+                  key: ValueKey(label),
+                  side: BorderSide.none,
+                  label: Text(label),
+                  backgroundColor: positive ? Colors.green.shade100 : Colors.red.shade100,
                 ),
-                _infoTile(
-                  methodRequest: 'isScreenLock',
-                  methodResponse: isScreenLock,
-                ),
-                _infoTile(
-                  methodRequest: 'isRealDevice',
-                  methodResponse: isRealDevice,
-                ),
-                if (Platform.isAndroid) ...[
-                  _infoTile(
-                    methodRequest: 'isExternalStorage',
-                    methodResponse: isExternalStorage,
-                  ),
-                  _infoTile(
-                    methodRequest: 'isDeveloperMode',
-                    methodResponse: isDeveloperMode,
-                  ),
-                ],
-                _infoTile(
-                  methodRequest: 'isVPN',
-                  methodResponse: isVPN,
-                ),
-                _infoTile(
-                  methodRequest: 'isInstalledFromStore',
-                  methodResponse: isInstalledFromStore,
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
   }
 
-  // Reusable infoTile widget
-  Widget _infoTile(
-      {required String methodRequest, required bool methodResponse}) {
-    return Container(
-      height: 60,
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Expanded(child: Text(methodRequest)),
-          Text(
-            methodResponse ? "Yes" : "No",
-            style: const TextStyle(fontWeight: FontWeight.w600),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Device Safety Info'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _loading ? null : _refreshAll,
+            icon: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.refresh),
+          ),
+          IconButton(
+            tooltip: 'Version Check',
+            onPressed: _checkAppVersion,
+            icon: const Icon(Icons.system_update),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _refreshAll,
+        icon: const Icon(Icons.search),
+        label: const Text('Re-check'),
+      ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refreshAll,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('Summary', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _refreshAll,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _statusTile(
+                title: 'Device is rooted / jailbroken',
+                value: isRootedDevice,
+                leadingIcon: Icons.security,
+                subtitle: 'Root/jailbreak increases risk — block if required.',
+              ),
+              _statusTile(
+                title: 'Screen lock enabled',
+                value: isScreenLock,
+                leadingIcon: Icons.lock,
+                subtitle: 'Secure lockscreen is recommended.',
+              ),
+              _statusTile(
+                title: 'Real device (not emulator)',
+                value: isRealDevice,
+                leadingIcon: Icons.phone_android,
+                subtitle: 'Emulators are often insecure / for testing only.',
+              ),
+              if (Platform.isAndroid) ...[
+                _statusTile(
+                  title: 'External storage available',
+                  value: isExternalStorage,
+                  leadingIcon: Icons.sd_storage,
+                  subtitle: 'External storage access can be risky depending on app usage.',
+                ),
+                _statusTile(
+                  title: 'Developer mode enabled',
+                  value: isDeveloperMode,
+                  leadingIcon: Icons.developer_mode,
+                  subtitle: 'Developer options may expose debugging surfaces.',
+                ),
+              ],
+              _statusTile(
+                title: 'VPN connected',
+                value: isVPN,
+                leadingIcon: Icons.vpn_lock,
+                subtitle: 'A VPN is active (useful for network security or suspicious traffic).',
+              ),
+              _statusTile(
+                title: 'Installed from store',
+                value: isInstalledFromStore,
+                leadingIcon: Icons.storefront,
+                subtitle: 'Install source: store vs sideload.',
+              ),
+              const SizedBox(height: 59),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -30,7 +30,7 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
         case "isScreenLock":
             let context = LAContext()
             let isScreenLockEnabled = context.canEvaluatePolicy(
-                .deviceOwnerAuthenticationWithBiometrics, error: nil)
+                .deviceOwnerAuthentication, error: nil)
             result(isScreenLockEnabled)
         case "isVPNCheck":
             let isVPN = isVpnActive()

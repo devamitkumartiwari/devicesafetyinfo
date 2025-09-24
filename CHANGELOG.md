@@ -1,3 +1,8 @@
+## 1.0.3
+* @magnus-lpa thank you for contributing screen lock issue in iOS
+* @UADACID thank you for pointing out 16KB issue in Android fixed
+
+
 ## 1.0.2
 > Note: This release has breaking changes.
 > On Android plugin now requires the following:

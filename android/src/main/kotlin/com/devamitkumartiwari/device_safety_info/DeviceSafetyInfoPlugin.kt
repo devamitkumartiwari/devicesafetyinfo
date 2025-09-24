@@ -37,6 +37,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler {
                 result.success(context?.let { RootedDeviceCheck.isRootedDevice(it) })
             }
 
+
             "isRealDevice" -> {
                 result.success(RealDeviceCheck.isRealDevice())
             }

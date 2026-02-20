@@ -4,17 +4,22 @@ import IOSSecuritySuite
 import LocalAuthentication
 import Foundation
 
-public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
+public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     private let vpnProtocolsKeysIdentifiers = [
         "tap", "tun", "ppp", "ipsec", "utun",
     ]
 
+    private var eventSink: FlutterEventSink?
+
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(
+        let methodChannel = FlutterMethodChannel(
             name: "device_safety_info", binaryMessenger: registrar.messenger())
         let instance = DeviceSafetyInfoPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        registrar.addMethodCallDelegate(instance, channel: methodChannel)
+
+        let eventChannel = FlutterEventChannel(name: "device_safety_info/screen_capture_events", binaryMessenger: registrar.messenger())
+        eventChannel.setStreamHandler(instance)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -38,8 +43,49 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
         case "isInstalledFromStore":
             let isInstalledFromStore = isValidApp()
             result(isInstalledFromStore)
+        case "isScreenCaptured":
+            if #available(iOS 11.0, *) {
+                result(UIScreen.main.isCaptured)
+            } else {
+                result(false)
+            }
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        if #available(iOS 11.0, *) {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(onScreenCaptureChanged),
+                name: UIScreen.capturedDidChangeNotification,
+                object: nil
+            )
+            // Send initial state
+            events(UIScreen.main.isCaptured)
+        } else {
+            events(false)
+        }
+        return nil
+    }
+
+    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        if #available(iOS 11.0, *) {
+            NotificationCenter.default.removeObserver(self, name: UIScreen.capturedDidChangeNotification, object: nil)
+        }
+        return nil
+    }
+
+    @objc private func onScreenCaptureChanged() {
+        if let eventSink = self.eventSink {
+            if #available(iOS 11.0, *) {
+                eventSink(UIScreen.main.isCaptured)
+            } else {
+                eventSink(false)
+            }
         }
     }
 

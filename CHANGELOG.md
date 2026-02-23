@@ -1,3 +1,8 @@
+## 1.0.4
+* Screen capture (screenshot and screen recording) prevention feature added for iOS.
+* Hooked device detection feature added for iOS.
+* Improved root detection mechanism on Android.
+
 ## 1.0.3
 * @magnus-lpa thank you for contributing screen lock issue in iOS
 * @UADACID thank you for pointing out 16KB issue in Android fixed

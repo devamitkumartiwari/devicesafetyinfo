@@ -41,6 +41,8 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   bool? isDeveloperMode;
   bool? isVPN;
   bool? isInstalledFromStore;
+  bool? isHooked;
+  bool? isScreenCaptured;
 
   bool _loading = false;
   final VPNCheck _vpnCheck = VPNCheck();
@@ -51,12 +53,23 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     super.initState();
     _vpnStream = _vpnCheck.vpnState;
     _listenVpn();
+    _listenScreenCapture();
     _refreshAll();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  void _listenScreenCapture() {
+    DeviceSafetyInfo.onScreenCapturedChanged.listen((isCaptured) {
+      if (mounted) {
+        setState(() => isScreenCaptured = isCaptured);
+      }
+    }, onError: (e) {
+      if (kDebugMode) debugPrint('Screen capture listen error: $e');
+    });
   }
 
   void _listenVpn() {
@@ -91,6 +104,8 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
       }
 
       futures.add(DeviceSafetyInfo.isInstalledFromStore);
+      futures.add(DeviceSafetyInfo.isHooked);
+      futures.add(DeviceSafetyInfo.isScreenCaptured);
 
       final results = await Future.wait(futures);
 
@@ -109,6 +124,8 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
         }
 
         isInstalledFromStore = _boolFrom(results[idx++]);
+        isHooked = _boolFrom(results[idx++]);
+        isScreenCaptured = _boolFrom(results[idx++]);
       });
     } catch (e) {
       if (kDebugMode) debugPrint('Error fetching device info: $e');
@@ -120,6 +137,8 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
           isExternalStorage ??= (Platform.isAndroid ? false : null);
           isDeveloperMode ??= (Platform.isAndroid ? false : null);
           isInstalledFromStore ??= false;
+          isHooked ??= false;
+          isScreenCaptured ??= false;
         });
       }
     } finally {
@@ -160,6 +179,40 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
         );
       }
     }
+  }
+
+  Future<void> _showConfirmationDialog(String content, VoidCallback onConfirm) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Are you sure?'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(content),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Confirm'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                onConfirm();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _statusTile({
@@ -308,7 +361,72 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                 leadingIcon: Icons.storefront,
                 subtitle: 'Install source: store vs sideload.',
               ),
-              const SizedBox(height: 59),
+              _statusTile(
+                title: 'Device is hooked',
+                value: isHooked,
+                leadingIcon: Icons.bug_report,
+                subtitle: 'Hooking frameworks like Frida or Xposed are present.',
+              ),
+              _statusTile(
+                title: 'Screen is being captured',
+                value: isScreenCaptured,
+                leadingIcon: Icons.screen_share,
+                subtitle: 'Screen is being shared, casted, or recorded.',
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text('Actions', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => DeviceSafetyInfo.blockScreenshots(block: true),
+                      icon: const Icon(Icons.screen_lock_portrait),
+                      label: const Text('Block Screenshots'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => DeviceSafetyInfo.blockScreenshots(block: false),
+                      icon: const Icon(Icons.screenshot),
+                      label: const Text('Allow Screenshots'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => DeviceSafetyInfo.hideMenu(hide: true),
+                      icon: const Icon(Icons.visibility_off),
+                      label: const Text('Hide in Menu'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => DeviceSafetyInfo.hideMenu(hide: false),
+                      icon: const Icon(Icons.visibility),
+                      label: const Text('Show in Menu'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showConfirmationDialog(
+                        'This will close the app if hooking is detected.',
+                        () => DeviceSafetyInfo.checkHooked(exitProcessIfTrue: true),
+                      ),
+                      icon: const Icon(Icons.exit_to_app),
+                      label: const Text('Check Hooked & Exit'),
+                      style: ElevatedButton.styleFrom(foregroundColor: Colors.orange.shade800),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showConfirmationDialog(
+                        'This will attempt to uninstall the app if hooking is detected.',
+                        () => DeviceSafetyInfo.checkHooked(uninstallIfTrue: true),
+                      ),
+                      icon: const Icon(Icons.delete_forever),
+                      label: const Text('Check Hooked & Uninstall'),
+                      style: ElevatedButton.styleFrom(foregroundColor: Colors.red.shade800),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 80),
             ],
           ),
         ),

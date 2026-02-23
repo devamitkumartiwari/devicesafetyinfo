@@ -11,6 +11,8 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     ]
 
     private var eventSink: FlutterEventSink?
+    private var isBlockingScreenshots = false
+    private var screenBlockingView: UIView?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let methodChannel = FlutterMethodChannel(
@@ -49,6 +51,24 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             } else {
                 result(false)
             }
+        case "isHooked":
+            let exitIfTrue = (call.arguments as? [String: Any])?["exitProcessIfTrue"] as? Bool ?? false
+            // uninstallIfTrue from Android is not applicable on iOS.
+
+            let isHooked = IOSSecuritySuite.amIReverseEngineered()
+            if isHooked && exitIfTrue {
+                exit(0)
+            }
+            result(isHooked)
+        case "blockScreenShots":
+            guard let args = call.arguments as? [String: Any],
+                  let block = args["block"] as? Bool else {
+                result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments for blockScreenShots", details: nil))
+                return
+            }
+            isBlockingScreenshots = block
+            updateScreenBlockingView()
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -65,6 +85,7 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             )
             // Send initial state
             events(UIScreen.main.isCaptured)
+            updateScreenBlockingView()
         } else {
             events(false)
         }
@@ -82,9 +103,28 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     @objc private func onScreenCaptureChanged() {
         if let eventSink = self.eventSink {
             if #available(iOS 11.0, *) {
-                eventSink(UIScreen.main.isCaptured)
+                let isCaptured = UIScreen.main.isCaptured
+                eventSink(isCaptured)
+                updateScreenBlockingView()
             } else {
                 eventSink(false)
+            }
+        }
+    }
+
+    private func updateScreenBlockingView() {
+        DispatchQueue.main.async {
+            guard let window = UIApplication.shared.keyWindow else { return }
+
+            if #available(iOS 11.0, *), self.isBlockingScreenshots && UIScreen.main.isCaptured {
+                if self.screenBlockingView == nil {
+                    self.screenBlockingView = UIView(frame: window.bounds)
+                    self.screenBlockingView?.backgroundColor = .black
+                    window.addSubview(self.screenBlockingView!)
+                }
+            } else {
+                self.screenBlockingView?.removeFromSuperview()
+                self.screenBlockingView = nil
             }
         }
     }
@@ -123,9 +163,8 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
                 }
 
                 let path = appStoreReceiptURL.path
-                print("Receipt path: \(path)")  // Log the path for debugging
+                print("Receipt path: \(path)")
 
-                // Check if the path contains "sandboxReceipt" (TestFlight) or "receipt" (App Store)
                 if path.contains("sandboxReceipt") {
                     print("App installed via TestFlight")
                     return true

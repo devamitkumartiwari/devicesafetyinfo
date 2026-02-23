@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="06b38f4a-86c7-4ed1-91c3-41558f331e24" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/DeviceSafetyInfoPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/DeviceSafetyInfoPlugin.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/screencapturedetector/ScreenCaptureDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/screencapturedetector/ScreenCaptureDetector.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/example/lib/main.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,7 +29,7 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/devamitkumartiwari/devicesafetyinfo.git&quot;,
-    &quot;accountId&quot;: &quot;0c3c1f04-154a-4d2f-8f54-3cece62da161&quot;
+    &quot;accountId&quot;: &quot;bcb75256-914f-44df-8e6f-b27e9c3ec18d&quot;
   }
 }</component>
   <component name="ProjectColorInfo">{
@@ -42,6 +44,7 @@
   &quot;keyToString&quot;: {
     &quot;Flutter.main.dart.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
@@ -49,10 +52,11 @@
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main-new-feature&quot;,
+    &quot;io.flutter.project.isFirstOpen&quot;: &quot;true&quot;,
     &quot;io.flutter.reload.alreadyRun&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/amitkumartiwari/Documents/GitHub/devicesafetyinfo/example/android&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/dev/Documents/GitHub/devicesafetyinfo&quot;,
     &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
   }
 }</component>

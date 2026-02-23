@@ -4,7 +4,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.os.Build
 import android.view.Display
 import com.devamitkumartiwari.device_safety_info.developmentmode.DevelopmentModeCheck
 import com.devamitkumartiwari.device_safety_info.externalstorage.ExternalStorageCheck
@@ -28,6 +31,7 @@ import io.flutter.plugin.common.MethodChannel.Result
 import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.InputStreamReader
+import java.util.concurrent.Executor
 import kotlin.system.exitProcess
 
 class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, EventChannel.StreamHandler {
@@ -38,24 +42,36 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
     private var eventSink: EventChannel.EventSink? = null
     private var displayManager: DisplayManager? = null
     private var displayListener: DisplayManager.DisplayListener? = null
+    private var screenCaptureCallback: Activity.ScreenCaptureCallback? = null
+    private var mediaProjection: MediaProjection? = null
+    private var mediaProjectionCallback: MediaProjection.Callback? = null
 
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "device_safety_info")
         channel.setMethodCallHandler(this)
-        
+
         val eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "device_safety_info/screen_capture_events")
         eventChannel.setStreamHandler(this)
-        
+
         displayManager = context?.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            screenCaptureCallback = Activity.ScreenCaptureCallback {
+                updateScreenCaptureState(true)
+            }
+            activity?.registerScreenCaptureCallback(context?.mainExecutor as Executor, screenCaptureCallback!!)
+        }
     }
 
     override fun onDetachedFromActivity() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && screenCaptureCallback != null) {
+            activity?.unregisterScreenCaptureCallback(screenCaptureCallback!!)
+        }
         activity = null
     }
 
@@ -79,7 +95,11 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
             "isScreenLock" -> result.success(context?.let { ScreenLockCheck.isDeviceScreenLocked(it) })
             "isVPNCheck" -> result.success(context?.let { VpnCheck.isActiveVPN(it) })
             "isInstalledFromStore" -> result.success(context?.let { StoreInstallCheck.isInstalledFromStore(it) })
-            "isScreenCaptured" -> result.success(context?.let { ScreenCaptureDetector(it).isScreenBeingCaptured() })
+            "isScreenCaptured" -> {
+                val mediaProjectionManager = context?.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, Intent())
+                result.success(context?.let { ScreenCaptureDetector(it).isScreenBeingCaptured(mediaProjection) })
+            }
             "isRootedDevice" -> {
                 val isRooted = RootedDeviceCheck.isRootedDevice()
                 handleExitOrUninstall(isRooted, exitIfTrue, uninstallIfTrue)
@@ -142,6 +162,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        mediaProjection?.stop()
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
@@ -161,8 +182,16 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
                 }
             }
             displayManager?.registerDisplayListener(displayListener, null)
-            // Send initial state
             updateScreenCaptureState()
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mediaProjectionCallback = object : MediaProjection.Callback() {
+                override fun onStop() {
+                    updateScreenCaptureState(false)
+                }
+            }
+            mediaProjection?.registerCallback(mediaProjectionCallback!!, null)
         }
     }
 
@@ -172,10 +201,15 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
             displayManager?.unregisterDisplayListener(displayListener)
             displayListener = null
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && mediaProjectionCallback != null) {
+            mediaProjection?.unregisterCallback(mediaProjectionCallback!!)
+            mediaProjectionCallback = null
+        }
     }
 
-    private fun updateScreenCaptureState() {
-        val isCaptured = context?.let { ScreenCaptureDetector(it).isScreenBeingCaptured() } ?: false
-        eventSink?.success(isCaptured)
+    private fun updateScreenCaptureState(isCaptured: Boolean? = null) {
+        val finalCapturedState = isCaptured ?: (context?.let { ScreenCaptureDetector(it).isScreenBeingCaptured(mediaProjection) } ?: false)
+        eventSink?.success(finalCapturedState)
     }
 }

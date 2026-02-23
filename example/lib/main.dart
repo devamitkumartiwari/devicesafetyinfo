@@ -42,6 +42,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   bool? isVPN;
   bool? isInstalledFromStore;
   bool? isHooked;
+  bool? isScreenCaptured;
 
   bool _loading = false;
   final VPNCheck _vpnCheck = VPNCheck();
@@ -52,12 +53,23 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     super.initState();
     _vpnStream = _vpnCheck.vpnState;
     _listenVpn();
+    _listenScreenCapture();
     _refreshAll();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  void _listenScreenCapture() {
+    DeviceSafetyInfo.onScreenCapturedChanged.listen((isCaptured) {
+      if (mounted) {
+        setState(() => isScreenCaptured = isCaptured);
+      }
+    }, onError: (e) {
+      if (kDebugMode) debugPrint('Screen capture listen error: $e');
+    });
   }
 
   void _listenVpn() {
@@ -93,6 +105,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
 
       futures.add(DeviceSafetyInfo.isInstalledFromStore);
       futures.add(DeviceSafetyInfo.isHooked);
+      futures.add(DeviceSafetyInfo.isScreenCaptured);
 
       final results = await Future.wait(futures);
 
@@ -112,6 +125,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
 
         isInstalledFromStore = _boolFrom(results[idx++]);
         isHooked = _boolFrom(results[idx++]);
+        isScreenCaptured = _boolFrom(results[idx++]);
       });
     } catch (e) {
       if (kDebugMode) debugPrint('Error fetching device info: $e');
@@ -124,6 +138,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
           isDeveloperMode ??= (Platform.isAndroid ? false : null);
           isInstalledFromStore ??= false;
           isHooked ??= false;
+          isScreenCaptured ??= false;
         });
       }
     } finally {
@@ -351,6 +366,12 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                 value: isHooked,
                 leadingIcon: Icons.bug_report,
                 subtitle: 'Hooking frameworks like Frida or Xposed are present.',
+              ),
+              _statusTile(
+                title: 'Screen is being captured',
+                value: isScreenCaptured,
+                leadingIcon: Icons.screen_share,
+                subtitle: 'Screen is being shared, casted, or recorded.',
               ),
               const SizedBox(height: 24),
               Padding(

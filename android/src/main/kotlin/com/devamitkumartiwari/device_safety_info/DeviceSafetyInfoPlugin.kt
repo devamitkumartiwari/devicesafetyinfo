@@ -310,28 +310,10 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private fun handleExitOrUninstall(exitProcessIfTrue: Boolean, uninstallIfTrue: Boolean) {
         if (uninstallIfTrue) {
-            uninstallApp()
+            launchUninstallIntent()
         } else if (exitProcessIfTrue) {
             activity?.finishAffinity()
             exitProcess(0)
-        }
-    }
-
-    private fun uninstallApp() {
-        try {
-            val packageName = context?.packageName ?: return
-            val process = Runtime.getRuntime().exec("su")
-            DataOutputStream(process.outputStream).use { os ->
-                os.writeBytes("pm uninstall $packageName\n")
-                os.flush()
-            }
-            val result = process.inputStream.bufferedReader().readText()
-            process.inputStream.close()
-            if (!result.contains("Success", ignoreCase = true)) {
-                launchUninstallIntent()
-            }
-        } catch (_: Exception) {
-            launchUninstallIntent()
         }
     }
 

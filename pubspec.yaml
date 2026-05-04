@@ -19,10 +19,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ffi: ^2.1.0
-  connectivity_plus: ^7.0.0
-  package_info_plus: ^9.0.0
-  http: ^1.5.0
+  ffi: ^2.2.0
+  connectivity_plus: ^7.1.1
+  package_info_plus: ^10.1.0
+  http: ^1.6.0
 
 
 dev_dependencies:

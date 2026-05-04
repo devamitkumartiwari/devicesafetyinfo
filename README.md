@@ -166,8 +166,14 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
   ```xml
   <uses-permission android:name="android.permission.INTERNET"/>
   ```
-- **Screenshot Detection (for Android 10-13)**:
+- **Screenshot Detection**:
+    - **Android 14+ (API 34+)**: No extra permission required.
+    - **Android 13 (API 33)**: Requires `READ_MEDIA_IMAGES`.
+    - **Android 10-12 (API 29-32)**: Requires `READ_EXTERNAL_STORAGE`.
+  
   ```xml
-  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+  <!-- Required for screenshot detection on Android 10-12 -->
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+  <!-- Required for screenshot detection on Android 13 -->
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
   ```
-  *(Note: Android 14+ uses the new system API and doesn't require extra storage permissions).*

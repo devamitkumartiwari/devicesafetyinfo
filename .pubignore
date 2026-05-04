@@ -1,0 +1,10 @@
+# Exclude development and internal files from the published package
+.artifacts/
+.idea/
+.DS_Store
+CODE_REVIEW.md
+android/build/
+ios/.symlinks/
+ios/Pods/
+example/build/
+pubspec.lock

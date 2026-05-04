@@ -1,6 +1,7 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -25,9 +26,12 @@ class DeviceSafetyInfo {
   // Returns true if the application is running on external storage, false otherwise.
   // Android only.
   static Future<bool> get isExternalStorage async {
-    final bool? isExternalStorage =
-        await channel.invokeMethod<bool>('isExternalStorage');
-    return isExternalStorage ?? false;
+    if (!kIsWeb && Platform.isAndroid) {
+      final bool? isExternalStorage =
+          await channel.invokeMethod<bool>('isExternalStorage');
+      return isExternalStorage ?? false;
+    }
+    return false;
   }
 
   // Returns true if the device is a real device, false if it's an emulator.
@@ -42,7 +46,9 @@ class DeviceSafetyInfo {
     // FFI root file check runs first via native stat() — harder to hook than
     // the JVM-level File.exists() calls inside the MethodChannel implementation.
     try {
-      if (DeviceSafetyFfi.checkRootFilesNative()) return true;
+      if (!kIsWeb && Platform.isAndroid) {
+        if (DeviceSafetyFfi.checkRootFilesNative()) return true;
+      }
     } catch (_) {}
     final bool? isRootedDevice =
         await channel.invokeMethod<bool>('isRootedDevice');
@@ -52,8 +58,12 @@ class DeviceSafetyInfo {
   // Returns true if developer mode is enabled on the device, false otherwise.
   // Android only.
   static Future<bool> get isDeveloperMode async {
-    bool? isDeveloperMode = await channel.invokeMethod<bool>('isDeveloperMode');
-    return isDeveloperMode ?? false;
+    if (!kIsWeb && Platform.isAndroid) {
+      bool? isDeveloperMode =
+          await channel.invokeMethod<bool>('isDeveloperMode');
+      return isDeveloperMode ?? false;
+    }
+    return false;
   }
 
   // Returns true if a screen lock is set on the device, false otherwise.
@@ -186,10 +196,12 @@ class DeviceSafetyInfo {
 
   // Hides or shows the app in the recent apps list. Android only.
   static Future<void> hideMenu({bool hide = true}) async {
-    try {
-      await channel.invokeMethod('hideMenu', {'hide': hide});
-    } on PlatformException catch (e) {
-      debugPrint("Failed to set app recents visibility: '${e.message}'");
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        await channel.invokeMethod('hideMenu', {'hide': hide});
+      } on PlatformException catch (e) {
+        debugPrint("Failed to set app recents visibility: '${e.message}'");
+      }
     }
   }
 }

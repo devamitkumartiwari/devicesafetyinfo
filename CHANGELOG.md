@@ -1,7 +1,31 @@
-## 1.0.4
-* Screen capture (screenshot and screen recording) prevention feature added for iOS.
-* Hooked device detection feature added for iOS.
-* Improved root detection mechanism on Android.
+## 1.1.0
+* **New:** `onScreenshotTaken` stream — fires when the user takes a screenshot. Android API 34+: uses `Activity.ScreenshotCallback` (no permission needed). Android API 24–33: uses `MediaStore` `ContentObserver` (host app must hold `READ_MEDIA_IMAGES` at runtime). iOS: `UIApplication.userDidTakeScreenshotNotification` (no permission needed).
+* **New:** `setRecentsOverlay({int argbColor})` — shows a solid-color overlay over the app thumbnail in the recent-apps switcher. Automatically shown on background, hidden on foreground. Android + iOS.
+* **New:** `clearRecentsOverlay()` — removes the recents overlay.
+* **Fix:** `blockScreenshots()` now works on iOS via the `UITextField.isSecureTextEntry` layer trick — the key window's `CALayer` is re-parented into the text field's secure sublayer, which the system protects from screenshots and recordings.
+* **New:** `dart:ffi` native C/C++ layer — Frida `/proc/self/maps` scan + port scan (27042/27043), root `stat()` check, and debugger `TracerPid` check all run below the JVM/Swift runtime, making them significantly harder to hook
+* **New:** Swift Package Manager (SPM) support via `Package.swift` — Flutter 3.19+ projects can now resolve the plugin without CocoaPods
+* **New:** `isDebuggerAttached` API — detects attached debuggers via native sysctl (iOS) and TracerPid (Android)
+* **New:** `isHooked` now implemented on iOS via `IOSSecuritySuite.amIReverseEngineered()`
+* **New:** `checkFridaByMaps()` and `checkRootFilesNative()` exposed as standalone public APIs
+* **Fix:** `isRootedDevice` now combines native C `stat()` check with JVM-level check — false negatives from hooked `File.exists()` no longer silently bypass detection
+* **Fix:** `isVPNCheck` and `isRootedDevice` were returning `true` as default on null/error — corrected to `false`
+* **Fix:** `ScreenCaptureDetector` was flagging HDMI monitors and Chromecast as screen captures — fixed with `FLAG_PRESENTATION` check
+* **Fix:** `ro.debuggable=1` was incorrectly flagging all developer/debug builds as rooted — removed from root detection
+* **Fix:** `com.google.android.packageinstaller` was listed as a trusted store — it is the APK sideload installer; removed
+* **Fix:** iOS `#if TARGET_OS_SIMULATOR` C macro silently had no effect in Swift — corrected to `#if targetEnvironment(simulator)`
+* **Fix:** iOS `UIScreen.main.isCaptured` deprecated in iOS 16 — replaced with scene-based API with fallback
+* **Fix:** `blockScreenshots`/`hideMenu` returned success silently when `Activity` was null — now returns `error("NO_ACTIVITY")`
+* **Fix:** `exitProcess(0)` was called before `result.success()` — Dart Future now resolves before process exits
+* **Fix:** `DisplayListener` was not unregistered on engine detach — memory leak fixed
+* **Fix:** `VPNCheck` stream now emits initial VPN state immediately on creation
+* **Fix:** `ShellExecutor` timeout increased from 50 ms to 200 ms; stderr now drained to prevent process hangs
+* **Fix:** Production `print()` calls replaced with `debugPrint()` throughout
+* **Fix:** Podspec metadata (version, description, homepage, author) updated from placeholder values
+* **Removed:** `ro.debuggable` false-positive root indicator
+* **Removed:** `com.google.android.packageinstaller` from trusted stores
+* **Removed:** Unused `LaunchModeVersion` enum
+* **Removed:** Dead pre-API-17 code path in `DevelopmentModeCheck` (minSdk is 24)
 
 ## 1.0.3
 * @magnus-lpa thank you for contributing screen lock issue in iOS

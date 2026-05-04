@@ -13,8 +13,8 @@ object SystemPropsChecker {
     private val propsToChecks: Map<String, (String) -> Boolean> = mapOf(
         // "test-keys" is often found on custom ROMs and rooted devices.
         "ro.build.tags" to { it.contains("test-keys") },
-        // A value of "1" means USB debugging is enabled, which is common on rooted devices.
-        "ro.debuggable" to { it == "1" },
+        // ro.debuggable removed: value "1" appears on all standard debug builds,
+        // causing false positives on unrooted developer devices.
         // A value of "0" means the device is not running in a secure mode.
         "ro.secure" to { it == "0" },
         // Booting into recovery or fastboot can be part of the rooting process.

@@ -2,14 +2,14 @@ group 'com.devamitkumartiwari.device_safety_info'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = "2.2.0"
+    ext.kotlin_version = "1.9.22"
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.android.tools.build:gradle:8.2.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -47,6 +47,22 @@ android {
 
     defaultConfig {
         minSdkVersion 24
+        targetSdkVersion 36
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.18.1+"
+        }
     }
 
     dependencies {

@@ -35,8 +35,6 @@ object ExternalStorageCheck {
             // Check if the FLAG_EXTERNAL_STORAGE is set in the application's flags.
             ai?.let { (it.flags and ApplicationInfo.FLAG_EXTERNAL_STORAGE) != 0 } ?: false
         } catch (e: PackageManager.NameNotFoundException) {
-            // This should not happen if we are checking our own package.
-            e.printStackTrace()
             false
         }
     }

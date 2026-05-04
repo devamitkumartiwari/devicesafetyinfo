@@ -4,15 +4,62 @@ import IOSSecuritySuite
 import LocalAuthentication
 import Foundation
 
+// Direct reference to the C-level debugger check compiled from DeviceSafetyFfi.c.
+// Using @_silgen_name avoids the need for a bridging header (required for SPM).
+@_silgen_name("dsi_is_debugger_attached")
+private func dsi_is_debugger_attached() -> Int32
+
+// Separate stream handler for screenshot detection events.
+// A class can only conform to FlutterStreamHandler once, so we use a dedicated object.
+private class ScreenshotEventStreamHandler: NSObject, FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onScreenshot),
+            name: UIApplication.userDidTakeScreenshotNotification,
+            object: nil
+        )
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIApplication.userDidTakeScreenshotNotification,
+            object: nil
+        )
+        eventSink = nil
+        return nil
+    }
+
+    @objc private func onScreenshot() {
+        eventSink?(nil)
+    }
+}
+
 public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
-    private let vpnProtocolsKeysIdentifiers = [
+    // Set for O(1) prefix-lookup performance
+    private let vpnProtocolsKeysIdentifiers: Set<String> = [
         "tap", "tun", "ppp", "ipsec", "utun",
     ]
 
     private var eventSink: FlutterEventSink?
-    private var isBlockingScreenshots = false
-    private var screenBlockingView: UIView?
+
+    // Kept alive for the lifetime of the plugin instance so the EventChannel
+    // retains its stream handler and screenshot events keep firing.
+    private let screenshotStreamHandler = ScreenshotEventStreamHandler()
+
+    // --- Screenshot blocking (UITextField isSecureTextEntry layer trick) ---
+    private var secureTextField: UITextField?
+    private var secureWindowOriginalSuperLayer: CALayer?
+
+    // --- Recents overlay ---
+    private var recentsOverlayView: UIView?
+    private var recentsOverlayColor: UIColor = .black
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let methodChannel = FlutterMethodChannel(
@@ -20,8 +67,15 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let instance = DeviceSafetyInfoPlugin()
         registrar.addMethodCallDelegate(instance, channel: methodChannel)
 
-        let eventChannel = FlutterEventChannel(name: "device_safety_info/screen_capture_events", binaryMessenger: registrar.messenger())
-        eventChannel.setStreamHandler(instance)
+        let captureEventChannel = FlutterEventChannel(
+            name: "device_safety_info/screen_capture_events",
+            binaryMessenger: registrar.messenger())
+        captureEventChannel.setStreamHandler(instance)
+
+        let screenshotEventChannel = FlutterEventChannel(
+            name: "device_safety_info/screenshot_events",
+            binaryMessenger: registrar.messenger())
+        screenshotEventChannel.setStreamHandler(instance.screenshotStreamHandler)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -29,50 +83,57 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
         case "isRootedDevice":
-            let isRooted = IOSSecuritySuite.amIJailbroken()
-            result(isRooted)
+            result(IOSSecuritySuite.amIJailbroken())
         case "isRealDevice":
-            let isEmulator = IOSSecuritySuite.amIRunInEmulator()
-            result(!isEmulator)
+            result(!IOSSecuritySuite.amIRunInEmulator())
         case "isScreenLock":
             let context = LAContext()
-            let isScreenLockEnabled = context.canEvaluatePolicy(
-                .deviceOwnerAuthentication, error: nil)
-            result(isScreenLockEnabled)
+            result(context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil))
         case "isVPNCheck":
-            let isVPN = isVpnActive()
-            result(isVPN)
+            result(isVpnActive())
         case "isInstalledFromStore":
-            let isInstalledFromStore = isValidApp()
-            result(isInstalledFromStore)
+            result(isInstalledFromStoreInternal())
         case "isScreenCaptured":
-            if #available(iOS 11.0, *) {
-                result(UIScreen.main.isCaptured)
-            } else {
-                result(false)
-            }
+            result(currentScreenCaptured())
         case "isHooked":
-            let exitIfTrue = (call.arguments as? [String: Any])?["exitProcessIfTrue"] as? Bool ?? false
-            // uninstallIfTrue from Android is not applicable on iOS.
-
-            let isHooked = IOSSecuritySuite.amIReverseEngineered()
-            if isHooked && exitIfTrue {
-                exit(0)
-            }
-            result(isHooked)
+            result(IOSSecuritySuite.amIReverseEngineered())
+        case "isDeveloperMode":
+            // Developer mode state is not readable via public iOS API.
+            result(false)
         case "blockScreenShots":
-            guard let args = call.arguments as? [String: Any],
-                  let block = args["block"] as? Bool else {
-                result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments for blockScreenShots", details: nil))
-                return
+            let block = (call.arguments as? [String: Any])?["block"] as? Bool ?? false
+            if block {
+                enableScreenshotBlocking()
+            } else {
+                disableScreenshotBlocking()
             }
-            isBlockingScreenshots = block
-            updateScreenBlockingView()
+            result(true)
+        case "hideMenu":
+            // App switching/recents visibility is not controllable on iOS.
+            result(false)
+        case "isExternalStorage":
+            // External storage in the Android sense does not exist on iOS.
+            result(false)
+        case "isDebuggerAttached":
+            // Combine native sysctl C check with IOSSecuritySuite for best coverage.
+            let cCheck = dsi_is_debugger_attached() != 0
+            let suiteCheck = IOSSecuritySuite.amIDebugged()
+            result(cCheck || suiteCheck)
+        case "setRecentsOverlay":
+            let colorInt = (call.arguments as? [String: Any])?["color"] as? Int ?? Int(bitPattern: 0xFF000000)
+            recentsOverlayColor = uiColor(fromARGB: colorInt)
+            registerRecentsOverlayObservers()
+            result(nil)
+        case "clearRecentsOverlay":
+            unregisterRecentsOverlayObservers()
+            hideRecentsOverlay()
             result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
+
+    // MARK: - Screen capture stream (FlutterStreamHandler)
 
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
@@ -83,9 +144,7 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
                 name: UIScreen.capturedDidChangeNotification,
                 object: nil
             )
-            // Send initial state
-            events(UIScreen.main.isCaptured)
-            updateScreenBlockingView()
+            events(currentScreenCaptured())
         } else {
             events(false)
         }
@@ -95,88 +154,152 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     public func onCancel(withArguments arguments: Any?) -> FlutterError? {
         self.eventSink = nil
         if #available(iOS 11.0, *) {
-            NotificationCenter.default.removeObserver(self, name: UIScreen.capturedDidChangeNotification, object: nil)
+            NotificationCenter.default.removeObserver(
+                self, name: UIScreen.capturedDidChangeNotification, object: nil)
         }
         return nil
     }
 
     @objc private func onScreenCaptureChanged() {
-        if let eventSink = self.eventSink {
-            if #available(iOS 11.0, *) {
-                let isCaptured = UIScreen.main.isCaptured
-                eventSink(isCaptured)
-                updateScreenBlockingView()
-            } else {
-                eventSink(false)
-            }
-        }
+        eventSink?(currentScreenCaptured())
     }
 
-    private func updateScreenBlockingView() {
-        DispatchQueue.main.async {
-            guard let window = UIApplication.shared.keyWindow else { return }
-
-            if #available(iOS 11.0, *), self.isBlockingScreenshots && UIScreen.main.isCaptured {
-                if self.screenBlockingView == nil {
-                    self.screenBlockingView = UIView(frame: window.bounds)
-                    self.screenBlockingView?.backgroundColor = .black
-                    window.addSubview(self.screenBlockingView!)
-                }
-            } else {
-                self.screenBlockingView?.removeFromSuperview()
-                self.screenBlockingView = nil
-            }
+    // Returns the current screen capture state, using the scene-based API on iOS 16+
+    // and falling back to UIScreen.main on iOS 11–15.
+    private func currentScreenCaptured() -> Bool {
+        if #available(iOS 16.0, *) {
+            return UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.screen.isCaptured ?? false
+        } else if #available(iOS 11.0, *) {
+            return UIScreen.main.isCaptured
         }
+        return false
     }
+
+    // MARK: - VPN check
 
     func isVpnActive() -> Bool {
         guard let cfDict = CFNetworkCopySystemProxySettings() else { return false }
         let nsDict = cfDict.takeRetainedValue() as NSDictionary
         guard let keys = nsDict["__SCOPED__"] as? NSDictionary,
-            let allKeys = keys.allKeys as? [String]
+              let allKeys = keys.allKeys as? [String]
         else { return false }
-
-        // Check for VPN-related tunneling protocols
         return allKeys.contains { key in
             vpnProtocolsKeysIdentifiers.contains { key.starts(with: $0) }
         }
     }
 
-    private func isValidApp() -> Bool {
-        return isInstalledFromStoreInternal()
-    }
+    // MARK: - Store install check
 
     private func isInstalledFromStoreInternal() -> Bool {
-        // Check if the app is running in the simulator
-        #if TARGET_OS_SIMULATOR
-            print("App is running in the simulator")
+        #if targetEnvironment(simulator)
             return false
         #else
-            // Check for Debug build first and handle accordingly
             #if DEBUG
-                print("App is running in DEBUG mode")
                 return false
             #else
-                // If not DEBUG or simulator, proceed with receipt check
                 guard let appStoreReceiptURL = Bundle.main.appStoreReceiptURL else {
                     return false
                 }
-
                 let path = appStoreReceiptURL.path
-                print("Receipt path: \(path)")
-
-                if path.contains("sandboxReceipt") {
-                    print("App installed via TestFlight")
-                    return true
-                } else if path.contains("receipt") {
-                    print("App installed from App Store")
-                    return true
-                } else {
-                    print("App installed from unknown source")
-                    return false
-                }
+                // sandboxReceipt = TestFlight, receipt = App Store
+                return path.contains("sandboxReceipt") || path.contains("receipt")
             #endif
         #endif
     }
 
+    // MARK: - Screenshot blocking (UITextField isSecureTextEntry trick)
+    //
+    // Re-parents the key window's CALayer into the secure sublayer of a UITextField
+    // with isSecureTextEntry = true. The system prevents that secure layer's
+    // contents from appearing in screenshots and screen recordings.
+
+    private func enableScreenshotBlocking() {
+        guard secureTextField == nil, let window = keyWindow else { return }
+
+        let field = UITextField()
+        field.isSecureTextEntry = true
+
+        secureWindowOriginalSuperLayer = window.layer.superlayer
+        window.addSubview(field)
+
+        // The last sublayer of the text field's layer is the protected secure layer.
+        if let secureSubLayer = field.layer.sublayers?.last {
+            secureSubLayer.addSublayer(window.layer)
+        }
+        secureTextField = field
+    }
+
+    private func disableScreenshotBlocking() {
+        guard let field = secureTextField else { return }
+
+        // Restore the window layer to its original parent so it stays visible.
+        if let originalParent = secureWindowOriginalSuperLayer {
+            originalParent.addSublayer(keyWindow?.layer ?? CALayer())
+        }
+        field.removeFromSuperview()
+        secureTextField = nil
+        secureWindowOriginalSuperLayer = nil
+    }
+
+    // MARK: - Recents overlay
+
+    private func registerRecentsOverlayObservers() {
+        // Remove first to avoid duplicate registrations.
+        NotificationCenter.default.removeObserver(
+            self, name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.removeObserver(
+            self, name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(showRecentsOverlay),
+            name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(hideRecentsOverlay),
+            name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+
+    private func unregisterRecentsOverlayObservers() {
+        NotificationCenter.default.removeObserver(
+            self, name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.removeObserver(
+            self, name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+
+    @objc private func showRecentsOverlay() {
+        guard let window = keyWindow else { return }
+        hideRecentsOverlay()
+        let overlay = UIView(frame: window.bounds)
+        overlay.backgroundColor = recentsOverlayColor
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.tag = 998
+        window.addSubview(overlay)
+        recentsOverlayView = overlay
+    }
+
+    @objc private func hideRecentsOverlay() {
+        recentsOverlayView?.removeFromSuperview()
+        recentsOverlayView = nil
+    }
+
+    // MARK: - Helpers
+
+    private var keyWindow: UIWindow? {
+        if #available(iOS 15.0, *) {
+            return UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.windows.first(where: { $0.isKeyWindow })
+        } else {
+            return UIApplication.shared.windows.first(where: { $0.isKeyWindow })
+        }
+    }
+
+    private func uiColor(fromARGB value: Int) -> UIColor {
+        let a = CGFloat((value >> 24) & 0xFF) / 255.0
+        let r = CGFloat((value >> 16) & 0xFF) / 255.0
+        let g = CGFloat((value >> 8)  & 0xFF) / 255.0
+        let b = CGFloat( value        & 0xFF) / 255.0
+        return UIColor(red: r, green: g, blue: b, alpha: a)
+    }
 }

@@ -4,21 +4,27 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'device_safety_info'
-  s.version          = '0.0.1'
-  s.summary          = 'Rooted, Emulator/Simulator'
+  s.version          = '1.1.0'
+  s.summary          = 'Flutter plugin for device security: root/jailbreak, emulator, VPN, hooking, screen capture, debugger detection.'
   s.description      = <<-DESC
-A new Flutter project.
+A Flutter plugin providing security-focused device checks including jailbreak/root detection,
+emulator detection, VPN detection, hooking framework detection (Frida/Xposed), screen capture
+detection, developer mode detection, debugger detection, and store installation verification.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/devamitkumartiwari/devicesafetyinfo'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'Amit Kumar Tiwari' => 'amtechnovation@gmail.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.dependency 'IOSSecuritySuite'
-  s.platform = :ios, '13.0'
+  s.dependency 'IOSSecuritySuite', '~> 1.9'
+  s.platform         = :ios, '13.0'
 
-  # Flutter.framework does not contain a i386 slice.
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
-  s.swift_version = '5.0'
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE'                       => 'YES',
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
+    'CLANG_ENABLE_MODULES'                 => 'YES',
+    'OTHER_CFLAGS'                         => '-fvisibility=hidden'
+  }
+  s.swift_version = '5.9'
 end

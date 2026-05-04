@@ -17,22 +17,15 @@ class VersionStatus {
   final String? appStoreLink;
 
   bool get canUpdate {
-    final local = localVersion?.split('.').map(int.parse).toList();
-    final store = storeVersion?.split('.').map(int.parse).toList();
+    if (localVersion == null || storeVersion == null) return false;
+    final local = localVersion!.split('.').map(int.parse).toList();
+    final store = storeVersion!.split('.').map(int.parse).toList();
 
-    for (var i = 0; i < store!.length; i++) {
-      // store version field is newer than the local version.
-      if (store[i] > local![i]) {
-        return true;
-      }
-
-      // local version field is newer than the store version.
-      if (local[i] > store[i]) {
-        return false;
-      }
+    for (var i = 0; i < store.length; i++) {
+      if (i >= local.length) return true; // store has more version segments
+      if (store[i] > local[i]) return true;
+      if (local[i] > store[i]) return false;
     }
-
-    // local and store versions are the same.
     return false;
   }
 
@@ -78,17 +71,20 @@ class NewVersionChecker {
     } else if (Platform.isAndroid) {
       return _getAndroidStoreVersion(packageInfo);
     } else {
-      debugPrint('The target platform "${Platform.operatingSystem}" is not yet supported by this package.');
+      debugPrint(
+          'The target platform "${Platform.operatingSystem}" is not yet supported by this package.');
       return null;
     }
   }
 
   Future<String> getLocalVersion() async {
     PackageInfo localPackageInfo = await PackageInfo.fromPlatform();
-    return RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(localPackageInfo.version) ?? '0.0.0';
+    return RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(localPackageInfo.version) ??
+        '0.0.0';
   }
 
-  String _getCleanVersion(String version) => RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(version) ?? '0.0.0';
+  String _getCleanVersion(String version) =>
+      RegExp(r'\d+\.\d+(\.\d+)?').stringMatch(version) ?? '0.0.0';
 
   Future<VersionStatus?> _getiOSStoreVersion(PackageInfo packageInfo) async {
     final id = iOSId ?? packageInfo.packageName;
@@ -110,7 +106,8 @@ class NewVersionChecker {
     }
     return VersionStatus._(
       localVersion: _getCleanVersion(packageInfo.version),
-      storeVersion: _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
+      storeVersion:
+          _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
       originalStoreVersion: forceAppVersion ?? jsonObj['results'][0]['version'],
       appStoreLink: jsonObj['results'][0]['trackViewUrl'],
     );
@@ -118,13 +115,15 @@ class NewVersionChecker {
 
   Future<VersionStatus> _getAndroidStoreVersion(PackageInfo packageInfo) async {
     final id = androidId ?? packageInfo.packageName;
-    final uri = Uri.https("play.google.com", "/store/apps/details", {"id": id.toString(), "hl": androidPlayStoreCountry ?? "en_US"});
+    final uri = Uri.https("play.google.com", "/store/apps/details",
+        {"id": id.toString(), "hl": androidPlayStoreCountry ?? "en_US"});
     final response = await http.get(uri);
     if (response.statusCode != 200) {
       throw Exception("Invalid response code: ${response.statusCode}");
     }
 
-    final regexp = RegExp(r'\[\[\[\"(\d+\.\d+(\.[a-z]+)?(\.([^"]|\\")*)?)\"\]\]');
+    final regexp =
+        RegExp(r'\[\[\[\"(\d+\.\d+(\.[a-z]+)?(\.([^"]|\\")*)?)\"\]\]');
     final storeVersion = regexp.firstMatch(response.body)?.group(1);
 
     return VersionStatus._(
@@ -135,5 +134,3 @@ class NewVersionChecker {
     );
   }
 }
-
-enum LaunchModeVersion { normal, external }

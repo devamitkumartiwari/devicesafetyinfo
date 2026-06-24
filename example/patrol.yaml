@@ -1,0 +1,7 @@
+app_name: Device Safety Info
+app_id: com.devamitkumartiwari.device_safety_info_example
+test_directory: patrol_test
+android:
+  package_name: com.devamitkumartiwari.device_safety_info_example
+ios:
+  bundle_id: com.devamitkumartiwari.deviceSafetyInfoExample

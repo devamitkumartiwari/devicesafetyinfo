@@ -10,7 +10,8 @@ class StoreInstallCheck {
         // List of trusted app stores
         private val trustedStores = setOf(
             "com.android.vending",               // Google Play Store
-            "com.google.android.packageinstaller", // Default package installer
+            // com.google.android.packageinstaller removed: this is the APK sideload
+            // installer — exactly what isInstalledFromStore should return false for.
             "com.skt.skaf.A000Z00040",           // SKT T Store (Korea)
             "com.kt.olleh.storefront",           // Olleh Market (Korea)
             "android.lgt.appstore",              // LG U+ Store (Korea)

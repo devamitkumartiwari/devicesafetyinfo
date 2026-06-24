@@ -4,61 +4,59 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 
-/**
- * A utility for executing shell commands on the device.
- *
- * This object provides a simple interface for running shell commands and retrieving their output,
- * which is primarily used for root detection checks. It is designed to be safe and non-blocking.
- */
 object ShellExecutor {
 
-    /**
-     * Executes a given shell command and checks if it produces any standard output.
-     *
-     * This method is useful for commands like `which su`, where any output indicates that
-     * the executable was found in the system's PATH. It includes a short timeout to prevent
-     * the check from hanging.
-     *
-     * @param command The shell command to execute (e.g., "which su").
-     * @return `true` if the command produces at least one line of output, `false` otherwise.
-     */
     fun executeCommand(command: String): Boolean {
+        val parts = command.trim().split("\\s+".toRegex())
         var process: Process? = null
         return try {
-            process = Runtime.getRuntime().exec(command)
-            // Wait for the process to complete, with a short timeout to prevent blocking indefinitely.
-            process.waitFor(50, TimeUnit.MILLISECONDS)
-            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-                // If readLine() is not null, it means the command produced some output.
-                reader.readLine() != null
-            }
-        } catch (e: Exception) {
-            // Exceptions (e.g., IOException, InterruptedException) are treated as command failure.
+            process = ProcessBuilder(parts).redirectErrorStream(false).start()
+
+            // Drain stdout on a daemon thread concurrently with waitFor so a full
+            // output buffer can't deadlock the process before the timeout fires.
+            var stdoutLine: String? = null
+            val stdoutThread = Thread {
+                process.inputStream.bufferedReader().use { r ->
+                    stdoutLine = r.readLine()
+                    r.forEachLine { } // drain remaining lines
+                }
+            }.also { it.isDaemon = true; it.start() }
+
+            Thread { process.errorStream.use { it.readBytes() } }
+                .also { it.isDaemon = true; it.start() }
+
+            val finished = process.waitFor(200, TimeUnit.MILLISECONDS)
+            if (!finished) process.destroyForcibly()
+            stdoutThread.join(50)
+            stdoutLine != null
+        } catch (_: Exception) {
             false
         } finally {
-            // Ensure the process is destroyed to free up system resources.
-            process?.destroy()
+            process?.destroyForcibly()
         }
     }
 
-    /**
-     * Retrieves a system property by executing the `getprop` shell command.
-     *
-     * @param prop The name of the system property to retrieve (e.g., "ro.build.tags").
-     * @return The value of the property as a String, or `null` if it cannot be read or an error occurs.
-     */
     fun getSystemProperty(prop: String): String? {
+        // Read from Android's internal property cache via reflection — zero cost,
+        // no shell spawn. Falls back to `getprop` only if reflection is restricted.
+        try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val get = clazz.getMethod("get", String::class.java, String::class.java)
+            val value = get.invoke(null, prop, "") as? String
+            if (!value.isNullOrEmpty()) return value
+        } catch (_: Exception) {}
+
         var process: Process? = null
         return try {
-            process = Runtime.getRuntime().exec("getprop $prop")
-            process.waitFor(50, TimeUnit.MILLISECONDS)
-            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-                reader.readLine()
-            }
-        } catch (e: Exception) {
+            process = ProcessBuilder("getprop", prop).redirectErrorStream(true).start()
+            Thread { process.errorStream.use { it.readBytes() } }
+                .also { it.isDaemon = true; it.start() }
+            process.waitFor(200, TimeUnit.MILLISECONDS)
+            BufferedReader(InputStreamReader(process.inputStream)).use { it.readLine() }
+        } catch (_: Exception) {
             null
         } finally {
-            process?.destroy()
+            process?.destroyForcibly()
         }
     }
 }

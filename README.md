@@ -1,41 +1,6 @@
-# device_safety_info (Null-Safety)
+# device_safety_info
 
-A Flutter plugin to detect if a device is jailbroken/rooted, running in an emulator, and to check for other security vulnerabilities like screen capture and hooking frameworks.
-
-## Features
-
-- **Jailbreak/Root Detection**: Checks if the device is jailbroken (iOS) or rooted (Android).
-- **Emulator/Simulator Detection**: Determines if the app is running on a simulator/emulator or a real device.
-- **App Install Source**: Verifies if the app was installed from the App Store (iOS) or Play Store (Android).
-- **Screen Lock**: Checks if a screen lock (passcode, Touch ID, Face ID) is enabled.
-- **External Storage**: Detects if the app is running on external storage (Android only).
-- **Developer Mode**: Checks if Developer Options are enabled (Android only).
-- **VPN Status**: Monitors the device's VPN connection state.
-- **App Version Check**: Checks for new versions of the app in the App Store/Play Store.
-- **Screen Capture Detection**: Detects if the screen is being captured (recorded or mirrored).
-- **Screen Capture Prevention**: Blocks screenshots and screen recordings.
-- **Hook Detection**: Detects if the app is being targeted by hooking frameworks like Frida or Cydia Substrate.
-- **Hide App in Recents**: Programmatically hide or show the app in the recent apps list (Android only).
-
-## Platform Support
-
-| Feature                      | Android | iOS |
-| ---------------------------- | :-----: | :-: |
-| Jailbreak/Root Detection     |    ✅    |  ✅  |
-| Emulator/Simulator Detection |    ✅    |  ✅  |
-| Installed from Store         |    ✅    |  ✅  |
-| Screen Lock Enabled          |    ✅    |  ✅  |
-| Hooking/Reverse-Engineering  |    ✅    |  ✅  |
-| Screen Capture Detection     |    ✅    |  ✅  |
-| Screen Capture Prevention    |    ✅    |  ✅  |
-| VPN Status Monitoring        |    ✅    |  ✅  |
-| App Store Version Check      |    ✅    |  ✅  |
-| Exit App on Detection        |    ✅    |  ✅  |
-| Developer Mode Enabled       |    ✅    |  ❌  |
-| Running on External Storage  |    ✅    |  ❌  |
-| Hide App in Recents          |    ✅    |  ❌  |
-| Prompt for Uninstall         |    ✅    |  ❌  |
-
+Flutter JailBreak, Rooted, Emulator/Simulator, External storage, VPN detection, and App Security features.
 
 ## Getting Started
 
@@ -43,9 +8,28 @@ In your flutter project add the dependency:
 
 ```yml
 dependencies:
-  
-  device_safety_info: ^1.0.4
+  device_safety_info: ^1.1.0
 ```
+
+## Features
+
+| Feature | Android | iOS | Description |
+| :--- | :---: | :---: | :--- |
+| **Root/Jailbreak Detection** | ✅ | ✅ | Check if the device is rooted or jailbroken. |
+| **Real Device Check** | ✅ | ✅ | Distinguish between physical devices and emulators. |
+| **Hook Detection** | ✅ | ✅ | Detect frameworks like Frida, Xposed, or Cydia Substrate. |
+| **Debugger Detection** | ✅ | ✅ | Check if a debugger is attached to the process. |
+| **Screen Lock Status** | ✅ | ✅ | Check if PIN, Pattern, or Biometrics are enabled. |
+| **VPN Detection** | ✅ | ✅ | Real-time monitoring of VPN connection status. |
+| **Store Install Check** | ✅ | ✅ | Verify if installed from Google Play / App Store. |
+| **Screenshot Detection** | ✅ | ✅ | Listen for real-time screenshot events. |
+| **Screen Capture Status** | ✅ | ✅ | Detect if the screen is being recorded or mirrored. |
+| **Block Screenshots** | ✅ | ✅ | Prevent screenshots and screen recordings in-app. |
+| **Recents Overlay** | ✅ | ✅ | Add a custom color overlay in the app switcher. |
+| **External Storage Check** | ✅ | ❌ | Check if app is on external storage. |
+| **Developer Mode** | ✅ | ❌ | Check if Developer Options are enabled. |
+| **Hide from Recents** | ✅ | ❌ | Completely hide the app from the recent apps list. |
+| **Version Checker** | ✅ | ✅ | Check for newer app versions on the store. |
 
 ## Usage
 
@@ -55,142 +39,141 @@ dependencies:
 import 'package:device_safety_info/device_safety_info.dart';
 ```
 
-#### Using it
-
-**Checks whether device is JailBroken (iOS) or Rooted (Android)?**
-
-```dart
-bool isRootedDevice = await DeviceSafetyInfo.isRootedDevice;
-```
-
-**Checks whether device is a real device or an Emulator/Simulator**
+### 1. Basic Security Checks
+These simple getters provide quick boolean checks for common security states.
 
 ```dart
-bool isRealDevice = await DeviceSafetyInfo.isRealDevice;
-```
+// Checks whether device JailBroken or Rooted
+// iOS: Uses IOSSecuritySuite. Android: Uses Native FFI + Root files check.
+bool isRooted = await DeviceSafetyInfo.isRootedDevice;
 
-**Checks if the app was installed from the App Store or Google Play**
+// Checks whether device is Real or Emulator/Simulator
+bool isReal = await DeviceSafetyInfo.isRealDevice;
 
-```dart
-bool isInstalledFromStore = await DeviceSafetyInfo.isInstalledFromStore;
-```
-
-**Checks whether a screen lock is enabled**
-
-```dart
-bool isScreenLock = await DeviceSafetyInfo.isScreenLock;
-```
-
-**Checks if the screen is being captured (recorded or mirrored)**
-This stream will emit `true` if screen capture is detected.
-
-```dart
-DeviceSafetyInfo.onScreenCapturedChanged.listen((bool isCaptured) {
-  print('Screen is being captured: $isCaptured');
-});
-
-// You can also get the current status directly
-bool isScreenCaptured = await DeviceSafetyInfo.isScreenCaptured;
-```
-
-**Blocks screenshots and screen recordings (Android & iOS)**
-On Android, this uses `FLAG_SECURE`. On iOS, it overlays a view to hide the content when the screen is captured.
-
-```dart
-// To block
-await DeviceSafetyInfo.blockScreenshots(block: true);
-
-// To unblock
-await DeviceSafetyInfo.blockScreenshots(block: false);
-```
-
-**Checks for hooking frameworks like Frida or Cydia Substrate (Android & iOS)**
-This helps detect if the app is being reverse-engineered.
-
-```dart
-// Simple check
+// Checks for hooking frameworks (Frida, Xposed, Cydia Substrate, etc.)
+// Uses native scan of process memory maps for high reliability.
 bool isHooked = await DeviceSafetyInfo.isHooked;
 
-// Check and exit the app if hooked (works on both platforms)
-await DeviceSafetyInfo.checkHooked(exitProcessIfTrue: true);
+// Checks whether a debugger is attached to the process
+// Uses native C checks (TracerPid/P_TRACED) to bypass simple debugger hooks.
+bool isDebugger = await DeviceSafetyInfo.isDebuggerAttached;
 
-// Check and prompt for uninstall if hooked (Android only)
-await DeviceSafetyInfo.checkHooked(uninstallIfTrue: true);
-```
+// Checks for screen lock (PIN/Pattern/Biometrics)
+bool isScreenLock = await DeviceSafetyInfo.isScreenLock;
 
-**Hides or shows the app in the recent apps list (Android Only)**
+// Checks if app is installed from Official Store (Play Store / App Store)
+bool isStore = await DeviceSafetyInfo.isInstalledFromStore;
 
-```dart
-// To hide
-await DeviceSafetyInfo.hideMenu(hide: true);
+// (Android Only) Checks if app is installed on external storage
+bool isExternal = await DeviceSafetyInfo.isExternalStorage;
 
-// To show
-await DeviceSafetyInfo.hideMenu(hide: false);
-```
-
-**Checks whether the application is running on external storage (Android Only)**
-
-```dart
-bool isExternalStorage = await DeviceSafetyInfo.isExternalStorage;
-```
-
-**Checks whether Developer Options are enabled on the device (Android Only)**
-
-```dart
+// (Android Only) Checks if Development Options are enabled
 bool isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
 ```
 
-**Checks VPN status on device**
-For checking VPN status device must be connected to the internet.
-For Android, add `<uses-permission android:name="android.permission.INTERNET"/>` to your `AndroidManifest.xml`.
+### 2. Advanced Security Actions
+For Root and Hook detection, you can take immediate action like closing the app.
+
+```dart
+// Check for hooks and optionally exit or uninstall
+bool hooked = await DeviceSafetyInfo.checkHooked(
+  exitProcessIfTrue: true, // Closes the app immediately if hooked
+  uninstallIfTrue: false,  // (Android Only) Triggers uninstallation
+);
+```
+
+### 3. Screenshot & Recording Management
+Protect your app's sensitive data from being captured.
+
+```dart
+// --- Detection ---
+
+// Check if screen is currently being captured/recorded/mirrored
+bool isCaptured = await DeviceSafetyInfo.isScreenCaptured;
+
+// Listen to real-time screen capture status changes
+DeviceSafetyInfo.onScreenCapturedChanged.listen((isCaptured) {
+  print("Screen capture status changed: $isCaptured");
+});
+
+// Listen to screenshot events
+// iOS: Uses UIApplication.userDidTakeScreenshotNotification
+// Android: Uses API 34 ScreenCaptureCallback or ContentObserver
+DeviceSafetyInfo.onScreenshotTaken.listen((_) {
+  print("User took a screenshot!");
+});
+
+// --- Prevention ---
+
+// Block screenshots and screen recordings
+// Android: Uses FLAG_SECURE. iOS: Uses a secure UITextField layer trick.
+await DeviceSafetyInfo.blockScreenshots(block: true);
+```
+
+### 4. App Switcher (Recents) Security
+Control how your app appears in the recent apps / multitasking view.
+
+```dart
+// Add a solid color overlay when the app is in the background.
+// This prevents sensitive data from being visible in the app switcher.
+await DeviceSafetyInfo.setRecentsOverlay(argbColor: 0xFF000000); // Opaque Black
+
+// Clear the overlay
+await DeviceSafetyInfo.clearRecentsOverlay();
+
+// (Android Only) Completely hide the app from the Recents menu
+await DeviceSafetyInfo.hideMenu(hide: true);
+```
+
+### 5. VPN Monitoring
+Monitor VPN connectivity in real-time.
 
 ```dart
 final vpnCheck = VPNCheck();
 
 vpnCheck.vpnState.listen((state) {
-      if (state == VPNState.CONNECTED) {
-        if (kDebugMode) {
-          print("VPN connected.");
-        }
-      } else {
-        if (kDebugMode) {
-          print("VPN disconnected.");
-        }
-      }
+  if (state == VPNState.CONNECTED) {
+    print("VPN is now connected.");
+  } else {
+    print("VPN is now disconnected.");
+  }
 });
 ```
 
-**Checks if a new app version is available**
-Requires an internet connection.
-For Android, add `<uses-permission android:name="android.permission.INTERNET"/>` to your `AndroidManifest.xml`.
+### 6. App Version Checker
+Check if there's a new version available on the store.
 
 ```dart
-appVersionStatus() {
+void checkVersion() async {
     final newVersion = NewVersionChecker(
-      iOSId: '', // Your iOS app ID
-      androidId: '', // Your Android app ID
+      iOSId: 'your.bundle.id',
+      androidId: 'your.package.name',
     );
-    statusCheck(newVersion);
-}
 
-statusCheck(NewVersionChecker newVersion) async {
-    try {
-      final status = await newVersion.getVersionStatus();
-
-      if (status != null) {
-        debugPrint(status.appStoreLink);
-        debugPrint(status.localVersion);
-        debugPrint(status.storeVersion);
-        debugPrint(status.canUpdate.toString());
-
-        if (status.canUpdate) {
-         // New version available
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print(e.toString());
-      }
+    final status = await newVersion.getVersionStatus();
+    if (status != null && status.canUpdate) {
+        print("New version: ${status.storeVersion} (Local: ${status.localVersion})");
+        print("Update Link: ${status.appStoreLink}");
     }
 }
 ```
+
+## Permissions (Android)
+
+Add these to your `AndroidManifest.xml` if you use the respective features:
+
+- **VPN & Version Check**:
+  ```xml
+  <uses-permission android:name="android.permission.INTERNET"/>
+  ```
+- **Screenshot Detection**:
+    - **Android 14+ (API 34+)**: No extra permission required.
+    - **Android 13 (API 33)**: Requires `READ_MEDIA_IMAGES`.
+    - **Android 10-12 (API 29-32)**: Requires `READ_EXTERNAL_STORAGE`.
+  
+  ```xml
+  <!-- Required for screenshot detection on Android 10-12 -->
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+  <!-- Required for screenshot detection on Android 13 -->
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+  ```

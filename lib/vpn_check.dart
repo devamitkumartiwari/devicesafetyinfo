@@ -7,48 +7,50 @@ import 'package:flutter/services.dart';
 class VPNCheck {
   static const MethodChannel _channel = MethodChannel('device_safety_info');
 
-  // Singleton Part
-  // Creates or retrieves an instance of the VPNDetector.
   factory VPNCheck() {
     _instance ??= VPNCheck._private();
     return _instance!;
   }
 
   VPNCheck._private() {
-    _streamSubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) async {
-      await _checkVPNStatus();
-    });
+    _streamSubscription = Connectivity().onConnectivityChanged.listen(
+          (_) async => _checkVPNStatus(),
+        );
+    // Emit initial state immediately so listeners receive a value
+    // without waiting for the next connectivity change event.
+    _checkVPNStatus();
   }
 
-  final StreamController<VPNState> _streamController = StreamController.broadcast();
+  // StreamController.broadcast() already produces a broadcast stream —
+  // no second .asBroadcastStream() call needed.
+  final StreamController<VPNState> _streamController =
+      StreamController.broadcast();
   StreamSubscription<List<ConnectivityResult>>? _streamSubscription;
 
-  //check weather VPN connection
-  static Future<bool> isVPNActive() async {
-    return isVPNCheck;
-  }
-
-  static Future<bool> get isVPNCheck async {
-    final bool isVPNCheck = await _channel.invokeMethod('isVPNCheck');
-    return isVPNCheck;
-  }
-
-  // singleton instance
   static VPNCheck? _instance;
 
-  // get VPN state
-  Stream<VPNState> get vpnState => _streamController.stream.asBroadcastStream();
-
-  Future<void> _checkVPNStatus() async {
-    final currentVpnStatus = await isVPNActive();
-    if (currentVpnStatus) {
-      _streamController.add(VPNState.connectedState);
-    } else {
-      _streamController.add(VPNState.disconnectedState);
+  // Returns true if a VPN connection is currently active.
+  static Future<bool> get isVpnActive async {
+    try {
+      final bool result = await _channel.invokeMethod<bool>('isVPNCheck') ?? false;
+      return result;
+    } on PlatformException {
+      return false;
     }
   }
 
-  // dispose all streams
+  @Deprecated('Use isVpnActive instead')
+  static Future<bool> isVPNActive() => isVpnActive;
+
+  // Emits VPNState whenever the network connectivity changes.
+  Stream<VPNState> get vpnState => _streamController.stream;
+
+  Future<void> _checkVPNStatus() async {
+    final active = await isVpnActive;
+    _streamController
+        .add(active ? VPNState.connectedState : VPNState.disconnectedState);
+  }
+
   void dispose() {
     _streamController.close();
     _streamSubscription?.cancel();

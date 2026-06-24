@@ -35,8 +35,9 @@ object RealDeviceCheck {
 
         // A list of common patterns found in emulator properties.
         val emulatorIndicators = listOf(
-            "generic", "unknown", "google_sdk", "sdk", "emulator",
-            "android sdk built for x86", "genymotion", "vbox", "nox"
+            "generic", "unknown", "google_sdk", "emulator",
+            "android sdk built for x86", "genymotion", "vbox", "nox", "vbox86p",
+            "sdk_gphone", "sdk_google", "google_sdk"
         )
 
         // Return true only if none of the properties contain an emulator indicator.

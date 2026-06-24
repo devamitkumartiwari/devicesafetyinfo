@@ -32,7 +32,7 @@ class VPNCheck {
   // Returns true if a VPN connection is currently active.
   static Future<bool> get isVpnActive async {
     try {
-      final bool result = await _channel.invokeMethod('isVPNCheck');
+      final bool result = await _channel.invokeMethod<bool>('isVPNCheck') ?? false;
       return result;
     } on PlatformException {
       return false;

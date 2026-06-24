@@ -43,6 +43,18 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private var context: Context? = null
     private var activity: Activity? = null
 
+    // Background thread pool for checks that spawn shell processes (isRootedDevice,
+    // isHooked). Two threads is enough for the two checks that can be in-flight
+    // simultaneously. Delivering results on mainHandler satisfies Flutter's threading contract.
+    private val bgExecutor = Executors.newFixedThreadPool(2)
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    // 30-second TTL cache for expensive security checks. Security state doesn't change
+    // mid-session on real devices; the short TTL still catches dynamic Frida attachment.
+    @Volatile private var cachedRooted: Pair<Boolean, Long>? = null
+    @Volatile private var cachedHooked: Pair<Boolean, Long>? = null
+    private val cacheTtlMs = 30_000L
+
     // --- Screen capture stream ---
     private var screenCaptureEventSink: EventChannel.EventSink? = null
     private var displayManager: DisplayManager? = null
@@ -52,6 +64,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private var screenshotEventSink: EventChannel.EventSink? = null
     private var screenshotContentObserver: ContentObserver? = null
     private var api34ScreenshotCallback: Any? = null  // Activity.ScreenshotCallback (API 34+)
+    private var api34Executor: java.util.concurrent.ExecutorService? = null
 
     // --- Recents overlay ---
     private var recentsOverlayCallbacks: Application.ActivityLifecycleCallbacks? = null
@@ -101,14 +114,38 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "isScreenCaptured" -> result.success(context?.let { ScreenCaptureDetector(it).isScreenBeingCaptured() })
             "isDebuggerAttached" -> result.success(android.os.Debug.isDebuggerConnected())
             "isRootedDevice" -> {
-                val isRooted = RootedDeviceCheck.isRootedDevice()
-                result.success(isRooted)
-                if (isRooted) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
+                val now = System.currentTimeMillis()
+                val cached = cachedRooted
+                if (cached != null && (now - cached.second) < cacheTtlMs) {
+                    result.success(cached.first)
+                    if (cached.first) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
+                    return
+                }
+                bgExecutor.execute {
+                    val isRooted = RootedDeviceCheck.isRootedDevice()
+                    cachedRooted = Pair(isRooted, System.currentTimeMillis())
+                    mainHandler.post {
+                        result.success(isRooted)
+                        if (isRooted) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
+                    }
+                }
             }
             "isHooked" -> {
-                val isHooked = HookDetector.check()
-                result.success(isHooked)
-                if (isHooked) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
+                val now = System.currentTimeMillis()
+                val cached = cachedHooked
+                if (cached != null && (now - cached.second) < cacheTtlMs) {
+                    result.success(cached.first)
+                    if (cached.first) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
+                    return
+                }
+                bgExecutor.execute {
+                    val isHooked = HookDetector.check()
+                    cachedHooked = Pair(isHooked, System.currentTimeMillis())
+                    mainHandler.post {
+                        result.success(isHooked)
+                        if (isHooked) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
+                    }
+                }
             }
             "blockScreenShots" -> {
                 val block = call.argument<Boolean>("block") ?: false
@@ -168,7 +205,15 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private val screenshotStreamHandler = object : EventChannel.StreamHandler {
         override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
             screenshotEventSink = events
-            startScreenshotDetection()
+            try {
+                startScreenshotDetection()
+            } catch (e: SecurityException) {
+                // DETECT_SCREEN_CAPTURE not granted (e.g. missing from manifest on API 34+).
+                // Deliver as stream error so the Dart onError handler catches it instead
+                // of propagating through FlutterError and failing the test framework.
+                events?.error("permission_denied", e.message, null)
+                screenshotEventSink = null
+            }
         }
 
         override fun onCancel(arguments: Any?) {
@@ -188,11 +233,12 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     @Suppress("NewApi")
     private fun startApi34ScreenshotDetection() {
         val act = activity ?: return
-        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        api34Executor?.shutdown()
+        api34Executor = Executors.newSingleThreadExecutor()
         val callback = android.app.Activity.ScreenCaptureCallback {
             screenshotEventSink?.success(null)
         }
-        act.registerScreenCaptureCallback(executor, callback)
+        act.registerScreenCaptureCallback(api34Executor!!, callback)
         api34ScreenshotCallback = callback
     }
 
@@ -241,6 +287,8 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
             api34ScreenshotCallback = null
         }
+        api34Executor?.shutdown()
+        api34Executor = null
     }
 
     // --- Recents overlay ---
@@ -297,6 +345,9 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     // --- Engine detach cleanup ---
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        cachedRooted = null
+        cachedHooked = null
+        bgExecutor.shutdown()
         channel.setMethodCallHandler(null)
         displayListener?.let { displayManager?.unregisterDisplayListener(it) }
         displayListener = null

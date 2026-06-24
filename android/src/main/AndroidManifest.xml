@@ -1,3 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required on Android 14+ (API 34+) for Activity.registerScreenCaptureCallback().
+         Protection level: normal — auto-granted at install, no runtime prompt. -->
+    <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
 </manifest>

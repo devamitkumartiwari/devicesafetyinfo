@@ -99,27 +99,29 @@ class NewVersionChecker {
       return null;
     }
     final jsonObj = json.decode(response.body);
-    final List results = jsonObj['results'];
+    final List<dynamic> results = jsonObj['results'] as List<dynamic>;
     if (results.isEmpty) {
       debugPrint('Can\'t find an app in the App Store with the id: $id');
       return null;
     }
+    final firstResult = results[0] as Map<String, dynamic>;
     return VersionStatus._(
       localVersion: _getCleanVersion(packageInfo.version),
       storeVersion:
-          _getCleanVersion(forceAppVersion ?? jsonObj['results'][0]['version']),
-      originalStoreVersion: forceAppVersion ?? jsonObj['results'][0]['version'],
-      appStoreLink: jsonObj['results'][0]['trackViewUrl'],
+          _getCleanVersion(forceAppVersion ?? firstResult['version'] as String),
+      originalStoreVersion: forceAppVersion ?? firstResult['version'] as String?,
+      appStoreLink: firstResult['trackViewUrl'] as String?,
     );
   }
 
-  Future<VersionStatus> _getAndroidStoreVersion(PackageInfo packageInfo) async {
+  Future<VersionStatus?> _getAndroidStoreVersion(PackageInfo packageInfo) async {
     final id = androidId ?? packageInfo.packageName;
     final uri = Uri.https("play.google.com", "/store/apps/details",
         {"id": id.toString(), "hl": androidPlayStoreCountry ?? "en_US"});
     final response = await http.get(uri);
     if (response.statusCode != 200) {
-      throw Exception("Invalid response code: ${response.statusCode}");
+      debugPrint('Failed to query Android Play Store: ${response.statusCode}');
+      return null;
     }
 
     final regexp =

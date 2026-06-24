@@ -1,3 +1,14 @@
+## 1.2.0
+* **Fix (Android — ANR):** `isRootedDevice` and `isHooked` now run on a background thread pool — eliminates main-thread shell spawning and ANR risk.
+* **Fix (Android — Performance):** `SystemPropsChecker` now reads system properties via `android.os.SystemProperties` reflection (zero-cost cache read) before falling back to `getprop` shell spawn — worst-case latency for 4 property checks drops from ~800 ms to near-zero.
+* **Fix (Android):** `ShellExecutor` migrated from `Runtime.exec()` to `ProcessBuilder` — stdout is now drained concurrently with `waitFor`, eliminating a race condition where `readLine()` blocked after the timeout expired.
+* **Fix (Android):** API-34 `ScreenCaptureCallback` executor was never shut down on `stopScreenshotDetection()` — fixed resource leak.
+* **New (Android):** 30-second TTL result cache for `isRootedDevice` and `isHooked` — repeated polls within the window return immediately without spawning any processes.
+* **Dependency (Android):** Kotlin updated `1.9.22` → `2.2.0`; Android Gradle Plugin `8.2.2` → `8.12.1`.
+* **Dependency (iOS SPM):** `swift-tools-version` bumped `5.9` → `6.0` (compiles in Swift 5 language mode — no source changes needed).
+* **Dependency (iOS SPM):** IOSSecuritySuite minimum version raised from `1.9.0` to `1.9.11`.
+* **Dependency (Dart):** Dart SDK floor raised to `>=3.5.0`; Flutter floor raised to `>=3.24.0` — this also fixes the "Swift Package Manager not supported" flag on pub.dev (pub.dev requires Flutter ≥ 3.19.0 to recognise SPM support). `flutter_lints` pinned to `^6.0.0`.
+
 ## 1.1.0
 * **New:** `onScreenshotTaken` stream — fires when the user takes a screenshot. Android API 34+: uses `Activity.ScreenshotCallback` (no permission needed). Android API 24–33: uses `MediaStore` `ContentObserver` (host app must hold `READ_MEDIA_IMAGES` at runtime). iOS: `UIApplication.userDidTakeScreenshotNotification` (no permission needed).
 * **New:** `setRecentsOverlay({int argbColor})` — shows a solid-color overlay over the app thumbnail in the recent-apps switcher. Automatically shown on background, hidden on foreground. Android + iOS.

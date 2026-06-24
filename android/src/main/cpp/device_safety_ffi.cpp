@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <sys/select.h>
+#include <poll.h>
 
 extern "C" {
 
@@ -23,6 +23,7 @@ static int32_t check_frida_ports() {
         if (sock == -1) continue;
 
         int flags = fcntl(sock, F_GETFL, 0);
+        if (flags == -1) flags = 0;
         fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
         struct sockaddr_in addr = {};
@@ -37,11 +38,12 @@ static int32_t check_frida_ports() {
         }
 
         if (errno == EINPROGRESS) {
-            fd_set wset;
-            FD_ZERO(&wset);
-            FD_SET(sock, &wset);
-            struct timeval tv = {0, 50000}; // 50 ms
-            if (select(sock + 1, nullptr, &wset, nullptr, &tv) > 0) {
+            // poll() has no FD_SETSIZE limit, unlike select() + FD_SET which
+            // overflows and crashes (SIGABRT via FORTIFY) when sock >= 1024.
+            struct pollfd pfd = {};
+            pfd.fd = sock;
+            pfd.events = POLLOUT;
+            if (poll(&pfd, 1, 50) > 0) { // 50 ms
                 int err = 0;
                 socklen_t len = sizeof(err);
                 getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len);

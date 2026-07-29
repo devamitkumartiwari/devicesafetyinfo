@@ -2,6 +2,7 @@ package com.devamitkumartiwari.device_safety_info
 
 import android.app.Activity
 import android.app.Application
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
@@ -14,9 +15,14 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.view.View
 import android.view.ViewGroup
+import com.devamitkumartiwari.device_safety_info.accessibility.AccessibilityAbuseDetector
+import com.devamitkumartiwari.device_safety_info.clipboard.ClipboardProtectionManager
 import com.devamitkumartiwari.device_safety_info.developmentmode.DevelopmentModeCheck
 import com.devamitkumartiwari.device_safety_info.externalstorage.ExternalStorageCheck
 import com.devamitkumartiwari.device_safety_info.hooks.HookDetector
+import com.devamitkumartiwari.device_safety_info.malware.MalwarePackageDetector
+import com.devamitkumartiwari.device_safety_info.overlay.OverlayAttackDetector
+import com.devamitkumartiwari.device_safety_info.playprotect.PlayProtectStatusCheck
 import com.devamitkumartiwari.device_safety_info.realdevice.RealDeviceCheck
 import com.devamitkumartiwari.device_safety_info.rooted.RootedDeviceCheck
 import com.devamitkumartiwari.device_safety_info.screencapturedetector.ScreenCaptureDetector
@@ -69,33 +75,53 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     // --- Recents overlay ---
     private var recentsOverlayCallbacks: Application.ActivityLifecycleCallbacks? = null
 
+    // --- Overlay attack detection ---
+    private var overlayEventSink: EventChannel.EventSink? = null
+    private var overlayDetector: OverlayAttackDetector? = null
+
+    // --- Clipboard protection ---
+    private var clipboardProtectionManager: ClipboardProtectionManager? = null
+    private var clipboardEventSink: EventChannel.EventSink? = null
+    private var clipboardChangeListener: ClipboardManager.OnPrimaryClipChangedListener? = null
+
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
         channel = MethodChannel(binding.binaryMessenger, "device_safety_info")
         channel.setMethodCallHandler(this)
 
         displayManager = context?.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        clipboardProtectionManager = ClipboardProtectionManager(context!!)
 
         EventChannel(binding.binaryMessenger, "device_safety_info/screen_capture_events")
             .setStreamHandler(screenCaptureStreamHandler)
 
         EventChannel(binding.binaryMessenger, "device_safety_info/screenshot_events")
             .setStreamHandler(screenshotStreamHandler)
+
+        EventChannel(binding.binaryMessenger, "device_safety_info/overlay_events")
+            .setStreamHandler(overlayStreamHandler)
+
+        EventChannel(binding.binaryMessenger, "device_safety_info/clipboard_events")
+            .setStreamHandler(clipboardStreamHandler)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
+        if (overlayEventSink != null) installOverlayDetector(activity!!)
     }
 
     override fun onDetachedFromActivity() {
+        activity?.let { uninstallOverlayDetector(it) }
         activity = null
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
+        if (overlayEventSink != null) installOverlayDetector(activity!!)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
+        activity?.let { uninstallOverlayDetector(it) }
         activity = null
     }
 
@@ -167,6 +193,41 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "clearRecentsOverlay" -> {
                 clearRecentsOverlay()
                 result.success(null)
+            }
+            "blockTouchesWhenObscured" -> {
+                val block = call.argument<Boolean>("block") ?: true
+                val act = activity ?: run { result.error("NO_ACTIVITY", "Activity not attached", null); return }
+                act.window.decorView.filterTouchesWhenObscured = block
+                result.success(null)
+            }
+            "copyToClipboard" -> {
+                val text = call.argument<String>("text") ?: ""
+                val sensitive = call.argument<Boolean>("sensitive") ?: true
+                val autoClearMillis = call.argument<Int>("autoClearMillis")?.toLong()
+                clipboardProtectionManager?.copyToClipboard(text, sensitive, autoClearMillis, mainHandler)
+                result.success(null)
+            }
+            "clearClipboard" -> {
+                clipboardProtectionManager?.clearClipboard()
+                result.success(null)
+            }
+            "isPackageInstalled" -> {
+                val packageName = call.argument<String>("packageName")
+                if (packageName.isNullOrEmpty()) {
+                    result.success(false)
+                } else {
+                    result.success(context?.let {
+                        MalwarePackageDetector.isPackageInstalled(it, packageName)
+                    } ?: false)
+                }
+            }
+            "getEnabledAccessibilityServices" -> {
+                result.success(context?.let {
+                    AccessibilityAbuseDetector.getEnabledAccessibilityServices(it)
+                } ?: emptyList<String>())
+            }
+            "getPlayProtectStatus" -> {
+                result.success(context?.let { PlayProtectStatusCheck.getStatus(it) } ?: 0)
             }
             else -> result.notImplemented()
         }
@@ -342,6 +403,51 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         decor.findViewWithTag<View>("dsi_overlay")?.let { decor.removeView(it) }
     }
 
+    // --- Overlay attack detection stream handler ---
+
+    private val overlayStreamHandler = object : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            overlayEventSink = events
+            activity?.let { installOverlayDetector(it) }
+        }
+
+        override fun onCancel(arguments: Any?) {
+            overlayEventSink = null
+            activity?.let { uninstallOverlayDetector(it) }
+        }
+    }
+
+    private fun installOverlayDetector(act: Activity) {
+        if (overlayDetector != null) return
+        overlayDetector = OverlayAttackDetector.install(act) {
+            overlayEventSink?.success(null)
+        }
+    }
+
+    private fun uninstallOverlayDetector(act: Activity) {
+        overlayDetector?.let { OverlayAttackDetector.uninstall(act, it) }
+        overlayDetector = null
+    }
+
+    // --- Clipboard protection stream handler ---
+
+    private val clipboardStreamHandler = object : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            clipboardEventSink = events
+            val listener = ClipboardManager.OnPrimaryClipChangedListener {
+                clipboardEventSink?.success(null)
+            }
+            clipboardChangeListener = listener
+            clipboardProtectionManager?.addChangeListener(listener)
+        }
+
+        override fun onCancel(arguments: Any?) {
+            clipboardChangeListener?.let { clipboardProtectionManager?.removeChangeListener(it) }
+            clipboardChangeListener = null
+            clipboardEventSink = null
+        }
+    }
+
     // --- Engine detach cleanup ---
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -355,6 +461,12 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         stopScreenshotDetection()
         screenshotEventSink = null
         clearRecentsOverlay()
+        activity?.let { uninstallOverlayDetector(it) }
+        overlayEventSink = null
+        clipboardChangeListener?.let { clipboardProtectionManager?.removeChangeListener(it) }
+        clipboardChangeListener = null
+        clipboardEventSink = null
+        clipboardProtectionManager = null
     }
 
     // --- Helpers ---

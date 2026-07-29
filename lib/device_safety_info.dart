@@ -8,10 +8,19 @@ import 'package:flutter/services.dart';
 
 import 'src/ffi/device_safety_ffi.dart';
 
+export 'idle_timeout_guard.dart';
+export 'ioc_domain_blocker.dart';
+export 'malware_package_detector.dart';
 export 'new_version_check.dart';
+export 'risk_summary.dart';
 export 'screen_capture_check.dart';
 export 'vpn_check.dart';
 export 'vpn_state.dart';
+
+// The state of Google Play Protect, read from the OS setting its toggle controls. There is no
+// public "Play Protect API" — SafetyNet's Verify Apps API, which used to expose this, was fully
+// retired in January 2025. Android only; always [unknown] on iOS.
+enum PlayProtectStatus { enabled, disabled, unknown }
 
 class DeviceSafetyInfo {
   static const MethodChannel channel = MethodChannel('device_safety_info');
@@ -19,9 +28,15 @@ class DeviceSafetyInfo {
       EventChannel('device_safety_info/screen_capture_events');
   static const EventChannel _screenshotChannel =
       EventChannel('device_safety_info/screenshot_events');
+  static const EventChannel _overlayChannel =
+      EventChannel('device_safety_info/overlay_events');
+  static const EventChannel _clipboardChannel =
+      EventChannel('device_safety_info/clipboard_events');
 
   static Stream<bool>? _onScreenCapturedChanged;
   static Stream<void>? _onScreenshotTaken;
+  static Stream<void>? _onOverlayAttackDetected;
+  static Stream<void>? _onClipboardChanged;
 
   // Returns true if the application is running on external storage, false otherwise.
   // Android only.
@@ -203,5 +218,98 @@ class DeviceSafetyInfo {
         debugPrint("Failed to set app recents visibility: '${e.message}'");
       }
     }
+  }
+
+  // Fires whenever a touch is delivered while this app's window is obscured (or partially
+  // obscured) by another app's overlay — tapjacking / overlay-phishing detection.
+  // Android only. iOS app sandboxing makes cross-app overlays structurally impossible, so
+  // listening on iOS throws a PlatformException('UNSUPPORTED_PLATFORM', ...) instead of
+  // silently staying quiet — a silent stream here would look identical to "checked, no attack
+  // found", which would be misleading for a feature that can't actually run on that platform.
+  static Stream<void> get onOverlayAttackDetected {
+    _onOverlayAttackDetected ??=
+        _overlayChannel.receiveBroadcastStream().map<void>((_) {});
+    return _onOverlayAttackDetected!;
+  }
+
+  // Drops touches delivered while the window is obscured by another app's overlay — the
+  // OS-level protect counterpart to [onOverlayAttackDetected], same detect+protect pairing as
+  // [blockScreenshots] for screenshots. Android only; throws on iOS for the same reason as
+  // [onOverlayAttackDetected].
+  static Future<void> blockTouchesWhenObscured({bool block = true}) async {
+    await channel.invokeMethod('blockTouchesWhenObscured', {'block': block});
+  }
+
+  // Copies [text] to the system clipboard. When [sensitive] is true (the default), the OS is
+  // asked to treat the content as sensitive: Android hides it from the system clipboard preview
+  // UI (API 33+; a documented no-op below that) and iOS marks the pasteboard item local-only.
+  // When [autoClear] is set, the clipboard is automatically overwritten with empty content
+  // after that duration. Android + iOS.
+  static Future<void> copyToClipboard(
+    String text, {
+    bool sensitive = true,
+    Duration? autoClear,
+  }) async {
+    try {
+      await channel.invokeMethod('copyToClipboard', {
+        'text': text,
+        'sensitive': sensitive,
+        'autoClearMillis': autoClear?.inMilliseconds,
+      });
+    } on PlatformException catch (e) {
+      debugPrint("Failed to copy to clipboard: '${e.message}'");
+    }
+  }
+
+  // Immediately clears the system clipboard. Android + iOS.
+  static Future<void> clearClipboard() async {
+    try {
+      await channel.invokeMethod('clearClipboard');
+    } on PlatformException catch (e) {
+      debugPrint("Failed to clear clipboard: '${e.message}'");
+    }
+  }
+
+  // Fires whenever the system clipboard's contents change, from any app (not just this one).
+  // Android + iOS.
+  static Stream<void> get onClipboardChanged {
+    _onClipboardChanged ??=
+        _clipboardChannel.receiveBroadcastStream().map<void>((_) {});
+    return _onClipboardChanged!;
+  }
+
+  // Returns the raw component names of currently-enabled Accessibility services. Malware that
+  // abuses the Accessibility API (to read screen content or auto-click for the user) shows up
+  // here the same way a legitimate screen reader would — distinguishing malicious from
+  // legitimate services against your own known-good/known-bad list is left to the caller.
+  // Android only; always empty on iOS (no public API to enumerate this there).
+  static Future<List<String>> get enabledAccessibilityServices async {
+    if (!kIsWeb && Platform.isAndroid) {
+      final result = await channel
+          .invokeMethod<List<Object?>>('getEnabledAccessibilityServices');
+      return result?.cast<String>() ?? const [];
+    }
+    return const [];
+  }
+
+  // Returns true if at least one Accessibility service is currently enabled. Android only.
+  static Future<bool> get isAnyAccessibilityServiceEnabled async =>
+      (await enabledAccessibilityServices).isNotEmpty;
+
+  // Returns the current Google Play Protect status. Android only; always [PlayProtectStatus.unknown]
+  // on iOS. See [PlayProtectStatus] doc comment for the caveat on how this is read.
+  static Future<PlayProtectStatus> get playProtectStatus async {
+    if (!kIsWeb && Platform.isAndroid) {
+      final raw = await channel.invokeMethod<int>('getPlayProtectStatus');
+      switch (raw) {
+        case 1:
+          return PlayProtectStatus.enabled;
+        case -1:
+          return PlayProtectStatus.disabled;
+        default:
+          return PlayProtectStatus.unknown;
+      }
+    }
+    return PlayProtectStatus.unknown;
   }
 }

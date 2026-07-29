@@ -35,6 +35,16 @@ void main() {
             return false;
           case 'isDebuggerAttached':
             return false;
+          case 'copyToClipboard':
+          case 'clearClipboard':
+          case 'blockTouchesWhenObscured':
+            return null;
+          case 'isPackageInstalled':
+            return false;
+          case 'getEnabledAccessibilityServices':
+            return <String>[];
+          case 'getPlayProtectStatus':
+            return 0;
           default:
             return null;
         }
@@ -69,6 +79,107 @@ void main() {
     test('isDebuggerAttached returns false from mock', () async {
       expect(await DeviceSafetyInfo.isDebuggerAttached, false);
     });
+
+    test('copyToClipboard invokes the channel with the given text', () async {
+      await DeviceSafetyInfo.copyToClipboard('secret', sensitive: true);
+      expect(calls.single.method, 'copyToClipboard');
+      expect(calls.single.arguments['text'], 'secret');
+      expect(calls.single.arguments['sensitive'], true);
+      expect(calls.single.arguments['autoClearMillis'], isNull);
+    });
+
+    test('copyToClipboard passes autoClear as milliseconds', () async {
+      await DeviceSafetyInfo.copyToClipboard('otp',
+          autoClear: const Duration(seconds: 30));
+      expect(calls.single.arguments['autoClearMillis'], 30000);
+    });
+
+    test('clearClipboard invokes the channel', () async {
+      await DeviceSafetyInfo.clearClipboard();
+      expect(calls.single.method, 'clearClipboard');
+    });
+
+    // These getters are Android-gated (Platform.isAndroid), so on the host platform this test
+    // suite runs under, they resolve to their safe default without ever reaching the mocked
+    // channel — this exercises exactly the behavior a non-Android platform (iOS) sees.
+    test('enabledAccessibilityServices is empty off-Android', () async {
+      expect(await DeviceSafetyInfo.enabledAccessibilityServices, isEmpty);
+    });
+
+    test('isAnyAccessibilityServiceEnabled is false off-Android', () async {
+      expect(await DeviceSafetyInfo.isAnyAccessibilityServiceEnabled, false);
+    });
+
+    test('playProtectStatus is unknown off-Android', () async {
+      expect(await DeviceSafetyInfo.playProtectStatus, PlayProtectStatus.unknown);
+    });
+
+    test('MalwarePackageDetector.isPackageInstalled is false off-Android', () async {
+      expect(
+          await MalwarePackageDetector.isPackageInstalled('com.example.app'),
+          false);
+    });
+  });
+
+  group('RiskSummary.evaluate', () {
+    const channel = MethodChannel('device_safety_info');
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    Future<void> mockChecks({
+      bool rooted = false,
+      bool hooked = false,
+      bool debugger = false,
+      bool screenCaptured = false,
+      bool vpn = false,
+      bool screenLock = true,
+    }) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        switch (call.method) {
+          case 'isRootedDevice':
+            return rooted;
+          case 'isHooked':
+            return hooked;
+          case 'isDebuggerAttached':
+            return debugger;
+          case 'isScreenCaptured':
+            return screenCaptured;
+          case 'isVPNCheck':
+            return vpn;
+          case 'isScreenLock':
+            return screenLock;
+          default:
+            return null;
+        }
+      });
+    }
+
+    test('returns no flags when every check is clean', () async {
+      await mockChecks();
+      expect(await RiskSummary.evaluate(), isEmpty);
+    });
+
+    test('flags a rooted device and a missing screen lock', () async {
+      await mockChecks(rooted: true, screenLock: false);
+      final flags = await RiskSummary.evaluate();
+      expect(flags.map((f) => f.id).toSet(), {'rooted', 'no_screen_lock'});
+    });
+
+    test('flags hooking, debugger, screen capture, and VPN independently', () async {
+      await mockChecks(
+        hooked: true,
+        debugger: true,
+        screenCaptured: true,
+        vpn: true,
+      );
+      final flags = await RiskSummary.evaluate();
+      expect(flags.map((f) => f.id).toSet(),
+          {'hooked', 'debugger', 'screen_captured', 'vpn'});
+    });
   });
 
   group('VersionStatus.canUpdate', () {
@@ -99,6 +210,46 @@ void main() {
     test('handles store having more version segments than local', () {
       final s = VersionStatus(localVersion: '1.0', storeVersion: '1.0.1');
       expect(s.canUpdate, true);
+    });
+  });
+
+  group('IOCDomainBlocker', () {
+    setUp(() => IOCDomainBlocker.updateBlocklist([]));
+
+    test('isBlocked is false with an empty blocklist', () {
+      expect(IOCDomainBlocker.isBlocked('evil.com'), false);
+    });
+
+    test('exact-match entries block only that domain', () {
+      IOCDomainBlocker.updateBlocklist(['evil.com']);
+      expect(IOCDomainBlocker.isBlocked('evil.com'), true);
+      expect(IOCDomainBlocker.isBlocked('sub.evil.com'), false);
+      expect(IOCDomainBlocker.isBlocked('notevil.com'), false);
+    });
+
+    test('wildcard entries block subdomains but not the bare domain', () {
+      IOCDomainBlocker.updateBlocklist(['*.evil.com']);
+      expect(IOCDomainBlocker.isBlocked('a.evil.com'), true);
+      expect(IOCDomainBlocker.isBlocked('a.b.evil.com'), true);
+      expect(IOCDomainBlocker.isBlocked('evil.com'), false);
+    });
+
+    test('matching is case-insensitive', () {
+      IOCDomainBlocker.updateBlocklist(['Evil.COM']);
+      expect(IOCDomainBlocker.isBlocked('evil.com'), true);
+      expect(IOCDomainBlocker.isBlocked('EVIL.com'), true);
+    });
+
+    test('updateBlocklist replaces the previous list, not merges', () {
+      IOCDomainBlocker.updateBlocklist(['evil.com']);
+      IOCDomainBlocker.updateBlocklist(['other.com']);
+      expect(IOCDomainBlocker.isBlocked('evil.com'), false);
+      expect(IOCDomainBlocker.isBlocked('other.com'), true);
+    });
+
+    test('blank entries are ignored', () {
+      IOCDomainBlocker.updateBlocklist(['', '  ', 'evil.com']);
+      expect(IOCDomainBlocker.isBlocked('evil.com'), true);
     });
   });
 }

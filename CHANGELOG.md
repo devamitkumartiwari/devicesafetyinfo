@@ -1,3 +1,39 @@
+## 1.3.0
+* **Fix (Android — 16 KB page size):** `libdevice_safety_ffi.so` is now linked with
+  `-Wl,-z,max-page-size=16384` / `common-page-size=16384`, fixing Google Play Console's "native library
+  not 16 KB compatible" warning for `arm64-v8a` and `x86_64`.
+* **Fix (Android — build):** the plugin module now declares its own self-contained `buildscript`
+  classpath and explicitly applies the Kotlin Android Gradle plugin, instead of relying on transitive
+  application via Flutter's Gradle plugin — that assumption didn't hold under all AGP/Gradle
+  declarative-`plugins{}` configurations, causing Kotlin sources to silently not compile and
+  `cannot find symbol DeviceSafetyInfoPlugin` build failures (#14).
+* **New:** Overlay Attack Detection — `onOverlayAttackDetected` stream and `blockTouchesWhenObscured()`
+  detect/block touches delivered while another app is drawing an overlay on top of yours (tapjacking).
+  Android only; throws `PlatformException('UNSUPPORTED_PLATFORM', ...)` on iOS, where app sandboxing
+  makes cross-app overlays structurally impossible.
+* **New:** Clipboard Protection — `copyToClipboard()` (with `sensitive` + `autoClear` options),
+  `clearClipboard()`, and `onClipboardChanged` stream. Android: `ClipDescription.EXTRA_IS_SENSITIVE`
+  (API 33+). iOS: `UIPasteboard` `.expirationDate`/`.localOnly`. Android + iOS.
+* **New:** `IOCDomainBlocker` — lightweight IOC/C2 domain-reputation lookup (`isBlocked`,
+  `updateBlocklist`, `loadRemoteBlocklist`) to wire into your own HTTP client or WebView guard.
+  Pure Dart, no native dependency. Android + iOS.
+* **New:** Malware Package Detection — `MalwarePackageDetector.isPackageInstalled()` /
+  `scanKnownMalware()` check specific package names against a list you supply. Android only.
+  Requires declaring each package name in your app's own `<queries>` manifest block (Android 11+
+  package visibility filtering) — this plugin deliberately doesn't request the broader
+  `QUERY_ALL_PACKAGES` permission, which Google Play gates behind manual approval and would be
+  merged into every app depending on this plugin.
+* **New:** Accessibility Abuse Detection — `DeviceSafetyInfo.enabledAccessibilityServices` /
+  `isAnyAccessibilityServiceEnabled` read `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES`. Android
+  only, no new permission.
+* **New:** Play Protect Status — `DeviceSafetyInfo.playProtectStatus` reads the `package_verifier_user_consent`
+  OS setting Play Protect's toggle controls. Android only, no new permission or dependency. (SafetyNet's
+  Verify Apps API, the old documented way to read this, was fully retired in January 2025.)
+* **New:** Idle Session Timeout — `IdleTimeoutGuard` widget fires a callback after a period of no
+  touch activity anywhere in the wrapped subtree. Pure Dart, no native code, Android + iOS.
+* **New:** Risk Summary — `RiskSummary.evaluate()` aggregates the rooted/hooked/debugger/screen-capture/VPN/
+  screen-lock checks into a list of plain-language `RiskFlag`s. Pure Dart, no new platform channel calls.
+
 ## 1.2.0
 * **Fix (Android — ANR):** `isRootedDevice` and `isHooked` now run on a background thread pool — eliminates main-thread shell spawning and ANR risk.
 * **Fix (Android — Performance):** `SystemPropsChecker` now reads system properties via `android.os.SystemProperties` reflection (zero-cost cache read) before falling back to `getprop` shell spawn — worst-case latency for 4 property checks drops from ~800 ms to near-zero.

@@ -43,5 +43,9 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Demo packages for MalwarePackageDetector — one guaranteed present on every AOSP
+             device (Settings), one guaranteed absent, to demonstrate both outcomes. -->
+        <package android:name="com.android.settings" />
+        <package android:name="com.example.known.malware" />
     </queries>
 </manifest>

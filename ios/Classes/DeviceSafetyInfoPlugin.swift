@@ -3,6 +3,7 @@ import UIKit
 import IOSSecuritySuite
 import LocalAuthentication
 import Foundation
+import MobileCoreServices
 
 // Direct reference to the C-level debugger check compiled from DeviceSafetyFfi.c.
 // Using @_silgen_name avoids the need for a bridging header (required for SPM).
@@ -40,6 +41,56 @@ private class ScreenshotEventStreamHandler: NSObject, FlutterStreamHandler {
     }
 }
 
+// Separate stream handler for clipboard change events.
+private class ClipboardEventStreamHandler: NSObject, FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onClipboardChanged),
+            name: UIPasteboard.changedNotification,
+            object: nil
+        )
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        NotificationCenter.default.removeObserver(
+            self, name: UIPasteboard.changedNotification, object: nil)
+        eventSink = nil
+        return nil
+    }
+
+    @objc private func onClipboardChanged() {
+        eventSink?(nil)
+    }
+}
+
+// Overlay attack detection is structurally impossible on iOS: app sandboxing means no other
+// app can ever draw over this app's window (unlike Android's SYSTEM_ALERT_WINDOW). Rather than
+// silently returning a default that implies "checked, all clear", calls throw so callers don't
+// mistake platform inapplicability for a clean security check.
+private let unsupportedOverlayError = FlutterError(
+    code: "UNSUPPORTED_PLATFORM",
+    message: "Overlay attack detection is not applicable on iOS: app sandboxing makes cross-app overlays structurally impossible.",
+    details: nil
+)
+
+// Without a registered stream handler at all, a Dart .listen() on this channel would hang
+// forever with no reply rather than erroring — this makes the unsupported-platform error
+// arrive immediately instead.
+private class UnsupportedOverlayStreamHandler: NSObject, FlutterStreamHandler {
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        return unsupportedOverlayError
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        return nil
+    }
+}
+
 public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     // Set for O(1) prefix-lookup performance
@@ -53,6 +104,10 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     // retains its stream handler and screenshot events keep firing.
     private let screenshotStreamHandler = ScreenshotEventStreamHandler()
 
+    // Kept alive for the lifetime of the plugin instance, same reasoning as screenshotStreamHandler.
+    private let clipboardStreamHandler = ClipboardEventStreamHandler()
+    private let overlayStreamHandler = UnsupportedOverlayStreamHandler()
+
     // --- Screenshot blocking (UITextField isSecureTextEntry layer trick) ---
     private var secureTextField: UITextField?
     private var secureWindowOriginalSuperLayer: CALayer?
@@ -60,6 +115,9 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     // --- Recents overlay ---
     private var recentsOverlayView: UIView?
     private var recentsOverlayColor: UIColor = .black
+
+    // --- Clipboard protection ---
+    private var clipboardAutoClearWorkItem: DispatchWorkItem?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let methodChannel = FlutterMethodChannel(
@@ -76,6 +134,16 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             name: "device_safety_info/screenshot_events",
             binaryMessenger: registrar.messenger())
         screenshotEventChannel.setStreamHandler(instance.screenshotStreamHandler)
+
+        let clipboardEventChannel = FlutterEventChannel(
+            name: "device_safety_info/clipboard_events",
+            binaryMessenger: registrar.messenger())
+        clipboardEventChannel.setStreamHandler(instance.clipboardStreamHandler)
+
+        let overlayEventChannel = FlutterEventChannel(
+            name: "device_safety_info/overlay_events",
+            binaryMessenger: registrar.messenger())
+        overlayEventChannel.setStreamHandler(instance.overlayStreamHandler)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -127,6 +195,18 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         case "clearRecentsOverlay":
             unregisterRecentsOverlayObservers()
             hideRecentsOverlay()
+            result(nil)
+        case "blockTouchesWhenObscured":
+            // Overlay attacks are structurally impossible on iOS (see unsupportedOverlayError).
+            result(unsupportedOverlayError)
+        case "copyToClipboard":
+            let args = call.arguments as? [String: Any]
+            let text = args?["text"] as? String ?? ""
+            let autoClearMillis = args?["autoClearMillis"] as? Int
+            copyToClipboard(text, autoClearMillis: autoClearMillis)
+            result(nil)
+        case "clearClipboard":
+            clearClipboard()
             result(nil)
         default:
             result(FlutterMethodNotImplemented)
@@ -281,6 +361,35 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     @objc private func hideRecentsOverlay() {
         recentsOverlayView?.removeFromSuperview()
         recentsOverlayView = nil
+    }
+
+    // MARK: - Clipboard protection
+    //
+    // UIPasteboard.setItems(_:options:) natively supports .expirationDate and .localOnly —
+    // "sensitive, auto-clearing copy" maps directly onto a first-class OS API here, unlike
+    // Android where EXTRA_IS_SENSITIVE only affects the preview UI (API 33+).
+
+    private func copyToClipboard(_ text: String, autoClearMillis: Int?) {
+        clipboardAutoClearWorkItem?.cancel()
+        clipboardAutoClearWorkItem = nil
+
+        var options: [UIPasteboard.OptionsKey: Any] = [.localOnly: true]
+        if let millis = autoClearMillis {
+            options[.expirationDate] = Date().addingTimeInterval(TimeInterval(millis) / 1000)
+        }
+        UIPasteboard.general.setItems([[kUTTypePlainText as String: text]], options: options)
+
+        if let millis = autoClearMillis {
+            let workItem = DispatchWorkItem { [weak self] in self?.clearClipboard() }
+            clipboardAutoClearWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(millis), execute: workItem)
+        }
+    }
+
+    private func clearClipboard() {
+        clipboardAutoClearWorkItem?.cancel()
+        clipboardAutoClearWorkItem = nil
+        UIPasteboard.general.items = []
     }
 
     // MARK: - Helpers

@@ -1,5 +1,35 @@
+buildscript {
+    val kotlinVersion = "2.2.0"
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.12.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 plugins {
     id("com.android.library")
+}
+
+// Self-contained buildscript classpath above means this doesn't depend on the
+// consuming app having declared org.jetbrains.kotlin.android anywhere — applying
+// it transitively via Flutter's Gradle plugin isn't reliable under every
+// AGP/Gradle declarative plugins{} configuration (see CHANGELOG 1.2.2 / issue #14).
+val agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.substringBefore('.').toInt()
+if (agpMajor < 9) {
+    apply(plugin = "org.jetbrains.kotlin.android")
 }
 
 group = "com.devamitkumartiwari.device_safety_info"
@@ -54,10 +84,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
 
-// KGP is applied transitively by Flutter's dev.flutter.flutter-gradle-plugin.
-// Using the tasks API lets KTS resolve the type from the build classpath without
-// this sub-project applying id("org.jetbrains.kotlin.android") directly.
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension::class.java) {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }

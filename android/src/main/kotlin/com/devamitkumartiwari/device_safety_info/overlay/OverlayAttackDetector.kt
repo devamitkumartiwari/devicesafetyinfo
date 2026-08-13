@@ -6,7 +6,7 @@ import android.view.Window
 
 // Wraps an Activity's Window.Callback to detect touches delivered while the window is
 // obscured (or partially obscured) by another app's overlay — tapjacking / overlay-phishing.
-// MotionEvent.FLAG_WINDOW_IS_OBSCURED / FLAG_WINDOW_IS_PARTIALLY_OBSCURED, per OWASP MASVS.
+// Uses MotionEvent.FLAG_WINDOW_IS_OBSCURED / FLAG_WINDOW_IS_PARTIALLY_OBSCURED.
 class OverlayAttackDetector private constructor(
     private val original: Window.Callback,
     private val onObscuredTouch: () -> Unit,

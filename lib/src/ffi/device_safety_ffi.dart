@@ -33,8 +33,9 @@ class DeviceSafetyFfi {
 
   static _Int32DartFunc? _lookup(String symbol) {
     try {
-      return _openLib()
-          ?.lookupFunction<_Int32NativeFunc, _Int32DartFunc>(symbol);
+      return _openLib()?.lookupFunction<_Int32NativeFunc, _Int32DartFunc>(
+        symbol,
+      );
     } catch (_) {
       return null;
     }

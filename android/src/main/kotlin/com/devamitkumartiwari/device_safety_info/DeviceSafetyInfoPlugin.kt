@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.hardware.display.DisplayManager
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -16,11 +17,15 @@ import android.provider.MediaStore
 import android.view.View
 import android.view.ViewGroup
 import com.devamitkumartiwari.device_safety_info.accessibility.AccessibilityAbuseDetector
+import com.devamitkumartiwari.device_safety_info.callactivity.CallActivityWatcher
+import com.devamitkumartiwari.device_safety_info.callscreening.CallScreeningRoleCheck
 import com.devamitkumartiwari.device_safety_info.clipboard.ClipboardProtectionManager
+import com.devamitkumartiwari.device_safety_info.connectivity.ConnectivityWatcher
 import com.devamitkumartiwari.device_safety_info.developmentmode.DevelopmentModeCheck
 import com.devamitkumartiwari.device_safety_info.externalstorage.ExternalStorageCheck
 import com.devamitkumartiwari.device_safety_info.hooks.HookDetector
 import com.devamitkumartiwari.device_safety_info.malware.MalwarePackageDetector
+import com.devamitkumartiwari.device_safety_info.notificationlistener.NotificationListenerAbuseDetector
 import com.devamitkumartiwari.device_safety_info.overlay.OverlayAttackDetector
 import com.devamitkumartiwari.device_safety_info.playprotect.PlayProtectStatusCheck
 import com.devamitkumartiwari.device_safety_info.realdevice.RealDeviceCheck
@@ -29,6 +34,7 @@ import com.devamitkumartiwari.device_safety_info.screencapturedetector.ScreenCap
 import com.devamitkumartiwari.device_safety_info.screenlock.ScreenLockCheck
 import com.devamitkumartiwari.device_safety_info.screenshot.RecentsMenuManager
 import com.devamitkumartiwari.device_safety_info.screenshot.ScreenShotManager
+import com.devamitkumartiwari.device_safety_info.sideload.UnknownSourcesCheck
 import com.devamitkumartiwari.device_safety_info.storeinstallcheck.StoreInstallCheck
 import com.devamitkumartiwari.device_safety_info.vpn_check.VpnCheck
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -84,6 +90,18 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private var clipboardEventSink: EventChannel.EventSink? = null
     private var clipboardChangeListener: ClipboardManager.OnPrimaryClipChangedListener? = null
 
+    // --- Connectivity change stream ---
+    private var connectivityEventSink: EventChannel.EventSink? = null
+    private var connectivityCallback: ConnectivityManager.NetworkCallback? = null
+
+    // --- Call activity stream ---
+    private var callActivityEventSink: EventChannel.EventSink? = null
+    private var callActivityTelephonyHandle: CallActivityWatcher.TelephonyHandle? = null
+    private var callActivityAudioHandle: CallActivityWatcher.AudioCallbackHandle? = null
+    private var callActivityPollRunnable: Runnable? = null
+    private var callActivityLastActive = false
+    private var callActivityLastSource: CallActivityWatcher.Source? = null
+
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
         channel = MethodChannel(binding.binaryMessenger, "device_safety_info")
@@ -103,6 +121,12 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         EventChannel(binding.binaryMessenger, "device_safety_info/clipboard_events")
             .setStreamHandler(clipboardStreamHandler)
+
+        EventChannel(binding.binaryMessenger, "device_safety_info/connectivity_events")
+            .setStreamHandler(connectivityStreamHandler)
+
+        EventChannel(binding.binaryMessenger, "device_safety_info/call_activity_events")
+            .setStreamHandler(callActivityStreamHandler)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -228,6 +252,45 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
             "getPlayProtectStatus" -> {
                 result.success(context?.let { PlayProtectStatusCheck.getStatus(it) } ?: 0)
+            }
+            "getPackageInfo" -> {
+                val ctx = context ?: run { result.error("NO_CONTEXT", "Application context not attached", null); return }
+                try {
+                    val pInfo = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+                    result.success(mapOf(
+                        "packageName" to ctx.packageName,
+                        "version" to (pInfo.versionName ?: "0.0.0")
+                    ))
+                } catch (e: Exception) {
+                    result.error("PACKAGE_INFO_ERROR", e.message, null)
+                }
+            }
+            "getEnabledNotificationListeners" -> {
+                result.success(context?.let {
+                    NotificationListenerAbuseDetector.getEnabledNotificationListeners(it)
+                } ?: emptyList<String>())
+            }
+            "isUnknownSourcesEnabled" -> {
+                result.success(context?.let { UnknownSourcesCheck.isUnknownSourcesEnabled(it) } ?: false)
+            }
+            "isCallScreeningRoleAvailable" -> {
+                result.success(context?.let { CallScreeningRoleCheck.isRoleAvailable(it) } ?: false)
+            }
+            "isCallScreeningRoleHeldByThisApp" -> {
+                result.success(context?.let { CallScreeningRoleCheck.isRoleHeldByThisApp(it) } ?: false)
+            }
+            "openCallScreeningRoleSettings" -> {
+                val act = activity ?: run { result.error("NO_ACTIVITY", "Activity not attached", null); return }
+                val intent = CallScreeningRoleCheck.createRequestRoleIntent(act)
+                if (intent == null) {
+                    result.error("UNSUPPORTED", "ROLE_CALL_SCREENING requires API 29+", null)
+                } else {
+                    act.startActivity(intent)
+                    result.success(null)
+                }
+            }
+            "isCallActive" -> {
+                result.success(context?.let { CallActivityWatcher.isCallActive(it) } ?: false)
             }
             else -> result.notImplemented()
         }
@@ -448,6 +511,97 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
 
+    // --- Connectivity change stream handler ---
+    //
+    // ConnectivityManager.registerNetworkCallback(request, callback) without a Handler
+    // delivers callbacks on a background thread. Since minSdk is 24 but the Handler-accepting
+    // overloads require API 26/28, results are posted through mainHandler before touching the
+    // EventSink, which must only be called on the main thread.
+
+    private val connectivityStreamHandler = object : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            connectivityEventSink = events
+            val ctx = context ?: return
+            connectivityCallback = ConnectivityWatcher.register(ctx) {
+                mainHandler.post { connectivityEventSink?.success(null) }
+            }
+        }
+
+        override fun onCancel(arguments: Any?) {
+            connectivityEventSink = null
+            connectivityCallback?.let { cb -> context?.let { ConnectivityWatcher.unregister(it, cb) } }
+            connectivityCallback = null
+        }
+    }
+
+    // --- Call activity stream handler ---
+    //
+    // Three signal sources (telephony push, audio-config push, and a ~2s audio-mode poll safety
+    // net for transitions the config-list callbacks miss) all funnel into evaluateAndCallActivity,
+    // which diffs against the last-emitted state so near-simultaneous signals for the same call
+    // don't double-fire. Everything here only runs between onListen and onCancel — nothing is
+    // registered merely because the plugin is bundled.
+
+    private val callActivityStreamHandler = object : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            callActivityEventSink = events
+            val ctx = context ?: return
+
+            callActivityTelephonyHandle =
+                CallActivityWatcher.registerTelephony(ctx, mainHandler) { evaluateAndEmitCallActivity() }
+            callActivityAudioHandle =
+                CallActivityWatcher.registerAudioCallbacks(ctx, mainHandler) { evaluateAndEmitCallActivity() }
+
+            val poll = object : Runnable {
+                override fun run() {
+                    evaluateAndEmitCallActivity()
+                    mainHandler.postDelayed(this, 2000L)
+                }
+            }
+            callActivityPollRunnable = poll
+            mainHandler.postDelayed(poll, 2000L)
+
+            evaluateAndEmitCallActivity()
+        }
+
+        override fun onCancel(arguments: Any?) {
+            callActivityEventSink = null
+            CallActivityWatcher.unregisterTelephony(callActivityTelephonyHandle)
+            callActivityTelephonyHandle = null
+            CallActivityWatcher.unregisterAudioCallbacks(callActivityAudioHandle)
+            callActivityAudioHandle = null
+            callActivityPollRunnable?.let { mainHandler.removeCallbacks(it) }
+            callActivityPollRunnable = null
+            callActivityLastActive = false
+            callActivityLastSource = null
+        }
+    }
+
+    private fun evaluateAndEmitCallActivity() {
+        val ctx = context ?: return
+        val source = CallActivityWatcher.currentSource(ctx)
+        val active = source != null
+
+        if (active == callActivityLastActive && source == callActivityLastSource) return
+
+        if (active) {
+            callActivityEventSink?.success(mapOf(
+                "source" to (if (source == CallActivityWatcher.Source.SIM) "simCall" else "voipCall"),
+                "state" to "started",
+                "timestamp" to System.currentTimeMillis()
+            ))
+        } else {
+            callActivityEventSink?.success(mapOf(
+                "source" to (if (callActivityLastSource == CallActivityWatcher.Source.SIM) "simCall" else "voipCall"),
+                "state" to "ended",
+                "timestamp" to System.currentTimeMillis()
+            ))
+        }
+
+        callActivityLastActive = active
+        callActivityLastSource = source
+    }
+
     // --- Engine detach cleanup ---
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -467,6 +621,16 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         clipboardChangeListener = null
         clipboardEventSink = null
         clipboardProtectionManager = null
+        connectivityCallback?.let { cb -> context?.let { ConnectivityWatcher.unregister(it, cb) } }
+        connectivityCallback = null
+        connectivityEventSink = null
+        CallActivityWatcher.unregisterTelephony(callActivityTelephonyHandle)
+        callActivityTelephonyHandle = null
+        CallActivityWatcher.unregisterAudioCallbacks(callActivityAudioHandle)
+        callActivityAudioHandle = null
+        callActivityPollRunnable?.let { mainHandler.removeCallbacks(it) }
+        callActivityPollRunnable = null
+        callActivityEventSink = null
     }
 
     // --- Helpers ---

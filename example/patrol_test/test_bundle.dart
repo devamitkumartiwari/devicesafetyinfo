@@ -13,6 +13,7 @@ import 'actions_test.dart' as actions_test;
 import 'device_checks_test.dart' as device_checks_test;
 import 'stream_test.dart' as stream_test;
 import 'version_check_test.dart' as version_check_test;
+
 // END: GENERATED TEST IMPORTS
 
 Future<void> main() async {
@@ -74,12 +75,12 @@ Future<void> main() async {
     reportGroupStructure(dartTestGroup);
   });
 
-// START: GENERATED TEST GROUPS
+  // START: GENERATED TEST GROUPS
   group('actions_test', actions_test.main);
   group('device_checks_test', device_checks_test.main);
   group('stream_test', stream_test.main);
   group('version_check_test', version_check_test.main);
-// END: GENERATED TEST GROUPS
+  // END: GENERATED TEST GROUPS
 
   final dartTestGroup = await testExplorationCompleter.future;
   final appService = PatrolAppService(topLevelDartTestGroup: dartTestGroup);

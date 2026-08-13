@@ -40,16 +40,22 @@ void main() {
     await $.pumpWidgetAndSettle(const MyApp());
     final result = await DeviceSafetyInfo.isRootedDevice;
     expect(result, isA<bool>());
-    expect(result, isFalse,
-        reason: 'Should be false on a non-rooted device/emulator');
+    expect(
+      result,
+      isFalse,
+      reason: 'Should be false on a non-rooted device/emulator',
+    );
   });
 
   patrolTest('isHooked is false on standard device', ($) async {
     await $.pumpWidgetAndSettle(const MyApp());
     final result = await DeviceSafetyInfo.isHooked;
     expect(result, isA<bool>());
-    expect(result, isFalse,
-        reason: 'Should be false when no hooking framework is attached');
+    expect(
+      result,
+      isFalse,
+      reason: 'Should be false when no hooking framework is attached',
+    );
   });
 
   patrolTest('checkHooked() with default params returns false', ($) async {
@@ -71,24 +77,35 @@ void main() {
     await $.pumpWidgetAndSettle(const MyApp());
     final result = await DeviceSafetyInfo.isScreenCaptured;
     expect(result, isA<bool>());
-    expect(result, isFalse,
-        reason: 'No external display should be connected during test');
+    expect(
+      result,
+      isFalse,
+      reason: 'No external display should be connected during test',
+    );
   });
 
   patrolTest('isVPNCheck is false when no VPN is active', ($) async {
     await $.pumpWidgetAndSettle(const MyApp());
     final result = await DeviceSafetyInfo.isVPNCheck;
     expect(result, isA<bool>());
-    expect(result, isFalse,
-        reason: 'No VPN should be active on the test device');
+    expect(
+      result,
+      isFalse,
+      reason: 'No VPN should be active on the test device',
+    );
   });
 
-  patrolTest('isInstalledFromStore is false for sideloaded test APK', ($) async {
+  patrolTest('isInstalledFromStore is false for sideloaded test APK', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     final result = await DeviceSafetyInfo.isInstalledFromStore;
     expect(result, isA<bool>());
-    expect(result, isFalse,
-        reason: 'Test APKs are sideloaded, not installed from Play/App Store');
+    expect(
+      result,
+      isFalse,
+      reason: 'Test APKs are sideloaded, not installed from Play/App Store',
+    );
   });
 
   patrolTest('isScreenLock returns a bool', ($) async {
@@ -98,13 +115,18 @@ void main() {
     expect(result, isA<bool>());
   });
 
-  patrolTest('isExternalStorage returns false on standard install (Android)', ($) async {
+  patrolTest('isExternalStorage returns false on standard install (Android)', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     if (defaultTargetPlatform == TargetPlatform.android) {
       final result = await DeviceSafetyInfo.isExternalStorage;
       expect(result, isA<bool>());
-      expect(result, isFalse,
-          reason: 'Example app is installed on internal storage');
+      expect(
+        result,
+        isFalse,
+        reason: 'Example app is installed on internal storage',
+      );
     } else {
       // iOS: always returns false (not applicable)
       final result = await DeviceSafetyInfo.isExternalStorage;
@@ -127,24 +149,38 @@ void main() {
 
   // ── ScreenCapture wrapper ───────────────────────────────────────────────
 
-  patrolTest('ScreenCapture.isScreenCaptured() matches DeviceSafetyInfo.isScreenCaptured', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final fromWrapper = await ScreenCapture.isScreenCaptured();
-    final fromPlugin  = await DeviceSafetyInfo.isScreenCaptured;
-    expect(fromWrapper, equals(fromPlugin),
-        reason: 'ScreenCapture.isScreenCaptured() is a thin delegate');
-    expect(fromWrapper, isFalse,
-        reason: 'No external display connected during test');
-  });
+  patrolTest(
+    'ScreenCapture.isScreenCaptured() matches DeviceSafetyInfo.isScreenCaptured',
+    ($) async {
+      await $.pumpWidgetAndSettle(const MyApp());
+      final fromWrapper = await ScreenCapture.isScreenCaptured();
+      final fromPlugin = await DeviceSafetyInfo.isScreenCaptured;
+      expect(
+        fromWrapper,
+        equals(fromPlugin),
+        reason: 'ScreenCapture.isScreenCaptured() is a thin delegate',
+      );
+      expect(
+        fromWrapper,
+        isFalse,
+        reason: 'No external display connected during test',
+      );
+    },
+  );
 
   // ── VPNCheck static helper ──────────────────────────────────────────────
 
-  patrolTest('VPNCheck.isVpnActive matches DeviceSafetyInfo.isVPNCheck', ($) async {
+  patrolTest('VPNCheck.isVpnActive matches DeviceSafetyInfo.isVPNCheck', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     final fromPlugin = await DeviceSafetyInfo.isVPNCheck;
     final fromVpnCheck = await VPNCheck.isVpnActive;
-    expect(fromVpnCheck, equals(fromPlugin),
-        reason: 'Both APIs read from the same platform channel');
+    expect(
+      fromVpnCheck,
+      equals(fromPlugin),
+      reason: 'Both APIs read from the same platform channel',
+    );
   });
 
   // ── Parallel all-checks smoke test ──────────────────────────────────────

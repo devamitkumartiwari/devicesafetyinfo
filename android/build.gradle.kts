@@ -1,5 +1,5 @@
 buildscript {
-    val kotlinVersion = "2.2.0"
+    val kotlinVersion = "2.4.0"
 
     repositories {
         google()
@@ -7,7 +7,7 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.12.1")
+        classpath("com.android.tools.build:gradle:9.1.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
 }
@@ -46,7 +46,6 @@ android {
 
     sourceSets {
         getByName("main").java.srcDirs("src/main/kotlin")
-        getByName("test").java.srcDirs("src/test/kotlin")
     }
 
     defaultConfig {
@@ -67,21 +66,6 @@ android {
             version = "3.18.1+"
         }
     }
-
-    testOptions {
-        unitTests.all { test ->
-            test.useJUnitPlatform()
-            test.outputs.upToDateWhen { false }
-            test.testLogging {
-                events("passed", "skipped", "failed", "standardOut", "standardError")
-                showStandardStreams = true
-            }
-        }
-    }
-}
-
-dependencies {
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
 
 project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension::class.java) {

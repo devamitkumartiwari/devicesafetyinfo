@@ -3,4 +3,12 @@
     <!-- Required on Android 14+ (API 34+) for Activity.registerScreenCaptureCallback().
          Protection level: normal — auto-granted at install, no runtime prompt. -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
+    <!-- Required to query (never to install) whether this app has been granted install-unknown-apps
+         rights, for the isUnknownSourcesEnabled check. Without this, canRequestPackageInstalls()
+         throws SecurityException on API 26+. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Dangerous/runtime permission — the host app must request runtime grant itself (this plugin
+         has no permission-request dependency). Backs the SIM-call signal for onCallActivityChanged
+         / isCallActive; the plugin degrades to VoIP-only detection if never granted. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 </manifest>

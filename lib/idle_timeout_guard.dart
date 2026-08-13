@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-// Wraps part of the widget tree and calls [onTimeout] after [timeout] has elapsed with no pointer
-// activity anywhere inside it — a session-idle guard for triggering a lock screen, logout, etc.
-// Pure Dart, no native code; works identically on every platform Flutter supports.
+/// Wraps part of the widget tree and calls [onTimeout] after [timeout] has elapsed with no pointer
+/// activity anywhere inside it — a session-idle guard for triggering a lock screen, logout, etc.
+/// Pure Dart, no native code; works identically on every platform Flutter supports.
 class IdleTimeoutGuard extends StatefulWidget {
   const IdleTimeoutGuard({
     super.key,
@@ -13,8 +13,13 @@ class IdleTimeoutGuard extends StatefulWidget {
     required this.child,
   });
 
+  /// How long to wait with no pointer activity before calling [onTimeout].
   final Duration timeout;
+
+  /// Called once [timeout] elapses with no pointer activity anywhere in [child].
   final VoidCallback onTimeout;
+
+  /// The wrapped subtree whose pointer activity resets the idle timer.
   final Widget child;
 
   @override

@@ -13,42 +13,53 @@ void main() {
       calls.clear();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        calls.add(call);
-        switch (call.method) {
-          case 'isRootedDevice':
-            return false;
-          case 'isRealDevice':
-            return true;
-          case 'isScreenLock':
-            return true;
-          case 'isVPNCheck':
-            return false;
-          case 'isInstalledFromStore':
-            return false;
-          case 'isHooked':
-            return false;
-          case 'isScreenCaptured':
-            return false;
-          case 'isDeveloperMode':
-            return false;
-          case 'isExternalStorage':
-            return false;
-          case 'isDebuggerAttached':
-            return false;
-          case 'copyToClipboard':
-          case 'clearClipboard':
-          case 'blockTouchesWhenObscured':
-            return null;
-          case 'isPackageInstalled':
-            return false;
-          case 'getEnabledAccessibilityServices':
-            return <String>[];
-          case 'getPlayProtectStatus':
-            return 0;
-          default:
-            return null;
-        }
-      });
+            calls.add(call);
+            switch (call.method) {
+              case 'isRootedDevice':
+                return false;
+              case 'isRealDevice':
+                return true;
+              case 'isScreenLock':
+                return true;
+              case 'isVPNCheck':
+                return false;
+              case 'isInstalledFromStore':
+                return false;
+              case 'isHooked':
+                return false;
+              case 'isScreenCaptured':
+                return false;
+              case 'isDeveloperMode':
+                return false;
+              case 'isExternalStorage':
+                return false;
+              case 'isDebuggerAttached':
+                return false;
+              case 'copyToClipboard':
+              case 'clearClipboard':
+              case 'blockTouchesWhenObscured':
+                return null;
+              case 'isPackageInstalled':
+                return false;
+              case 'getEnabledAccessibilityServices':
+                return <String>[];
+              case 'getPlayProtectStatus':
+                return 0;
+              case 'getEnabledNotificationListeners':
+                return <String>[];
+              case 'isUnknownSourcesEnabled':
+                return false;
+              case 'isCallScreeningRoleAvailable':
+              case 'isCallScreeningRoleHeldByThisApp':
+                return false;
+              case 'openCallScreeningRoleSettings':
+                return null;
+              case 'isCallActive':
+                return false;
+              default:
+                return null;
+            }
+          });
     });
 
     tearDown(() {
@@ -89,8 +100,10 @@ void main() {
     });
 
     test('copyToClipboard passes autoClear as milliseconds', () async {
-      await DeviceSafetyInfo.copyToClipboard('otp',
-          autoClear: const Duration(seconds: 30));
+      await DeviceSafetyInfo.copyToClipboard(
+        'otp',
+        autoClear: const Duration(seconds: 30),
+      );
       expect(calls.single.arguments['autoClearMillis'], 30000);
     });
 
@@ -111,14 +124,45 @@ void main() {
     });
 
     test('playProtectStatus is unknown off-Android', () async {
-      expect(await DeviceSafetyInfo.playProtectStatus, PlayProtectStatus.unknown);
+      expect(
+        await DeviceSafetyInfo.playProtectStatus,
+        PlayProtectStatus.unknown,
+      );
     });
 
-    test('MalwarePackageDetector.isPackageInstalled is false off-Android', () async {
-      expect(
-          await MalwarePackageDetector.isPackageInstalled('com.example.app'),
-          false);
+    test('enabledNotificationListeners is empty off-Android', () async {
+      expect(await DeviceSafetyInfo.enabledNotificationListeners, isEmpty);
     });
+
+    test('isAnyNotificationListenerEnabled is false off-Android', () async {
+      expect(await DeviceSafetyInfo.isAnyNotificationListenerEnabled, false);
+    });
+
+    test('isUnknownSourcesEnabled is false off-Android', () async {
+      expect(await DeviceSafetyInfo.isUnknownSourcesEnabled, false);
+    });
+
+    test('isCallScreeningRoleAvailable is false off-Android', () async {
+      expect(await DeviceSafetyInfo.isCallScreeningRoleAvailable, false);
+    });
+
+    test('isCallScreeningRoleHeldByThisApp is false off-Android', () async {
+      expect(await DeviceSafetyInfo.isCallScreeningRoleHeldByThisApp, false);
+    });
+
+    test('isCallActive returns false from mock', () async {
+      expect(await DeviceSafetyInfo.isCallActive, false);
+    });
+
+    test(
+      'MalwarePackageDetector.isPackageInstalled is false off-Android',
+      () async {
+        expect(
+          await MalwarePackageDetector.isPackageInstalled('com.example.app'),
+          false,
+        );
+      },
+    );
   });
 
   group('RiskSummary.evaluate', () {
@@ -139,23 +183,23 @@ void main() {
     }) async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        switch (call.method) {
-          case 'isRootedDevice':
-            return rooted;
-          case 'isHooked':
-            return hooked;
-          case 'isDebuggerAttached':
-            return debugger;
-          case 'isScreenCaptured':
-            return screenCaptured;
-          case 'isVPNCheck':
-            return vpn;
-          case 'isScreenLock':
-            return screenLock;
-          default:
-            return null;
-        }
-      });
+            switch (call.method) {
+              case 'isRootedDevice':
+                return rooted;
+              case 'isHooked':
+                return hooked;
+              case 'isDebuggerAttached':
+                return debugger;
+              case 'isScreenCaptured':
+                return screenCaptured;
+              case 'isVPNCheck':
+                return vpn;
+              case 'isScreenLock':
+                return screenLock;
+              default:
+                return null;
+            }
+          });
     }
 
     test('returns no flags when every check is clean', () async {
@@ -169,17 +213,24 @@ void main() {
       expect(flags.map((f) => f.id).toSet(), {'rooted', 'no_screen_lock'});
     });
 
-    test('flags hooking, debugger, screen capture, and VPN independently', () async {
-      await mockChecks(
-        hooked: true,
-        debugger: true,
-        screenCaptured: true,
-        vpn: true,
-      );
-      final flags = await RiskSummary.evaluate();
-      expect(flags.map((f) => f.id).toSet(),
-          {'hooked', 'debugger', 'screen_captured', 'vpn'});
-    });
+    test(
+      'flags hooking, debugger, screen capture, and VPN independently',
+      () async {
+        await mockChecks(
+          hooked: true,
+          debugger: true,
+          screenCaptured: true,
+          vpn: true,
+        );
+        final flags = await RiskSummary.evaluate();
+        expect(flags.map((f) => f.id).toSet(), {
+          'hooked',
+          'debugger',
+          'screen_captured',
+          'vpn',
+        });
+      },
+    );
   });
 
   group('VersionStatus.canUpdate', () {
@@ -199,17 +250,58 @@ void main() {
     });
 
     test('returns false when either version is null', () {
-      expect(VersionStatus(localVersion: null, storeVersion: '1.0.0').canUpdate,
-          false);
-      expect(VersionStatus(localVersion: '1.0.0', storeVersion: null).canUpdate,
-          false);
-      expect(VersionStatus(localVersion: null, storeVersion: null).canUpdate,
-          false);
+      expect(
+        VersionStatus(localVersion: null, storeVersion: '1.0.0').canUpdate,
+        false,
+      );
+      expect(
+        VersionStatus(localVersion: '1.0.0', storeVersion: null).canUpdate,
+        false,
+      );
+      expect(
+        VersionStatus(localVersion: null, storeVersion: null).canUpdate,
+        false,
+      );
     });
 
     test('handles store having more version segments than local', () {
       final s = VersionStatus(localVersion: '1.0', storeVersion: '1.0.1');
       expect(s.canUpdate, true);
+    });
+  });
+
+  group('CallActivityEvent.fromMap', () {
+    test('parses a started simCall event', () {
+      final event = CallActivityEvent.fromMap({
+        'source': 'simCall',
+        'state': 'started',
+        'timestamp': 1700000000000,
+      });
+      expect(event.source, CallActivitySource.simCall);
+      expect(event.state, CallActivityState.started);
+      expect(
+        event.timestamp,
+        DateTime.fromMillisecondsSinceEpoch(1700000000000),
+      );
+    });
+
+    test('parses an ended voipCall event', () {
+      final event = CallActivityEvent.fromMap({
+        'source': 'voipCall',
+        'state': 'ended',
+        'timestamp': 1700000001000,
+      });
+      expect(event.source, CallActivitySource.voipCall);
+      expect(event.state, CallActivityState.ended);
+    });
+
+    test('unrecognized source falls back to unknown', () {
+      final event = CallActivityEvent.fromMap({
+        'source': 'somethingNew',
+        'state': 'started',
+        'timestamp': 1700000000000,
+      });
+      expect(event.source, CallActivitySource.unknown);
     });
   });
 

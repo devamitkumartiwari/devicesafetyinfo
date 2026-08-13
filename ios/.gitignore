@@ -9,6 +9,10 @@ profile
 
 DerivedData/
 build/
+
+# SwiftPM build artifacts for the nested device_safety_info/ package.
+.build/
+Package.resolved
 GeneratedPluginRegistrant.h
 GeneratedPluginRegistrant.m
 

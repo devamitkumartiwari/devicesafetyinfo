@@ -1,3 +1,49 @@
+## 1.4.0
+
+**New checks — Android banking-malware defenses** (added in response to advisory coverage of
+Android banking trojans like TrickMo/PhantomCall):
+* **New:** Notification Listener enumeration — `enabledNotificationListeners` /
+  `isAnyNotificationListenerEnabled` surface which apps currently hold notification-listener access
+  (the mechanism banking trojans commonly abuse to intercept OTP/SMS notifications). Android only.
+* **New:** Unknown-sources / sideloading check — `isUnknownSourcesEnabled`. On Android 8+ this can only
+  answer "has *this app* been granted install rights" (not "has some other app"), a real API limitation
+  documented in the getter's own doc comment. Requires `REQUEST_INSTALL_PACKAGES` (query-only, never
+  installs anything) — strip it via `tools:node="remove"` in your manifest if you don't use this check.
+* **New:** Call-screening role — `isCallScreeningRoleAvailable`, `isCallScreeningRoleHeldByThisApp`,
+  `openCallScreeningRoleSettings()`. Android's `RoleManager.getRoleHolders()` (which would reveal which
+  app holds the role) is a privileged system API unavailable to third-party apps — these three cover
+  what's actually achievable: capability check, self-check, and a settings deep-link so the user can
+  review the current holder themselves. Android only, API 29+.
+* **New:** Call activity detection — `onCallActivityChanged` stream + `isCallActive` getter detect when
+  *any* call (native SIM or a VoIP call from WhatsApp/Teams/Skype/Meet/imo/etc.) starts or ends, without
+  identifying which app is calling (not achievable on either platform). Android: `TelephonyManager` (SIM,
+  needs `READ_PHONE_STATE`) + system-wide `AudioManager` routing state (any VoIP app, generically). iOS:
+  `CXCallObserver` (CallKit) + `AVAudioSession` interruption notifications. Detect-only, like every other
+  stream in this plugin — no lockdown/navigation policy is embedded. Native listeners only run while the
+  stream has an active subscriber.
+
+**Dependency removal** (eliminates consumer version-conflict risk from this plugin's own
+`dependencies:`):
+* Removed `connectivity_plus`, `package_info_plus`, and `http` — replaced with a native
+  `device_safety_info/connectivity_events` EventChannel, a native `getPackageInfo` MethodChannel call,
+  and a minimal `dart:io HttpClient`-based helper (`lib/src/http/simple_http_get.dart`) respectively.
+  `VPNCheck`, `NewVersionChecker`, and `IOCDomainBlocker` are unaffected from the outside.
+
+**Toolchain modernization** (Flutter 3.47 plugin-template baseline):
+* **Breaking (iOS):** minimum iOS version raised `13.0` → `16.0`.
+* **Fix (iOS — Swift Package Manager):** `Package.swift` moved from the flat `ios/Package.swift` to
+  `ios/device_safety_info/Package.swift` — the path Flutter's tooling actually scans for plugin SPM
+  support (`Plugin.pluginSwiftPackageManifestPath` in `flutter_tools`). The previous flat location was
+  never discovered by Flutter's build system, so SPM support was silently non-functional despite being
+  present; only the CocoaPods path was ever exercised. The native C FFI source now lives in its own SPM
+  target (`device_safety_ffi`) since SwiftPM doesn't support mixed Swift+C sources in one target.
+* **Dependency:** Android toolchain baseline bumped to match the Flutter 3.47 plugin template — Gradle
+  `8.14` → `9.3.1`, Android Gradle Plugin `8.12.1` → `9.1.0`, Kotlin `2.2.20` → `2.4.0`.
+* **Dependency:** `flutter_lints` `any` → `^6.0.0`.
+* Removed the plugin's Kotlin-level (`android/src/test/kotlin`) unit test in favor of relying solely on
+  the Dart-level test suite (`test/device_safety_info_test.dart`) — one less native test dependency
+  (`kotlin-test`, `mockito-core`) to keep in sync, and this plugin's actual public surface is the Dart API.
+
 ## 1.3.0
 * **Fix (Android — 16 KB page size):** `libdevice_safety_ffi.so` is now linked with
   `-Wl,-z,max-page-size=16384` / `common-page-size=16384`, fixing Google Play Console's "native library

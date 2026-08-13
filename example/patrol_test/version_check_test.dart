@@ -54,42 +54,27 @@ void main() {
     });
 
     test('returns false when localVersion is null', () {
-      final status = VersionStatus(
-        localVersion: null,
-        storeVersion: '1.0.0',
-      );
+      final status = VersionStatus(localVersion: null, storeVersion: '1.0.0');
       expect(status.canUpdate, isFalse);
     });
 
     test('returns false when storeVersion is null', () {
-      final status = VersionStatus(
-        localVersion: '1.0.0',
-        storeVersion: null,
-      );
+      final status = VersionStatus(localVersion: '1.0.0', storeVersion: null);
       expect(status.canUpdate, isFalse);
     });
 
     test('returns false when both versions are null', () {
-      final status = VersionStatus(
-        localVersion: null,
-        storeVersion: null,
-      );
+      final status = VersionStatus(localVersion: null, storeVersion: null);
       expect(status.canUpdate, isFalse);
     });
 
     test('handles store version with more segments than local', () {
-      final status = VersionStatus(
-        localVersion: '1.0',
-        storeVersion: '1.0.1',
-      );
+      final status = VersionStatus(localVersion: '1.0', storeVersion: '1.0.1');
       expect(status.canUpdate, isTrue);
     });
 
     test('handles local version with more segments than store', () {
-      final status = VersionStatus(
-        localVersion: '1.0.1',
-        storeVersion: '1.0',
-      );
+      final status = VersionStatus(localVersion: '1.0.1', storeVersion: '1.0');
       expect(status.canUpdate, isFalse);
     });
 
@@ -131,10 +116,7 @@ void main() {
   patrolTest('getVersionStatus returns null or valid VersionStatus', ($) async {
     await $.pumpWidgetAndSettle(const MyApp());
     // Uses empty app IDs so network call will return null gracefully
-    final checker = NewVersionChecker(
-      androidId: '',
-      iOSId: '',
-    );
+    final checker = NewVersionChecker(androidId: '', iOSId: '');
     final status = await checker.getVersionStatus();
     // null is acceptable (network unavailable, empty ID, or no store match)
     if (status != null) {
@@ -143,7 +125,9 @@ void main() {
     }
   });
 
-  patrolTest('NewVersionChecker with real app ID returns VersionStatus', ($) async {
+  patrolTest('NewVersionChecker with real app ID returns VersionStatus', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     // Uses the plugin's own pub.dev app IDs for a realistic check
     final checker = NewVersionChecker(

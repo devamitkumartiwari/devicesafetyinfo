@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'device_safety_info'
-  s.version          = '1.3.0'
+  s.version          = '1.4.0'
   s.summary          = 'Flutter plugin for device security: root/jailbreak, emulator, VPN, hooking, screen capture, debugger detection.'
   s.description      = <<-DESC
 A Flutter plugin providing security-focused device checks including jailbreak/root detection,
@@ -15,10 +15,10 @@ detection, developer mode detection, debugger detection, and store installation 
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Amit Kumar Tiwari' => 'amtechnovation@gmail.com' }
   s.source           = { :path => '.' }
-  s.source_files     = 'Classes/**/*'
+  s.source_files     = 'device_safety_info/Sources/device_safety_info/**/*', 'device_safety_info/Sources/device_safety_ffi/**/*'
   s.dependency 'Flutter'
   s.dependency 'IOSSecuritySuite', '~> 1.9'
-  s.platform         = :ios, '13.0'
+  s.platform         = :ios, '16.0'
 
   s.pod_target_xcconfig = {
     'DEFINES_MODULE'                       => 'YES',

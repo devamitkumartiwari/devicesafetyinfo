@@ -1,8 +1,8 @@
 # device_safety_info
 
 Flutter security plugin: root/jailbreak, hook, and tamper detection; overlay-attack, clipboard,
-malware-package, and accessibility-abuse protection; IOC domain blocking; VPN, screen-capture, and
-session-idle monitoring; and app-update checks.
+malware-package, and accessibility-abuse protection; IOC domain blocking; VPN, screen-capture,
+call-activity, and session-idle monitoring; and app-update checks.
 
 ## Getting Started
 
@@ -10,7 +10,7 @@ In your flutter project add the dependency:
 
 ```yml
 dependencies:
-  device_safety_info: ^1.3.0
+  device_safety_info: ^1.4.0
 ```
 
 ## Features
@@ -40,6 +40,10 @@ dependencies:
 | **Play Protect Status** | ✅ | ❌ | Read whether Google Play Protect scanning is enabled. Android/Google Play concept only. |
 | **Idle Session Timeout** | ✅ | ✅ | Widget wrapper that fires a callback after a period of no touch activity anywhere in the app. |
 | **Risk Summary** | ✅ | ✅ | Aggregates several checks above into a single list of plain-language risk flags. |
+| **Notification Listener Check** | ✅ | ❌ | List apps with notification-listener access — a common OTP/SMS-theft vector for banking trojans. |
+| **Unknown Sources Check** | ✅ | ❌ | Check whether this app has been granted install-unknown-apps rights. See caveats below. |
+| **Call-Screening Role** | ✅ | ❌ | Check the call-screening role's availability/self-held status, and open the OS picker for the user to review the current holder. Android 10+ (API 29+). |
+| **Call Activity Detection** | ✅ | ✅ | Detect when any call — native or VoIP (WhatsApp/Teams/Skype/etc.) — starts or ends, without identifying which app. |
 
 ## Usage
 
@@ -295,6 +299,62 @@ for (final flag in flags) {
 }
 ```
 
+### 15. Notification Listener Check (Android only)
+Lists apps currently granted notification-listener access — the mechanism banking trojans like
+TrickMo and Antidot/PhantomCall commonly abuse to intercept OTP and SMS notifications. Same
+"surface the raw list, you judge good vs. bad" shape as Accessibility Abuse Detection above.
+
+```dart
+final listeners = await DeviceSafetyInfo.enabledNotificationListeners; // raw component names
+final anyEnabled = await DeviceSafetyInfo.isAnyNotificationListenerEnabled;
+```
+
+### 16. Unknown Sources / Sideloading Check (Android only)
+Checks whether install-unknown-apps ("sideloading") rights are currently granted. **Important
+caveat, read before using**: on Android 8.0+ (the vast majority of active devices), this can only
+answer *"has THIS app been granted install rights"* — it cannot detect whether some *other*
+(potentially malicious) app has sideloading rights, because that per-app grant isn't readable
+across app boundaries. A `false` result here is **not** evidence the device is free of sideloaded
+malware. Only on Android 7.x does this reflect the old device-wide toggle. Requires
+`REQUEST_INSTALL_PACKAGES` — see [Permissions](#permissions-android) below.
+
+```dart
+final canSideload = await DeviceSafetyInfo.isUnknownSourcesEnabled;
+```
+
+### 17. Call-Screening Role (Android only, API 29+)
+Android's `RoleManager.getRoleHolders()` — the API that would reveal *which app* currently holds
+the call-screening role — is a privileged system API third-party apps can't call. PhantomCall
+abuses this role to silently block a bank's fraud-team calls, so the best available mitigation is
+pointing the user at the OS role picker to review it themselves.
+
+```dart
+final available = await DeviceSafetyInfo.isCallScreeningRoleAvailable; // device capability
+final heldByMe = await DeviceSafetyInfo.isCallScreeningRoleHeldByThisApp; // only meaningful if
+                                                                            // your app screens calls
+await DeviceSafetyInfo.openCallScreeningRoleSettings(); // opens the OS picker
+```
+
+### 18. Call Activity Detection
+Detects when any call — a native SIM call or a VoIP call from WhatsApp/Teams/Skype/Meet/imo/etc.
+— starts or ends. Like every other stream in this plugin, this is detect-only: no app is
+identified (not achievable on either platform) and no lockdown/navigation policy is applied for
+you. Native listeners only run while the stream has an active subscriber.
+
+```dart
+DeviceSafetyInfo.onCallActivityChanged.listen((event) {
+  print('${event.source}: ${event.state}'); // e.g. CallActivitySource.simCall, .started
+});
+
+final isActive = await DeviceSafetyInfo.isCallActive; // point-in-time, no subscription needed
+```
+
+Android distinguishes `simCall` (via `TelephonyManager`, needs `READ_PHONE_STATE`) from `voipCall`
+(inferred from system-wide audio routing state — works for any app, generically, with no per-app
+cooperation needed). iOS reports `callKitObserved` (via CallKit's `CXCallObserver` — only sees
+calls the calling app routed through CallKit) or `audioInterrupted` (a lower-confidence fallback
+for VoIP apps that don't integrate CallKit, via `AVAudioSession` interruption notifications).
+
 ## Permissions (Android)
 
 Add these to your `AndroidManifest.xml` if you use the respective features:
@@ -322,4 +382,23 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
     <package android:name="com.example.known.malware" />
     <!-- one <package> entry per package name you intend to check -->
   </queries>
+  ```
+- **Unknown Sources Check**: a normal-protection permission, auto-granted with no runtime
+  prompt — but Google Play treats it as a restricted permission requiring justification in Play
+  Console's Permissions Declaration form, since it's the same permission that gates actually
+  installing packages (this plugin only ever queries it). If you don't use
+  `isUnknownSourcesEnabled`, remove it to skip that review step entirely — this requires the
+  `xmlns:tools` namespace on your `<manifest>` root (see `example/android/app/src/main/AndroidManifest.xml`
+  for a working example of both):
+  ```xml
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+  <!-- Or, if you don't use isUnknownSourcesEnabled: -->
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+  ```
+- **Call Activity Detection (SIM-call signal)**: a **dangerous** runtime permission — this plugin
+  cannot request it for you (no `permission_handler`-style dependency), so your app must request
+  runtime grant itself. Without it, `onCallActivityChanged`/`isCallActive` silently degrade to
+  VoIP-only detection rather than crashing:
+  ```xml
+  <uses-permission android:name="android.permission.READ_PHONE_STATE" />
   ```

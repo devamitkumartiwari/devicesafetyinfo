@@ -1,12 +1,12 @@
 // Patrol integration tests for all stream-based APIs:
 // - DeviceSafetyInfo.onScreenCapturedChanged (EventChannel)
 // - DeviceSafetyInfo.onScreenshotTaken (EventChannel)
-// - VPNCheck.vpnState (connectivity_plus backed stream)
+// - VPNCheck.vpnState (native connectivity_events EventChannel backed stream)
 
 import 'dart:async';
 
 import 'package:device_safety_info/device_safety_info.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
@@ -20,7 +20,9 @@ Widget _minimalApp() =>
 void main() {
   // ── Screen capture stream ───────────────────────────────────────────────
 
-  patrolTest('onScreenCapturedChanged emits initial bool event within 5s', ($) async {
+  patrolTest('onScreenCapturedChanged emits initial bool event within 5s', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(_minimalApp());
 
     final completer = Completer<bool>();
@@ -41,23 +43,24 @@ void main() {
     );
 
     expect(value, isA<bool>());
-    expect(value, isFalse,
-        reason: 'No external display connected during test');
+    expect(value, isFalse, reason: 'No external display connected during test');
     await sub.cancel();
   });
 
-  patrolTest('onScreenCapturedChanged supports multiple concurrent listeners', ($) async {
+  patrolTest('onScreenCapturedChanged supports multiple concurrent listeners', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(_minimalApp());
 
     final c1 = Completer<bool>();
     final c2 = Completer<bool>();
 
-    final sub1 = DeviceSafetyInfo.onScreenCapturedChanged.listen(
-      (v) { if (!c1.isCompleted) c1.complete(v); },
-    );
-    final sub2 = DeviceSafetyInfo.onScreenCapturedChanged.listen(
-      (v) { if (!c2.isCompleted) c2.complete(v); },
-    );
+    final sub1 = DeviceSafetyInfo.onScreenCapturedChanged.listen((v) {
+      if (!c1.isCompleted) c1.complete(v);
+    });
+    final sub2 = DeviceSafetyInfo.onScreenCapturedChanged.listen((v) {
+      if (!c2.isCompleted) c2.complete(v);
+    });
 
     final results = await Future.wait([
       c1.future.timeout(const Duration(seconds: 5)),
@@ -66,21 +69,26 @@ void main() {
 
     expect(results[0], isA<bool>());
     expect(results[1], isA<bool>());
-    expect(results[0], equals(results[1]),
-        reason: 'Both listeners should see the same capture state');
+    expect(
+      results[0],
+      equals(results[1]),
+      reason: 'Both listeners should see the same capture state',
+    );
 
     await sub1.cancel();
     await sub2.cancel();
   });
 
-  patrolTest('onScreenCapturedChanged can subscribe and cancel repeatedly', ($) async {
+  patrolTest('onScreenCapturedChanged can subscribe and cancel repeatedly', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(_minimalApp());
 
     for (var i = 0; i < 3; i++) {
       final c = Completer<bool>();
-      final sub = DeviceSafetyInfo.onScreenCapturedChanged.listen(
-        (v) { if (!c.isCompleted) c.complete(v); },
-      );
+      final sub = DeviceSafetyInfo.onScreenCapturedChanged.listen((v) {
+        if (!c.isCompleted) c.complete(v);
+      });
       await c.future.timeout(const Duration(seconds: 5));
       await sub.cancel();
     }
@@ -181,8 +189,11 @@ void main() {
     await sub.cancel();
 
     expect(() => vpn.dispose(), returnsNormally);
-    expect(() => vpn.dispose(), returnsNormally,
-        reason: 'dispose() should be idempotent');
+    expect(
+      () => vpn.dispose(),
+      returnsNormally,
+      reason: 'dispose() should be idempotent',
+    );
   });
 
   patrolTest('Multiple VPNCheck instances can coexist', ($) async {
@@ -194,16 +205,23 @@ void main() {
     final c1 = Completer<VPNState>();
     final c2 = Completer<VPNState>();
 
-    final s1 = vpn1.vpnState.listen((v) { if (!c1.isCompleted) c1.complete(v); });
-    final s2 = vpn2.vpnState.listen((v) { if (!c2.isCompleted) c2.complete(v); });
+    final s1 = vpn1.vpnState.listen((v) {
+      if (!c1.isCompleted) c1.complete(v);
+    });
+    final s2 = vpn2.vpnState.listen((v) {
+      if (!c2.isCompleted) c2.complete(v);
+    });
 
     final results = await Future.wait([
       c1.future.timeout(const Duration(seconds: 5)),
       c2.future.timeout(const Duration(seconds: 5)),
     ]);
 
-    expect(results[0], equals(results[1]),
-        reason: 'Both instances should report the same VPN state');
+    expect(
+      results[0],
+      equals(results[1]),
+      reason: 'Both instances should report the same VPN state',
+    );
 
     await s1.cancel();
     await s2.cancel();

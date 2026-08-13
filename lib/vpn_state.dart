@@ -1,6 +1,8 @@
+/// The state emitted by `VPNCheck.vpnState`.
 enum VPNState {
-  // VPN Connected
+  /// A VPN connection is currently active.
   connectedState,
-  // VPN Disconnected
-  disconnectedState
+
+  /// No VPN connection is currently active.
+  disconnectedState,
 }

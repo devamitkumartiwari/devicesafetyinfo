@@ -1,7 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Required for onScreenshotTaken stream on Android API 24-33.
          API 34+ uses Activity.ScreenCaptureCallback which needs no permission. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Demonstrates opting out of a plugin-declared permission this app doesn't use: the plugin
+         declares REQUEST_INSTALL_PACKAGES for isUnknownSourcesEnabled, which this example app's
+         UI doesn't call. Removing it here avoids the Play Console sensitive-permission review
+         burden for apps that don't need that specific check. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
     <application
         android:label="device_safety_info_example"
         android:name="${applicationName}"

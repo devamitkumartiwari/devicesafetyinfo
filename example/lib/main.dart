@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+
+import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 
 void main() {
@@ -43,6 +44,11 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   bool? isDebuggerAttached;
   bool? isAnyAccessibilityServiceEnabled;
   PlayProtectStatus? playProtectStatus;
+  bool? isAnyNotificationListenerEnabled;
+  bool? isUnknownSourcesEnabled;
+  bool? isCallScreeningRoleAvailable;
+  bool? isCallScreeningRoleHeldByThisApp;
+  bool? isCallActive;
 
   // --- Stream state ---
   bool _screenCaptureActive = false;
@@ -50,11 +56,12 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   int _overlayAttackCount = 0;
   int _clipboardChangeCount = 0;
   int _idleTimeoutCount = 0;
+  String _callActivityStatus = 'No calls observed yet';
 
   // --- Demo results ---
   bool? _malwareCheckKnownGood; // com.android.settings — expected: installed
   bool?
-      _malwareCheckKnownBad; // com.example.known.malware — expected: not installed
+  _malwareCheckKnownBad; // com.example.known.malware — expected: not installed
   List<RiskFlag>? _riskFlags;
 
   // --- Action toggle state ---
@@ -68,10 +75,12 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   final VPNCheck _vpnCheck = VPNCheck();
   late final Stream<VPNState> _vpnStream;
 
-  final TextEditingController _clipboardController =
-      TextEditingController(text: '123456');
-  final TextEditingController _iocController =
-      TextEditingController(text: 'sub.evil.com');
+  final TextEditingController _clipboardController = TextEditingController(
+    text: '123456',
+  );
+  final TextEditingController _iocController = TextEditingController(
+    text: 'sub.evil.com',
+  );
   String? _iocResult;
 
   @override
@@ -83,6 +92,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     _listenScreenshots();
     _listenClipboardChanges();
     if (Platform.isAndroid) _listenOverlayAttacks();
+    _listenCallActivity();
     IOCDomainBlocker.updateBlocklist(['evil.com', '*.evil.com']);
     _refreshAll();
   }
@@ -125,6 +135,27 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     }, onError: (e) => debugPrint('Clipboard stream error: $e'));
   }
 
+  void _listenCallActivity() {
+    DeviceSafetyInfo.onCallActivityChanged.listen((event) {
+      if (!mounted) return;
+      final source = switch (event.source) {
+        CallActivitySource.simCall => 'SIM call',
+        CallActivitySource.voipCall => 'VoIP call',
+        CallActivitySource.callKitObserved => 'CallKit-observed call',
+        CallActivitySource.audioInterrupted =>
+          'possible call (audio interrupted)',
+        CallActivitySource.unknown => 'call',
+      };
+      final state = event.state == CallActivityState.started
+          ? 'started'
+          : 'ended';
+      setState(() {
+        _callActivityStatus = '$source $state';
+        isCallActive = event.state == CallActivityState.started;
+      });
+    }, onError: (e) => debugPrint('Call activity stream error: $e'));
+  }
+
   Future<void> _refreshAll() async {
     if (!mounted) return;
     setState(() => _loading = true);
@@ -165,13 +196,27 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
         final anyAccessibility =
             await DeviceSafetyInfo.isAnyAccessibilityServiceEnabled;
         final protectStatus = await DeviceSafetyInfo.playProtectStatus;
+        final anyNotificationListener =
+            await DeviceSafetyInfo.isAnyNotificationListenerEnabled;
+        final unknownSources = await DeviceSafetyInfo.isUnknownSourcesEnabled;
+        final roleAvailable =
+            await DeviceSafetyInfo.isCallScreeningRoleAvailable;
+        final roleHeld =
+            await DeviceSafetyInfo.isCallScreeningRoleHeldByThisApp;
         if (mounted) {
           setState(() {
             isAnyAccessibilityServiceEnabled = anyAccessibility;
             playProtectStatus = protectStatus;
+            isAnyNotificationListenerEnabled = anyNotificationListener;
+            isUnknownSourcesEnabled = unknownSources;
+            isCallScreeningRoleAvailable = roleAvailable;
+            isCallScreeningRoleHeldByThisApp = roleHeld;
           });
         }
       }
+
+      final callActive = await DeviceSafetyInfo.isCallActive;
+      if (mounted) setState(() => isCallActive = callActive);
     } catch (e) {
       debugPrint('Error refreshing: $e');
     } finally {
@@ -184,17 +229,21 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     try {
       final status = await checker.getVersionStatus();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(status != null && status.canUpdate
-            ? 'New version available: ${status.storeVersion}'
-            : 'App is up to date'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status != null && status.canUpdate
+                ? 'New version available: ${status.storeVersion}'
+                : 'App is up to date',
+          ),
+        ),
+      );
     } catch (e) {
       debugPrint('Version check error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Version check failed')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Version check failed')));
       }
     }
   }
@@ -208,8 +257,9 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
         content: Text(message),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -269,9 +319,8 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   Future<void> _clearClipboard() async {
     await DeviceSafetyInfo.clearClipboard();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Clipboard cleared')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Clipboard cleared')));
     }
   }
 
@@ -282,10 +331,12 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   }
 
   Future<void> _runMalwareChecks() async {
-    final knownGood =
-        await MalwarePackageDetector.isPackageInstalled('com.android.settings');
+    final knownGood = await MalwarePackageDetector.isPackageInstalled(
+      'com.android.settings',
+    );
     final knownBad = await MalwarePackageDetector.isPackageInstalled(
-        'com.example.known.malware');
+      'com.example.known.malware',
+    );
     if (mounted) {
       setState(() {
         _malwareCheckKnownGood = knownGood;
@@ -299,6 +350,10 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
     if (mounted) setState(() => _riskFlags = flags);
   }
 
+  Future<void> _openCallScreeningSettings() async {
+    await DeviceSafetyInfo.openCallScreeningRoleSettings();
+  }
+
   Widget _tile({
     required String title,
     required bool? value,
@@ -307,8 +362,9 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   }) {
     final unknown = value == null;
     final positive = value == true;
-    final color =
-        unknown ? Colors.orange : (positive ? Colors.green : Colors.red);
+    final color = unknown
+        ? Colors.orange
+        : (positive ? Colors.green : Colors.red);
     final bgColor = unknown
         ? Theme.of(context).colorScheme.surfaceContainerHighest
         : (positive ? Colors.green.shade50 : Colors.red.shade50);
@@ -333,8 +389,9 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
             : Chip(
                 side: BorderSide.none,
                 label: Text(positive ? 'Yes' : 'No'),
-                backgroundColor:
-                    positive ? Colors.green.shade100 : Colors.red.shade100,
+                backgroundColor: positive
+                    ? Colors.green.shade100
+                    : Colors.red.shade100,
               ),
       ),
     );
@@ -390,31 +447,28 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
   }
 
   Widget _demoCard({required List<Widget> children}) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Card(
-          elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: children,
-            ),
-          ),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    child: Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children,
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _sectionHeader(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-        child: Text(
-          label,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+    child: Text(
+      label,
+      style: Theme.of(context).textTheme.titleMedium
+          ?.copyWith(fontWeight: FontWeight.bold),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -437,7 +491,8 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.refresh),
             ),
           ],
@@ -486,8 +541,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                   title: 'Debugger attached',
                   value: isDebuggerAttached,
                   icon: Icons.adb,
-                  subtitle:
-                      'TracerPid (Android) / sysctl P_TRACED (iOS) + platform check.',
+                  subtitle: 'TracerPid (Android) / sysctl P_TRACED (iOS) + platform check.',
                 ),
                 _tile(
                   title: 'Screen is being captured',
@@ -500,8 +554,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                     title: 'Developer mode enabled',
                     value: isDeveloperMode,
                     icon: Icons.developer_mode,
-                    subtitle:
-                        'Android-only. Developer options expose debug surfaces.',
+                    subtitle: 'Android-only. Developer options expose debug surfaces.',
                   ),
                   _tile(
                     title: 'App on external storage',
@@ -514,8 +567,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                     title: 'Accessibility service enabled',
                     value: isAnyAccessibilityServiceEnabled,
                     icon: Icons.accessibility_new,
-                    subtitle:
-                        'Android-only. A common abuse vector for screen-reading malware.',
+                    subtitle: 'Android-only. A common abuse vector for screen-reading malware.',
                   ),
                   _streamTile(
                     title: 'Play Protect status',
@@ -528,8 +580,35 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                     color: playProtectStatus == PlayProtectStatus.disabled
                         ? Colors.red
                         : Colors.green,
+                    subtitle: 'Android-only. Reads the underlying OS setting directly.',
+                  ),
+                  _tile(
+                    title: 'Notification listener enabled',
+                    value: isAnyNotificationListenerEnabled,
+                    icon: Icons.notifications_active_outlined,
+                    subtitle: 'Android-only. Banking trojans commonly abuse this to steal OTP/SMS notifications.',
+                  ),
+                  _tile(
+                    title: 'Sideloading permitted (this app)',
+                    value: isUnknownSourcesEnabled,
+                    icon: Icons.system_security_update_warning,
                     subtitle:
-                        'Android-only. Reads the underlying OS setting directly.',
+                        'Android-only. Only answers "can THIS app sideload" — '
+                        'cannot detect whether some other app has that right. See doc comment.',
+                  ),
+                  _tile(
+                    title: 'Call-screening role available',
+                    value: isCallScreeningRoleAvailable,
+                    icon: Icons.phone_callback_outlined,
+                    subtitle: 'Android-only, API 29+. Device capability only.',
+                  ),
+                  _tile(
+                    title: 'Call-screening role held by this app',
+                    value: isCallScreeningRoleHeldByThisApp,
+                    icon: Icons.phone_in_talk_outlined,
+                    subtitle:
+                        'Cannot detect a malicious app holding it instead — '
+                        'see "Open Call-Screening Settings" below.',
                   ),
                 ],
 
@@ -563,8 +642,16 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                   value: '$_idleTimeoutCount',
                   icon: Icons.timer_outlined,
                   color: Colors.blueGrey,
+                  subtitle: 'IdleTimeoutGuard wraps this screen — fires after 30s with no touches.',
+                ),
+                _streamTile(
+                  title: 'Call activity',
+                  value: isCallActive == true ? 'Active' : 'Inactive',
+                  icon: Icons.call,
+                  color: isCallActive == true ? Colors.orange : Colors.green,
                   subtitle:
-                      'IdleTimeoutGuard wraps this screen — fires after 30s with no touches.',
+                      '$_callActivityStatus. Detects SIM or VoIP calls (WhatsApp/Teams/etc.) '
+                      'without identifying which app.',
                 ),
 
                 // --- Actions (ON/OFF toggles) ---
@@ -596,8 +683,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                     value: _blockTouchesWhenObscured,
                     onChanged: _toggleBlockTouchesWhenObscured,
                     icon: Icons.layers_clear,
-                    subtitle:
-                        'Android-only. Drops touches while another app overlays yours.',
+                    subtitle: 'Android-only. Drops touches while another app overlays yours.',
                   ),
                 ],
 
@@ -609,8 +695,7 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                     value: '$_overlayAttackCount',
                     icon: Icons.layers,
                     color: _overlayAttackCount > 0 ? Colors.red : Colors.green,
-                    subtitle:
-                        'Touches received while obscured by another app\'s overlay.',
+                    subtitle: 'Touches received while obscured by another app\'s overlay.',
                   ),
                 _streamTile(
                   title: 'Clipboard changes',
@@ -620,130 +705,183 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                   subtitle:
                       'Fires for changes from any app, not just this one.',
                 ),
-                _demoCard(children: [
-                  const Text('Clipboard demo',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _clipboardController,
-                    decoration: const InputDecoration(
-                      labelText: 'Text to copy',
-                      border: OutlineInputBorder(),
+                _demoCard(
+                  children: [
+                    const Text(
+                      'Clipboard demo',
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _copySensitiveToClipboard,
-                        icon: const Icon(Icons.copy),
-                        label: const Text('Copy (sensitive, 30s auto-clear)'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _clipboardController,
+                      decoration: const InputDecoration(
+                        labelText: 'Text to copy',
+                        border: OutlineInputBorder(),
                       ),
-                      OutlinedButton.icon(
-                        onPressed: _clearClipboard,
-                        icon: const Icon(Icons.delete_sweep),
-                        label: const Text('Clear Clipboard'),
-                      ),
-                    ],
-                  ),
-                ]),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _copySensitiveToClipboard,
+                          icon: const Icon(Icons.copy),
+                          label: const Text('Copy (sensitive, 30s auto-clear)'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _clearClipboard,
+                          icon: const Icon(Icons.delete_sweep),
+                          label: const Text('Clear Clipboard'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
 
                 // --- IOC Domain Check ---
                 _sectionHeader('IOC Domain Check'),
-                _demoCard(children: [
-                  Text(
-                    'Seeded with: evil.com, *.evil.com',
-                    style: TextStyle(
-                        fontSize: 12, color: Theme.of(context).hintColor),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _iocController,
-                    decoration: const InputDecoration(
-                      labelText: 'Hostname',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _checkIocDomain,
-                        icon: const Icon(Icons.search),
-                        label: const Text('Check Domain'),
+                _demoCard(
+                  children: [
+                    Text(
+                      'Seeded with: evil.com, *.evil.com',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).hintColor,
                       ),
-                      if (_iocResult != null) ...[
-                        const SizedBox(width: 12),
-                        Text(
-                          _iocResult!,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: _iocResult == 'Blocked'
-                                ? Colors.red
-                                : Colors.green,
-                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _iocController,
+                      decoration: const InputDecoration(
+                        labelText: 'Hostname',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _checkIocDomain,
+                          icon: const Icon(Icons.search),
+                          label: const Text('Check Domain'),
                         ),
+                        if (_iocResult != null) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            _iocResult!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _iocResult == 'Blocked'
+                                  ? Colors.red
+                                  : Colors.green,
+                            ),
+                          ),
+                        ],
                       ],
+                    ),
+                  ],
+                ),
+
+                // --- Banking Malware Defenses ---
+                _sectionHeader('Banking Malware Defenses'),
+                if (Platform.isAndroid)
+                  _demoCard(
+                    children: [
+                      const Text(
+                        'Call-screening role',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'There is no public API to detect a malicious app holding this role — '
+                        'this opens the OS role picker so the user can review it themselves.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).hintColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: _openCallScreeningSettings,
+                        icon: const Icon(Icons.settings_phone_outlined),
+                        label: const Text('Open Call-Screening Settings'),
+                      ),
                     ],
                   ),
-                ]),
 
                 // --- Malware & Risk ---
                 _sectionHeader('Malware & Risk'),
                 if (Platform.isAndroid)
-                  _demoCard(children: [
-                    const Text('Malware package check',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  _demoCard(
+                    children: [
+                      const Text(
+                        'Malware package check',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Both package names must be declared in AndroidManifest.xml <queries> —'
+                        ' see this example app\'s manifest.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).hintColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: _runMalwareChecks,
+                        icon: const Icon(Icons.search),
+                        label: const Text('Run Checks'),
+                      ),
+                      if (_malwareCheckKnownGood != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'com.android.settings: ${_malwareCheckKnownGood! ? "Installed" : "Not installed"}',
+                        ),
+                        Text(
+                          'com.example.known.malware: ${_malwareCheckKnownBad! ? "Installed" : "Not installed"}',
+                        ),
+                      ],
+                    ],
+                  ),
+                _demoCard(
+                  children: [
+                    const Text(
+                      'Risk summary',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      'Both package names must be declared in AndroidManifest.xml <queries> —'
-                      ' see this example app\'s manifest.',
+                      'Aggregates rooted/hooked/debugger/screen-capture/VPN/screen-lock checks.',
                       style: TextStyle(
-                          fontSize: 12, color: Theme.of(context).hintColor),
+                        fontSize: 12,
+                        color: Theme.of(context).hintColor,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
-                      onPressed: _runMalwareChecks,
-                      icon: const Icon(Icons.search),
-                      label: const Text('Run Checks'),
+                      onPressed: _evaluateRisk,
+                      icon: const Icon(Icons.assessment_outlined),
+                      label: const Text('Evaluate Risk'),
                     ),
-                    if (_malwareCheckKnownGood != null) ...[
+                    if (_riskFlags != null) ...[
                       const SizedBox(height: 8),
-                      Text(
-                          'com.android.settings: ${_malwareCheckKnownGood! ? "Installed" : "Not installed"}'),
-                      Text(
-                          'com.example.known.malware: ${_malwareCheckKnownBad! ? "Installed" : "Not installed"}'),
-                    ],
-                  ]),
-                _demoCard(children: [
-                  const Text('Risk summary',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Aggregates rooted/hooked/debugger/screen-capture/VPN/screen-lock checks.',
-                    style: TextStyle(
-                        fontSize: 12, color: Theme.of(context).hintColor),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: _evaluateRisk,
-                    icon: const Icon(Icons.assessment_outlined),
-                    label: const Text('Evaluate Risk'),
-                  ),
-                  if (_riskFlags != null) ...[
-                    const SizedBox(height: 8),
-                    if (_riskFlags!.isEmpty)
-                      const Text('No active risk flags.',
-                          style: TextStyle(color: Colors.green))
-                    else
-                      ..._riskFlags!.map((flag) => Padding(
+                      if (_riskFlags!.isEmpty)
+                        const Text(
+                          'No active risk flags.',
+                          style: TextStyle(color: Colors.green),
+                        )
+                      else
+                        ..._riskFlags!.map(
+                          (flag) => Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text('• ${flag.title}: ${flag.description}'),
-                          )),
+                          ),
+                        ),
+                    ],
                   ],
-                ]),
+                ),
 
                 // --- Danger Zone ---
                 _sectionHeader('Danger Zone'),
@@ -757,23 +895,27 @@ class _DeviceSafetyHomeState extends State<DeviceSafetyHome> {
                         onPressed: () => _confirm(
                           'This will exit the app if a hooking framework is detected.',
                           () => DeviceSafetyInfo.checkHooked(
-                              exitProcessIfTrue: true),
+                            exitProcessIfTrue: true,
+                          ),
                         ),
                         icon: const Icon(Icons.exit_to_app),
                         label: const Text('Check Hooked & Exit'),
                         style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.orange.shade800),
+                          foregroundColor: Colors.orange.shade800,
+                        ),
                       ),
                       ElevatedButton.icon(
                         onPressed: () => _confirm(
                           'This will attempt to uninstall the app if hooking is detected.',
                           () => DeviceSafetyInfo.checkHooked(
-                              uninstallIfTrue: true),
+                            uninstallIfTrue: true,
+                          ),
                         ),
                         icon: const Icon(Icons.delete_forever),
                         label: const Text('Check Hooked & Uninstall'),
                         style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.red.shade800),
+                          foregroundColor: Colors.red.shade800,
+                        ),
                       ),
                     ],
                   ),

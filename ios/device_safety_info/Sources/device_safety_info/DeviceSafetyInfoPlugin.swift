@@ -4,6 +4,7 @@ import IOSSecuritySuite
 import LocalAuthentication
 import Foundation
 import MobileCoreServices
+import Network
 
 // Direct reference to the C-level debugger check compiled from DeviceSafetyFfi.c.
 // Using @_silgen_name avoids the need for a bridging header (required for SPM).
@@ -68,6 +69,31 @@ private class ClipboardEventStreamHandler: NSObject, FlutterStreamHandler {
     }
 }
 
+// Separate stream handler for connectivity change events.
+private class ConnectivityEventStreamHandler: NSObject, FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+    private var monitor: NWPathMonitor?
+    private let monitorQueue = DispatchQueue(label: "com.devamitkumartiwari.device_safety_info.connectivity")
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        let pathMonitor = NWPathMonitor()
+        pathMonitor.pathUpdateHandler = { [weak self] _ in
+            DispatchQueue.main.async { self?.eventSink?(nil) }
+        }
+        pathMonitor.start(queue: monitorQueue)
+        self.monitor = pathMonitor
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        monitor?.cancel()
+        monitor = nil
+        eventSink = nil
+        return nil
+    }
+}
+
 // Overlay attack detection is structurally impossible on iOS: app sandboxing means no other
 // app can ever draw over this app's window (unlike Android's SYSTEM_ALERT_WINDOW). Rather than
 // silently returning a default that implies "checked, all clear", calls throw so callers don't
@@ -107,6 +133,8 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     // Kept alive for the lifetime of the plugin instance, same reasoning as screenshotStreamHandler.
     private let clipboardStreamHandler = ClipboardEventStreamHandler()
     private let overlayStreamHandler = UnsupportedOverlayStreamHandler()
+    private let connectivityStreamHandler = ConnectivityEventStreamHandler()
+    private let callActivityStreamHandler = CallActivityEventStreamHandler()
 
     // --- Screenshot blocking (UITextField isSecureTextEntry layer trick) ---
     private var secureTextField: UITextField?
@@ -144,6 +172,16 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             name: "device_safety_info/overlay_events",
             binaryMessenger: registrar.messenger())
         overlayEventChannel.setStreamHandler(instance.overlayStreamHandler)
+
+        let connectivityEventChannel = FlutterEventChannel(
+            name: "device_safety_info/connectivity_events",
+            binaryMessenger: registrar.messenger())
+        connectivityEventChannel.setStreamHandler(instance.connectivityStreamHandler)
+
+        let callActivityEventChannel = FlutterEventChannel(
+            name: "device_safety_info/call_activity_events",
+            binaryMessenger: registrar.messenger())
+        callActivityEventChannel.setStreamHandler(instance.callActivityStreamHandler)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -208,6 +246,12 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         case "clearClipboard":
             clearClipboard()
             result(nil)
+        case "getPackageInfo":
+            let bundleId = Bundle.main.bundleIdentifier ?? ""
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+            result(["packageName": bundleId, "version": version])
+        case "isCallActive":
+            result(callActivityStreamHandler.callObserver.calls.contains { !$0.hasEnded })
         default:
             result(FlutterMethodNotImplemented)
         }

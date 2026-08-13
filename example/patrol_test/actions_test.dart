@@ -42,7 +42,9 @@ void main() {
     expect(true, isTrue);
   });
 
-  patrolTest('blockScreenshots block=true then background and foreground', ($) async {
+  patrolTest('blockScreenshots block=true then background and foreground', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     await DeviceSafetyInfo.blockScreenshots(block: true);
 
@@ -50,7 +52,9 @@ void main() {
     // UITextField trick (iOS)
     await $.platform.mobile.pressHome();
     await Future.delayed(const Duration(milliseconds: 300));
-    await $.platform.mobile.openApp(appId: 'com.devamitkumartiwari.device_safety_info_example');
+    await $.platform.mobile.openApp(
+      appId: 'com.devamitkumartiwari.device_safety_info_example',
+    );
     await $.pumpAndSettle();
 
     // Unblock so it doesn't affect other tests
@@ -60,16 +64,17 @@ void main() {
 
   // ── setRecentsOverlay / clearRecentsOverlay ─────────────────────────────
 
-  patrolTest('setRecentsOverlay with default black color does not throw', ($) async {
+  patrolTest('setRecentsOverlay with default black color does not throw', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
-    await expectLater(
-      DeviceSafetyInfo.setRecentsOverlay(),
-      completes,
-    );
+    await expectLater(DeviceSafetyInfo.setRecentsOverlay(), completes);
     await DeviceSafetyInfo.clearRecentsOverlay();
   });
 
-  patrolTest('setRecentsOverlay with custom ARGB color does not throw', ($) async {
+  patrolTest('setRecentsOverlay with custom ARGB color does not throw', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     await expectLater(
       DeviceSafetyInfo.setRecentsOverlay(argbColor: 0xFF1A1A2E),
@@ -78,13 +83,13 @@ void main() {
     await DeviceSafetyInfo.clearRecentsOverlay();
   });
 
-  patrolTest('clearRecentsOverlay without prior set does not throw (cold call)', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    await expectLater(
-      DeviceSafetyInfo.clearRecentsOverlay(),
-      completes,
-    );
-  });
+  patrolTest(
+    'clearRecentsOverlay without prior set does not throw (cold call)',
+    ($) async {
+      await $.pumpWidgetAndSettle(const MyApp());
+      await expectLater(DeviceSafetyInfo.clearRecentsOverlay(), completes);
+    },
+  );
 
   patrolTest('clearRecentsOverlay after set is idempotent', ($) async {
     await $.pumpWidgetAndSettle(const MyApp());
@@ -103,14 +108,18 @@ void main() {
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Return to app — overlay should be automatically removed on resume
-    await $.platform.mobile.openApp(appId: 'com.devamitkumartiwari.device_safety_info_example');
+    await $.platform.mobile.openApp(
+      appId: 'com.devamitkumartiwari.device_safety_info_example',
+    );
     await $.pumpAndSettle();
 
     await DeviceSafetyInfo.clearRecentsOverlay();
     expect(true, isTrue);
   });
 
-  patrolTest('setRecentsOverlay called multiple times updates color', ($) async {
+  patrolTest('setRecentsOverlay called multiple times updates color', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     await DeviceSafetyInfo.setRecentsOverlay(argbColor: 0xFFFF0000); // red
     await DeviceSafetyInfo.setRecentsOverlay(argbColor: 0xFF0000FF); // blue
@@ -123,10 +132,7 @@ void main() {
   patrolTest('hideMenu(true) does not throw on Android', ($) async {
     await $.pumpWidgetAndSettle(const MyApp());
     if (defaultTargetPlatform == TargetPlatform.android) {
-      await expectLater(
-        DeviceSafetyInfo.hideMenu(hide: true),
-        completes,
-      );
+      await expectLater(DeviceSafetyInfo.hideMenu(hide: true), completes);
       // Restore visibility immediately so device is not stuck
       await DeviceSafetyInfo.hideMenu(hide: false);
     } else {
@@ -135,14 +141,13 @@ void main() {
     }
   });
 
-  patrolTest('hideMenu(false) restores recents visibility on Android', ($) async {
+  patrolTest('hideMenu(false) restores recents visibility on Android', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     if (defaultTargetPlatform == TargetPlatform.android) {
       await DeviceSafetyInfo.hideMenu(hide: true);
-      await expectLater(
-        DeviceSafetyInfo.hideMenu(hide: false),
-        completes,
-      );
+      await expectLater(DeviceSafetyInfo.hideMenu(hide: false), completes);
     }
   });
 
@@ -152,7 +157,9 @@ void main() {
       await DeviceSafetyInfo.hideMenu(hide: true);
       await $.platform.mobile.pressHome();
       await Future.delayed(const Duration(milliseconds: 300));
-      await $.platform.mobile.openApp(appId: 'com.devamitkumartiwari.device_safety_info_example');
+      await $.platform.mobile.openApp(
+        appId: 'com.devamitkumartiwari.device_safety_info_example',
+      );
       await $.pumpAndSettle();
       await DeviceSafetyInfo.hideMenu(hide: false);
     }
@@ -161,15 +168,22 @@ void main() {
 
   // ── checkHooked with safe flags ─────────────────────────────────────────
 
-  patrolTest('checkHooked(exitProcessIfTrue: false) returns false safely', ($) async {
+  patrolTest('checkHooked(exitProcessIfTrue: false) returns false safely', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     // exitProcessIfTrue=false means we never call exitProcess even if hooked
     final result = await DeviceSafetyInfo.checkHooked(exitProcessIfTrue: false);
-    expect(result, isFalse,
-        reason: 'No hooking framework present on clean test device');
+    expect(
+      result,
+      isFalse,
+      reason: 'No hooking framework present on clean test device',
+    );
   });
 
-  patrolTest('checkHooked(uninstallIfTrue: false) returns false safely', ($) async {
+  patrolTest('checkHooked(uninstallIfTrue: false) returns false safely', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
     final result = await DeviceSafetyInfo.checkHooked(uninstallIfTrue: false);
     expect(result, isFalse);
@@ -177,7 +191,9 @@ void main() {
 
   // ── Combined sequence ───────────────────────────────────────────────────
 
-  patrolTest('full security action sequence completes without errors', ($) async {
+  patrolTest('full security action sequence completes without errors', (
+    $,
+  ) async {
     await $.pumpWidgetAndSettle(const MyApp());
 
     // 1. Block screenshots
@@ -189,7 +205,9 @@ void main() {
     // 3. Background and resume to exercise lifecycle callbacks
     await $.platform.mobile.pressHome();
     await Future.delayed(const Duration(milliseconds: 400));
-    await $.platform.mobile.openApp(appId: 'com.devamitkumartiwari.device_safety_info_example');
+    await $.platform.mobile.openApp(
+      appId: 'com.devamitkumartiwari.device_safety_info_example',
+    );
     await $.pumpAndSettle();
 
     // 4. Clear overlay

@@ -1,3 +1,13 @@
+## 1.4.1
+
+* **Fix:** iOS builds failing under Flutter's Swift Package Manager integration with
+  `product 'device-safety-info' ... not found in package 'device_safety_info'` (#17). Flutter's
+  generated `FlutterGeneratedPluginSwiftPackage` requests each plugin's SPM library product by its
+  pubspec name with underscores replaced by hyphens (`device-safety-info`), but `Package.swift`
+  declared the product with an underscore. The product name now matches the convention used by
+  every other Flutter plugin. Thanks to [@jey-avono](https://github.com/jey-avono) for reporting
+  and diagnosing this!
+
 ## 1.4.0
 
 **New checks — Android banking-malware defenses** (added in response to advisory coverage of

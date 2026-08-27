@@ -11,7 +11,7 @@ let package = Package(
         .iOS(.v16)
     ],
     products: [
-        .library(name: "device_safety_info", targets: ["device_safety_info"])
+        .library(name: "device-safety-info", targets: ["device_safety_info"])
     ],
     dependencies: [
         .package(

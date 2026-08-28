@@ -37,7 +37,7 @@ version = "1.0-SNAPSHOT"
 
 android {
     namespace = "com.devamitkumartiwari.device_safety_info"
-    compileSdk = 36
+    compileSdk = 37
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

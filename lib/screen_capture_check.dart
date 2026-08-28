@@ -1,7 +1,4 @@
-import 'package:device_safety_info/device_safety_info.dart';
+/// [ScreenCapture] — a thin convenience wrapper around screen-capture detection.
+library;
 
-/// A thin convenience wrapper around [DeviceSafetyInfo.isScreenCaptured].
-class ScreenCapture {
-  /// Returns true if the screen is currently being captured, recorded, or mirrored.
-  static Future<bool> isScreenCaptured() => DeviceSafetyInfo.isScreenCaptured;
-}
+export 'src/screen_capture/screen_capture_check.dart';

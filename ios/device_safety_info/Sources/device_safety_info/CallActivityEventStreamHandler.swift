@@ -15,12 +15,29 @@ import AVFoundation
 //    pairing, so only .began is acted on directly; the "ended" transition is left to
 //    CXCallObserver changes and the didBecomeActive re-sync below, which also closes most of the
 //    "app suspended while a real call is in progress" delivery gap.
-class CallActivityEventStreamHandler: NSObject, FlutterStreamHandler, CXCallObserverDelegate {
+class CallActivityEventStreamHandler: NSObject, FlutterStreamHandler, CXCallObserverDelegate, DSIMethodHandler {
     let callObserver = CXCallObserver()
+    let methods: Set<String> = ["isCallActive"]
 
     private var eventSink: FlutterEventSink?
     private var lastActive = false
     private var lastSource: String?
+
+    /// Whether any call is currently active — the same underlying signal `evaluateAndEmit` uses
+    /// for the `call_activity_events` stream, exposed as a plain query for the `isCallActive`
+    /// method call.
+    var isCallActive: Bool {
+        callObserver.calls.contains { !$0.hasEnded }
+    }
+
+    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "isCallActive":
+            result(isCallActive)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
 
     func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         eventSink = events
@@ -67,7 +84,7 @@ class CallActivityEventStreamHandler: NSObject, FlutterStreamHandler, CXCallObse
     }
 
     private func evaluateAndEmit(hintedSource: String? = nil) {
-        let active = callObserver.calls.contains { !$0.hasEnded }
+        let active = isCallActive
         emit(active: active, source: active ? (hintedSource ?? "callKitObserved") : nil)
     }
 

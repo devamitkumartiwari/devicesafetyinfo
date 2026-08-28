@@ -1,8 +1,4 @@
-/// The state emitted by `VPNCheck.vpnState`.
-enum VPNState {
-  /// A VPN connection is currently active.
-  connectedState,
+/// [VPNState] — the state emitted by `VPNCheck.vpnState`.
+library;
 
-  /// No VPN connection is currently active.
-  disconnectedState,
-}
+export 'src/vpn/vpn_state.dart';

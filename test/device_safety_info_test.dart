@@ -268,6 +268,58 @@ void main() {
       final s = VersionStatus(localVersion: '1.0', storeVersion: '1.0.1');
       expect(s.canUpdate, true);
     });
+
+    test('does not throw on non-numeric version segments', () {
+      final s = VersionStatus(
+        localVersion: '1.2.3-beta',
+        storeVersion: '1.3.0',
+      );
+      expect(() => s.canUpdate, returnsNormally);
+      expect(s.canUpdate, true);
+    });
+
+    test('treats an unparseable segment as 0, not a crash', () {
+      final s = VersionStatus(localVersion: 'abc', storeVersion: '1.0.0');
+      expect(() => s.canUpdate, returnsNormally);
+      expect(s.canUpdate, true);
+    });
+  });
+
+  group('VersionStatus.urgency', () {
+    test('is none when there is no update available', () {
+      final s = VersionStatus(localVersion: '1.2.3', storeVersion: '1.2.3');
+      expect(s.urgency, UpdateUrgency.none);
+    });
+
+    test(
+      'is optional when an update exists but local satisfies minAppVersion',
+      () {
+        final s = VersionStatus(
+          localVersion: '1.2.0',
+          storeVersion: '1.3.0',
+          minAppVersion: '1.0.0',
+        );
+        expect(s.urgency, UpdateUrgency.optional);
+      },
+    );
+
+    test('is required when local is below minAppVersion', () {
+      final s = VersionStatus(
+        localVersion: '1.0.0',
+        storeVersion: '1.3.0',
+        minAppVersion: '1.2.0',
+      );
+      expect(s.urgency, UpdateUrgency.required);
+    });
+
+    test('is none when local is missing even with minAppVersion set', () {
+      final s = VersionStatus(
+        localVersion: null,
+        storeVersion: '1.3.0',
+        minAppVersion: '1.2.0',
+      );
+      expect(s.urgency, UpdateUrgency.none);
+    });
   });
 
   group('CallActivityEvent.fromMap', () {

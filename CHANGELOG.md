@@ -1,3 +1,59 @@
+## 1.5.0
+
+**Internal restructuring — feature modules, not a rewrite.** `lib/`, the Android Kotlin plugin, and
+the iOS Swift plugin are now organized as one vertical slice per feature (root detection, screen
+capture, screenshot, clipboard, overlay-attack, call activity, VPN, etc.) instead of a handful of
+large files implementing everything inline. This is purely structural — every existing top-level
+import (e.g. `package:device_safety_info/vpn_check.dart`) and every existing `DeviceSafetyInfo`
+member keeps its exact signature and behavior; nothing here is a breaking change. `compileSdk`
+(and the example app's `targetSdk`) are bumped to 37.
+
+**New — screenshot overlay modes:**
+* `DeviceSafetyInfo.setScreenshotOverlayMode(mode: ScreenshotOverlayMode, ...)` /
+  `clearScreenshotOverlayMode()` show a real, visible blur/color/image overlay over the active
+  screen whenever a capture or recording is detected — a branded "content hidden" placeholder
+  instead of the plain black rectangle `blockScreenshots` alone produces. FLAG_SECURE (Android) and
+  the iOS secure-layer trick prevent the OS from rendering anything at all *into* a capture, so this
+  overlay is a visible, on-screen-only effect, shown reactively while a capture/recording is active.
+  Android blur requires API 31+ (degrades to a translucent scrim below that); iOS blur uses a system
+  material blur style. Android + iOS.
+* `DeviceSafetyInfo.isScreenshotBlocked` / `toggleScreenshotBlocking()` — convenience query/toggle
+  alongside the existing `blockScreenshots`.
+
+**New — screen-recording detection:**
+* `ScreenRecordingDetector.isSupported` / `onScreenRecordingChanged` (plus
+  `onScreenRecordingStarted`/`onScreenRecordingStopped` convenience filters) detect an active
+  screen-recording *session*, distinct from `isScreenCaptured`/`onScreenCapturedChanged` (which
+  covers screen mirroring/external-display capture). Android: backed by the real
+  `WindowManager.addScreenRecordingCallback` API, API 35+ only — `isSupported` reports `false`
+  below that rather than guessing. iOS has no API distinguishing "recording" from
+  "mirroring/AirPlay" — both surface through the same `UIScreen.isCaptured` signal
+  `isScreenCaptured` already uses, so `isSupported` is always `true` there and the two streams
+  report identically; this is documented on `ScreenRecordingDetector` itself.
+
+**New — `SecureScreen` widget**: a declarative, ref-counted wrapper (`SecureScreen(child: ...)`)
+that engages `blockScreenshots` while mounted and releases it once no `SecureScreen` remains in the
+tree — pure Dart, no native code of its own. Nested/sibling `SecureScreen`s compose correctly.
+
+**`NewVersionChecker`/`VersionStatus` hardening:**
+* **Fix:** `VersionStatus.canUpdate` no longer throws on a non-purely-numeric version segment
+  (e.g. `"1.2.3-beta"`) — version comparison now degrades unparseable segments to `0` instead of
+  crashing.
+* **New:** `NewVersionChecker(minAppVersion: ...)` + `VersionStatus.urgency`
+  (`UpdateUrgency.none`/`optional`/`required`) — force/required-update support. The threshold is
+  always developer-supplied (your own remote config, or hardcoded), never scraped from the store,
+  since anything parsed out of store HTML/metadata is one layout change away from breaking.
+* **New:** `NewVersionChecker(iOSAppStoreId: ...)` — an optional numeric App Store ID fallback,
+  retried when the bundle-ID-keyed lookup returns no results (a reported failure mode even for
+  live, published apps).
+* **Fix:** both store lookups now fail soft (return `null`) on any unexpected response shape,
+  instead of letting a `TypeError`/`FormatException` escape `getVersionStatus()`.
+* **Fix:** `simpleHttpGet` now has a 10s timeout; a hung store endpoint could previously hang
+  `getVersionStatus()` indefinitely.
+* Deliberately not implemented: release-notes/"what's new" extraction — this field is unreliable
+  and inconsistently formatted across both stores; documented as a known limitation in the README
+  instead of shipping a frequently-broken scraper for it.
+
 ## 1.4.1
 
 * **Fix:** iOS builds failing under Flutter's Swift Package Manager integration with

@@ -5,9 +5,32 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="06b38f4a-86c7-4ed1-91c3-41558f331e24" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_graph.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/version" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/DeviceSafetyInfoPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/DeviceSafetyInfoPlugin.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/screencapturedetector/ScreenCaptureDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/devamitkumartiwari/device_safety_info/screencapturedetector/ScreenCaptureDetector.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/example/android/app/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/example/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/example/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/device_safety_info.podspec" beforeDir="false" afterPath="$PROJECT_DIR$/ios/device_safety_info.podspec" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/device_safety_info/Sources/device_safety_info/CallActivityEventStreamHandler.swift" beforeDir="false" afterPath="$PROJECT_DIR$/ios/device_safety_info/Sources/device_safety_info/CallActivityEventStreamHandler.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/device_safety_info/Sources/device_safety_info/DeviceSafetyInfoPlugin.swift" beforeDir="false" afterPath="$PROJECT_DIR$/ios/device_safety_info/Sources/device_safety_info/DeviceSafetyInfoPlugin.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/device_safety_info.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/device_safety_info.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/idle_timeout_guard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/idle_timeout_guard.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/ioc_domain_blocker.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/ioc_domain_blocker.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/malware_package_detector.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/malware_package_detector.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/new_version_check.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/new_version_check.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/risk_summary.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/risk_summary.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screen_capture_check.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen_capture_check.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/http/simple_http_get.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/http/simple_http_get.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/vpn_check.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/vpn_check.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/vpn_state.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/vpn_state.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/device_safety_info_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/test/device_safety_info_test.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,12 +49,12 @@
     &quot;assignee&quot;: &quot;amitkumartiwaridis&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/devamitkumartiwari/devicesafetyinfo.git&quot;,
-    &quot;accountId&quot;: &quot;bcb75256-914f-44df-8e6f-b27e9c3ec18d&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/devamitkumartiwari/devicesafetyinfo.git",
+    "accountId": "441aeb44-28ce-4c72-be85-096221980db7"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 4
 }</component>
@@ -40,26 +63,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Flutter.main.dart.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main-new-feature&quot;,
-    &quot;io.flutter.project.isFirstOpen&quot;: &quot;true&quot;,
-    &quot;io.flutter.reload.alreadyRun&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/dev/Documents/GitHub/devicesafetyinfo&quot;,
-    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Flutter.main.dart.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "main",
+    "io.flutter.project.isFirstOpen": "true",
+    "io.flutter.reload.alreadyRun": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/dev/Documents/GitHub/devicesafetyinfo",
+    "show.migrate.to.gradle.popup": "false"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/example/android" />

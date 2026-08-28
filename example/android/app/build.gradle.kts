@@ -16,7 +16,7 @@ val flutterVersionName: String = localProperties.getProperty("flutter.versionNam
 
 android {
     namespace = "com.devamitkumartiwari.device_safety_info_example"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -31,7 +31,7 @@ android {
     defaultConfig {
         applicationId = "com.devamitkumartiwari.device_safety_info_example"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
         testInstrumentationRunner = "pl.leancode.patrol.PatrolJUnitRunner"

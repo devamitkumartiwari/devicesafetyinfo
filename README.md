@@ -1,57 +1,72 @@
 # device_safety_info
 
-Flutter security plugin: root/jailbreak, hook, and tamper detection; overlay-attack, clipboard,
-malware-package, and accessibility-abuse protection; IOC domain blocking; VPN, screen-capture,
-call-activity, and session-idle monitoring; and app-update checks.
+[![pub package](https://img.shields.io/pub/v/device_safety_info.svg)](https://pub.dev/packages/device_safety_info)
+[![pub points](https://img.shields.io/pub/points/device_safety_info)](https://pub.dev/packages/device_safety_info/score)
+[![pub likes](https://img.shields.io/pub/likes/device_safety_info)](https://pub.dev/packages/device_safety_info/score)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![platform](https://img.shields.io/badge/platform-android%20%7C%20ios-lightgrey.svg)](#)
 
-## Getting Started
+A device-security toolkit for Flutter apps: root/jailbreak, hooking, and debugger detection;
+screenshot and screen-recording protection; clipboard, overlay-attack, and malware defenses; VPN
+and app-update checks — all as plain data and streams you compose into your own UI, with zero
+required third-party dependencies.
 
-In your flutter project add the dependency:
+## Table of Contents
 
-```yml
+- [Installation](#installation)
+- [Why this package](#why-this-package)
+- [Usage](#usage)
+  1. [Basic Security Checks](#1-basic-security-checks)
+  2. [Advanced Security Actions](#2-advanced-security-actions)
+  3. [Screenshot & Recording Management](#3-screenshot--recording-management)
+  4. [App Switcher (Recents) Security](#4-app-switcher-recents-security)
+  5. [VPN Monitoring](#5-vpn-monitoring)
+  6. [App Version Checker](#6-app-version-checker)
+  7. [Overlay Attack Detection](#7-overlay-attack-detection-android-only)
+  8. [Clipboard Protection](#8-clipboard-protection)
+  9. [IOC / C2 Domain Blocking](#9-ioc--c2-domain-blocking)
+  10. [Malware Package Detection](#10-malware-package-detection-android-only)
+  11. [Accessibility Abuse Detection](#11-accessibility-abuse-detection-android-only)
+  12. [Play Protect Status](#12-play-protect-status-android-only)
+  13. [Idle Session Timeout](#13-idle-session-timeout)
+  14. [Risk Summary](#14-risk-summary)
+  15. [Notification Listener Check](#15-notification-listener-check-android-only)
+  16. [Unknown Sources / Sideloading Check](#16-unknown-sources--sideloading-check-android-only)
+  17. [Call-Screening Role](#17-call-screening-role-android-only-api-29)
+  18. [Call Activity Detection](#18-call-activity-detection)
+- [Permissions (Android)](#permissions-android)
+- [Features at a Glance](#features-at-a-glance)
+- [Platform Support](#platform-support)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Installation
+
+```yaml
 dependencies:
-  device_safety_info: ^1.4.1
+  device_safety_info: ^1.5.0
 ```
-
-## Features
-
-| Feature | Android | iOS | Description |
-| :--- | :---: | :---: | :--- |
-| **Root/Jailbreak Detection** | ✅ | ✅ | Check if the device is rooted or jailbroken. |
-| **Real Device Check** | ✅ | ✅ | Distinguish between physical devices and emulators. |
-| **Hook Detection** | ✅ | ✅ | Detect frameworks like Frida, Xposed, or Cydia Substrate. |
-| **Debugger Detection** | ✅ | ✅ | Check if a debugger is attached to the process. |
-| **Screen Lock Status** | ✅ | ✅ | Check if PIN, Pattern, or Biometrics are enabled. |
-| **VPN Detection** | ✅ | ✅ | Real-time monitoring of VPN connection status. |
-| **Store Install Check** | ✅ | ✅ | Verify if installed from Google Play / App Store. |
-| **Screenshot Detection** | ✅ | ✅ | Listen for real-time screenshot events. |
-| **Screen Capture Status** | ✅ | ✅ | Detect if the screen is being recorded or mirrored. |
-| **Block Screenshots** | ✅ | ✅ | Prevent screenshots and screen recordings in-app. |
-| **Recents Overlay** | ✅ | ✅ | Add a custom color overlay in the app switcher. |
-| **External Storage Check** | ✅ | ❌ | Check if app is on external storage. |
-| **Developer Mode** | ✅ | ❌ | Check if Developer Options are enabled. |
-| **Hide from Recents** | ✅ | ❌ | Completely hide the app from the recent apps list. |
-| **Version Checker** | ✅ | ✅ | Check for newer app versions on the store. |
-| **Overlay Attack Detection** | ✅ | ❌ | Detect/block touches while another app is drawing over yours (tapjacking). Not applicable on iOS — app sandboxing makes cross-app overlays structurally impossible. |
-| **Clipboard Protection** | ✅ | ✅ | Copy sensitive text with an auto-clearing, preview-hidden clipboard entry; listen for clipboard changes. |
-| **IOC / C2 Domain Blocking** | ✅ | ✅ | Look up a host against a blocklist you supply, for wiring into your own HTTP client or WebView. |
-| **Malware Package Detection** | ✅ | ❌ | Check if a specific package is installed, to match against a known-malware list you supply. Requires a manifest declaration — see below. Not applicable on iOS. |
-| **Accessibility Abuse Detection** | ✅ | ❌ | List currently-enabled Accessibility services, a common abuse vector for screen-reading/auto-clicking malware. Not applicable on iOS — no public API. |
-| **Play Protect Status** | ✅ | ❌ | Read whether Google Play Protect scanning is enabled. Android/Google Play concept only. |
-| **Idle Session Timeout** | ✅ | ✅ | Widget wrapper that fires a callback after a period of no touch activity anywhere in the app. |
-| **Risk Summary** | ✅ | ✅ | Aggregates several checks above into a single list of plain-language risk flags. |
-| **Notification Listener Check** | ✅ | ❌ | List apps with notification-listener access — a common OTP/SMS-theft vector for banking trojans. |
-| **Unknown Sources Check** | ✅ | ❌ | Check whether this app has been granted install-unknown-apps rights. See caveats below. |
-| **Call-Screening Role** | ✅ | ❌ | Check the call-screening role's availability/self-held status, and open the OS picker for the user to review the current holder. Android 10+ (API 29+). |
-| **Call Activity Detection** | ✅ | ✅ | Detect when any call — native or VoIP (WhatsApp/Teams/Skype/etc.) — starts or ends, without identifying which app. |
-
-## Usage
-
-#### Importing package
 
 ```dart
 import 'package:device_safety_info/device_safety_info.dart';
 ```
+
+## Why this package
+
+- **Primitives, not opinions.** Every feature is a `Future`, a `Stream`, or a small data class —
+  the only widgets shipped (`IdleTimeoutGuard`, `SecureScreen`) are behavior-only wrappers, never
+  visual chrome. You build the UI; this package supplies the signal.
+- **No required third-party dependencies.** Root/hook detection runs through native FFI and
+  platform channels this package owns end-to-end — not `package_info_plus`, not `http`, not a
+  security-suite wrapper you also have to trust and keep updated.
+- **Honest about platform limits.** Where a check is structurally impossible on a platform (e.g.
+  overlay-attack detection on iOS, due to app sandboxing) it throws a clearly-coded exception
+  instead of silently returning a value that looks like "checked, all clear." Where a signal is
+  best-effort (store-version scraping, sideloading detection), the docs say so plainly.
+- **Modular by feature.** Internally organized as one vertical slice per feature across Dart,
+  Android, and iOS — a change to, say, clipboard behavior only touches clipboard files.
+
+## Usage
 
 ### 1. Basic Security Checks
 These simple getters provide quick boolean checks for common security states.
@@ -122,6 +137,55 @@ DeviceSafetyInfo.onScreenshotTaken.listen((_) {
 // Block screenshots and screen recordings
 // Android: Uses FLAG_SECURE. iOS: Uses a secure UITextField layer trick.
 await DeviceSafetyInfo.blockScreenshots(block: true);
+
+// Convenience query/toggle alongside blockScreenshots.
+bool isBlocked = await DeviceSafetyInfo.isScreenshotBlocked;
+await DeviceSafetyInfo.toggleScreenshotBlocking();
+
+// Or declaratively: blocks screenshots for as long as this widget (or any other
+// mounted SecureScreen) is in the tree. Pure Dart, no native code of its own.
+SecureScreen(child: MySensitiveScreen());
+
+// --- Live overlay modes ---
+//
+// FLAG_SECURE / the iOS secure-layer trick make the OS render nothing at all into a
+// capture, so no overlay content can ever appear *inside* a screenshot or recording —
+// these show a real, visible overlay over the app's own on-screen content instead,
+// reactively, only while a capture/recording is actually happening.
+
+// Blur the screen whenever a capture/recording is detected.
+// Android requires API 31+ for a true blur; degrades to a translucent scrim below that.
+await DeviceSafetyInfo.setScreenshotOverlayMode(
+  mode: ScreenshotOverlayMode.blur,
+  blurRadius: 16,
+);
+
+// Or a solid color / custom image instead:
+await DeviceSafetyInfo.setScreenshotOverlayMode(
+  mode: ScreenshotOverlayMode.color,
+  argbColor: 0xFF6200EE,
+);
+await DeviceSafetyInfo.setScreenshotOverlayMode(
+  mode: ScreenshotOverlayMode.image,
+  imageBytes: myBrandedPlaceholderBytes,
+);
+
+await DeviceSafetyInfo.clearScreenshotOverlayMode();
+
+// --- Screen recording detection ---
+//
+// Distinct from isScreenCaptured/onScreenCapturedChanged above, which covers screen
+// mirroring/external-display capture. Android: backed by the real recording-session
+// callback, API 35+ only — isSupported reports false below that rather than guessing.
+// iOS has no API distinguishing "recording" from "mirroring/AirPlay" — both surface
+// through the same signal isScreenCaptured already uses, so isSupported is always true
+// there and the two streams report identically.
+
+bool canDetectRecording = await ScreenRecordingDetector.isSupported;
+
+ScreenRecordingDetector.onScreenRecordingChanged.listen((isRecording) {
+  print("Screen recording: $isRecording");
+});
 ```
 
 ### 4. App Switcher (Recents) Security
@@ -146,7 +210,7 @@ Monitor VPN connectivity in real-time.
 final vpnCheck = VPNCheck();
 
 vpnCheck.vpnState.listen((state) {
-  if (state == VPNState.CONNECTED) {
+  if (state == VPNState.connectedState) {
     print("VPN is now connected.");
   } else {
     print("VPN is now disconnected.");
@@ -162,15 +226,42 @@ void checkVersion() async {
     final newVersion = NewVersionChecker(
       iOSId: 'your.bundle.id',
       androidId: 'your.package.name',
+
+      // Optional: numeric App Store ID, tried as a fallback lookup if the bundle-ID
+      // lookup above returns no results (a real failure mode even for live apps).
+      iOSAppStoreId: '123456789',
+
+      // Optional: a developer-supplied minimum version, e.g. from your own remote
+      // config. Never scraped from the store — see the caveat below.
+      minAppVersion: '2.0.0',
     );
 
     final status = await newVersion.getVersionStatus();
-    if (status != null && status.canUpdate) {
-        print("New version: ${status.storeVersion} (Local: ${status.localVersion})");
-        print("Update Link: ${status.appStoreLink}");
+    if (status == null) return; // Store unreachable or unparseable — see caveat below.
+
+    switch (status.urgency) {
+      case UpdateUrgency.required:
+        // localVersion is below minAppVersion — block further use until updated.
+        print("Update required: ${status.storeVersion}");
+        break;
+      case UpdateUrgency.optional:
+        print("New version available: ${status.storeVersion} (Local: ${status.localVersion})");
+        break;
+      case UpdateUrgency.none:
+        break; // Already up to date.
     }
+    print("Update Link: ${status.appStoreLink}");
 }
 ```
+
+> **Known limitation**: both lookups are best-effort parsing of endpoints neither store publishes
+> as a stable, documented API (the iTunes lookup JSON shape, and the Play Store listing HTML).
+> Both have changed unannounced in the past. `getVersionStatus()` fails soft — it returns `null`
+> rather than throwing when a response doesn't parse as expected — but a `null` result (or
+> `UpdateUrgency.none`) should never be treated as proof no update exists, only as "couldn't
+> determine." This package deliberately does not attempt to extract release notes/"what's new"
+> text, since that field is one of the most fragile and inconsistently formatted parts of both
+> stores' responses.
 
 ### 7. Overlay Attack Detection (Android only)
 Detect or block touches while another app is drawing an overlay on top of yours (tapjacking /
@@ -367,7 +458,7 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
     - **Android 14+ (API 34+)**: No extra permission required.
     - **Android 13 (API 33)**: Requires `READ_MEDIA_IMAGES`.
     - **Android 10-12 (API 29-32)**: Requires `READ_EXTERNAL_STORAGE`.
-  
+
   ```xml
   <!-- Required for screenshot detection on Android 10-12 -->
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -402,3 +493,79 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
   ```xml
   <uses-permission android:name="android.permission.READ_PHONE_STATE" />
   ```
+
+## Features at a Glance
+
+### Device Integrity & Tamper Detection
+
+| Feature | Android | iOS | Description |
+| :--- | :---: | :---: | :--- |
+| **Root/Jailbreak Detection** | ✅ | ✅ | Check if the device is rooted or jailbroken. |
+| **Real Device Check** | ✅ | ✅ | Distinguish between physical devices and emulators. |
+| **Hook Detection** | ✅ | ✅ | Detect frameworks like Frida, Xposed, or Cydia Substrate. |
+| **Debugger Detection** | ✅ | ✅ | Check if a debugger is attached to the process. |
+| **Screen Lock Status** | ✅ | ✅ | Check if PIN, Pattern, or Biometrics are enabled. |
+| **Store Install Check** | ✅ | ✅ | Verify if installed from Google Play / App Store. |
+| **Developer Mode** | ✅ | ❌ | Check if Developer Options are enabled. |
+| **External Storage Check** | ✅ | ❌ | Check if the app is installed on external storage. |
+
+### Screenshot & Screen Recording Protection
+
+| Feature | Android | iOS | Description |
+| :--- | :---: | :---: | :--- |
+| **Screenshot Detection** | ✅ | ✅ | Listen for real-time screenshot events. |
+| **Screen Capture Status** | ✅ | ✅ | Detect if the screen is being recorded or mirrored. |
+| **Block Screenshots** | ✅ | ✅ | Prevent screenshots and screen recordings in-app. |
+| **Screenshot Overlay Modes** | ✅ | ✅ | Live blur/color/image overlay over the active screen whenever a capture/recording is detected — a branded placeholder instead of a plain black rectangle. |
+| **Screen Recording Detection** | ✅ | ✅ | Detect an active screen-recording *session*, distinct from mirroring/external-display capture. Android needs API 35+; iOS shares the screen-capture signal — see the caveat in [§3](#3-screenshot--recording-management). |
+| **SecureScreen widget** | ✅ | ✅ | Declarative, ref-counted widget that blocks screenshots while mounted. Pure Dart, no native code. |
+
+### App Switcher & Privacy
+
+| Feature | Android | iOS | Description |
+| :--- | :---: | :---: | :--- |
+| **Recents Overlay** | ✅ | ✅ | Add a custom color overlay in the app switcher. |
+| **Hide from Recents** | ✅ | ❌ | Completely hide the app from the recent apps list. |
+| **Clipboard Protection** | ✅ | ✅ | Copy sensitive text with an auto-clearing, preview-hidden clipboard entry; listen for clipboard changes. |
+| **Overlay Attack Detection** | ✅ | ❌ | Detect/block touches while another app draws over yours (tapjacking). Not applicable on iOS — app sandboxing makes cross-app overlays structurally impossible. |
+
+### Network, Updates & Malware Defenses
+
+| Feature | Android | iOS | Description |
+| :--- | :---: | :---: | :--- |
+| **VPN Detection** | ✅ | ✅ | Real-time monitoring of VPN connection status. |
+| **Version Checker** | ✅ | ✅ | Check for newer app versions on the store, with optional force/minimum-version enforcement. |
+| **IOC / C2 Domain Blocking** | ✅ | ✅ | Look up a host against a blocklist you supply, for wiring into your own HTTP client or WebView. |
+| **Malware Package Detection** | ✅ | ❌ | Check if a specific package is installed, to match against a known-malware list you supply. Requires a manifest declaration. |
+| **Accessibility Abuse Detection** | ✅ | ❌ | List currently-enabled Accessibility services, a common abuse vector for screen-reading/auto-clicking malware. |
+| **Notification Listener Check** | ✅ | ❌ | List apps with notification-listener access — a common OTP/SMS-theft vector for banking trojans. |
+| **Unknown Sources Check** | ✅ | ❌ | Check whether this app has been granted install-unknown-apps rights. See caveats in [§16](#16-unknown-sources--sideloading-check-android-only). |
+| **Call-Screening Role** | ✅ | ❌ | Check the call-screening role's availability/self-held status, and open the OS picker to review the current holder. Android 10+ (API 29+). |
+| **Play Protect Status** | ✅ | ❌ | Read whether Google Play Protect scanning is enabled. |
+
+### Session & Risk Utilities
+
+| Feature | Android | iOS | Description |
+| :--- | :---: | :---: | :--- |
+| **Idle Session Timeout** | ✅ | ✅ | Widget wrapper that fires a callback after a period of no touch activity anywhere in the app. |
+| **Risk Summary** | ✅ | ✅ | Aggregates several checks above into a single list of plain-language risk flags. |
+| **Call Activity Detection** | ✅ | ✅ | Detect when any call — native or VoIP (WhatsApp/Teams/Skype/etc.) — starts or ends, without identifying which app. |
+
+## Platform Support
+
+| | Android | iOS |
+| :--- | :---: | :---: |
+| Minimum version | API 24 (Android 7.0) | iOS 16.0 |
+| Language | Kotlin | Swift |
+
+## Contributing
+
+Issues and pull requests are welcome at the
+[issue tracker](https://github.com/devamitkumartiwari/devicesafetyinfo/issues). Before opening a
+PR for a new check or feature, please open an issue first to discuss the approach — this package
+deliberately favors primitives over opinionated UI and avoids adding third-party dependencies, so
+it helps to align on shape before writing code.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

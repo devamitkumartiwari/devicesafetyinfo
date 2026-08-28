@@ -1,0 +1,23 @@
+{
+  "pins" : [
+    {
+      "identity" : "cocoaasyncsocket",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/robbiehanson/CocoaAsyncSocket",
+      "state" : {
+        "revision" : "dbdc00669c1ced63b27c3c5f052ee4d28f10150c",
+        "version" : "7.6.5"
+      }
+    },
+    {
+      "identity" : "iossecuritysuite",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/securing/IOSSecuritySuite",
+      "state" : {
+        "revision" : "651f1ca002b1060214173e55b9040272ae91abcd",
+        "version" : "1.9.11"
+      }
+    }
+  ],
+  "version" : 2
+}

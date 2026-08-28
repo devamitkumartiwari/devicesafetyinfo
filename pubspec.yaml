@@ -1,16 +1,16 @@
 name: device_safety_info
-description: Device Safety Info Flutter Plugin used for checking JailBreak, Rooted Device, Emulator/Simulator, External storage, VPN Detector, Application Update Checker and Screen Lock.
-version: 1.4.1
+description: Device security toolkit for Flutter - root/jailbreak, hook, and debugger detection, screenshot and clipboard protection, overlay-attack defenses, VPN and update checks.
+version: 1.5.0
 homepage: https://github.com/devamitkumartiwari/devicesafetyinfo
 repository: https://github.com/devamitkumartiwari/devicesafetyinfo
 issue_tracker: https://github.com/devamitkumartiwari/devicesafetyinfo/issues
 
 topics:
   - security
-  - rooted
-  - jailbreak
-  - safety
-  - anti-fraud
+  - root-detection
+  - jailbreak-detection
+  - privacy
+  - device-integrity
 
 environment:
   sdk: '>=3.13.0 <4.0.0'

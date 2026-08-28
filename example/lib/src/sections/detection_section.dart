@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 
+import '../refreshable.dart';
 import '../widgets/check_tile.dart';
 import '../widgets/section_header.dart';
 
@@ -13,7 +14,8 @@ class DetectionSection extends StatefulWidget {
   State<DetectionSection> createState() => DetectionSectionState();
 }
 
-class DetectionSectionState extends State<DetectionSection> {
+class DetectionSectionState extends State<DetectionSection>
+    implements Refreshable {
   bool? _isRootedDevice;
   bool? _isScreenLock;
   bool? _isRealDevice;
@@ -28,6 +30,7 @@ class DetectionSectionState extends State<DetectionSection> {
     refresh();
   }
 
+  @override
   Future<void> refresh() async {
     if (!mounted) return;
     try {

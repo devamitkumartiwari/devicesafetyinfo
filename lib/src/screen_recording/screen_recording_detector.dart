@@ -28,6 +28,13 @@ class ScreenRecordingDetector {
 
   /// Fires whenever screen recording starts (`true`) or stops (`false`). Subscribing starts native
   /// observation; cancelling the subscription stops it — there are no separate start/stop methods.
+  ///
+  /// On Android, [isSupported] reflects OS *version* support only — it cannot know ahead of time
+  /// whether this device's manufacturer actually grants the underlying permission to third-party
+  /// apps. If it doesn't (observed on at least one Samsung device, which enforces this through an
+  /// internal Knox-branded path even with the permission declared), this stream delivers a
+  /// `PlatformException('permission_denied', ...)` via [Stream.listen]'s `onError` instead of
+  /// values — always attach an `onError` handler.
   static Stream<bool> get onScreenRecordingChanged {
     _onScreenRecordingChanged ??= DeviceSafetyChannels.screenRecording
         .receiveBroadcastStream()

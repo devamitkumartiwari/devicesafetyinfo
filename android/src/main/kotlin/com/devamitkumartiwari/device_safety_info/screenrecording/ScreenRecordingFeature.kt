@@ -35,6 +35,15 @@ import java.util.function.Consumer
  * window-scoped signal), so — like [com.devamitkumartiwari.device_safety_info.overlay.OverlayAttackFeature] —
  * this feature exposes [onActivityAttached]/[onActivityDetached] for the plugin's `ActivityAware`
  * callbacks to drive, re-registering across activity attach/detach and configuration changes.
+ *
+ * Real-device finding: even with `DETECT_SCREEN_RECORDING` declared in the manifest,
+ * `addScreenRecordingCallback` has been observed throwing `SecurityException` at runtime on some
+ * OEM builds (observed on a Samsung device, whose `WindowManagerService` routes this call through
+ * an internal Knox-branded path with its own enforcement). [isApiSupported] can only reflect SDK
+ * level, not per-device grantability, so [registerIfPossible] treats that exception as "not
+ * actually usable here" and errors the stream (same `permission_denied`-class handling
+ * [com.devamitkumartiwari.device_safety_info.screenshot.ScreenshotFeature] already uses for the
+ * sibling `DETECT_SCREEN_CAPTURE` permission) rather than crashing the host app.
  */
 class ScreenRecordingFeature(private val host: PluginHost) :
     FeatureMethodHandler, EventChannel.StreamHandler, Disposable {
@@ -106,10 +115,19 @@ class ScreenRecordingFeature(private val host: PluginHost) :
             eventSink?.success(recording)
             stateListeners.toList().forEach { it(recording) }
         }
-        val initialState = wm.addScreenRecordingCallback(callbackExecutor, consumer)
+        try {
+            val initialState = wm.addScreenRecordingCallback(callbackExecutor, consumer)
+            registeredOnWindowManager = wm
+            lastRecording = initialState == WindowManager.SCREEN_RECORDING_STATE_VISIBLE
+        } catch (e: SecurityException) {
+            // Declared in the manifest but denied at runtime by this OEM's WindowManagerService
+            // (see class doc). Deliver as a stream error so the Dart onError handler catches it
+            // instead of an uncaught SecurityException reaching the host app.
+            eventSink?.error("permission_denied", e.message, null)
+            eventSink = null
+            return
+        }
         registeredCallback = consumer
-        registeredOnWindowManager = wm
-        lastRecording = initialState == WindowManager.SCREEN_RECORDING_STATE_VISIBLE
         // Emit the current state immediately, same as ScreenCaptureFeature does on listen —
         // otherwise a subscriber gets nothing until the next actual transition.
         eventSink?.success(lastRecording)
@@ -118,7 +136,11 @@ class ScreenRecordingFeature(private val host: PluginHost) :
     @Suppress("NewApi")
     private fun unregisterIfNeeded() {
         val consumer = registeredCallback ?: return
-        registeredOnWindowManager?.removeScreenRecordingCallback(consumer)
+        try {
+            registeredOnWindowManager?.removeScreenRecordingCallback(consumer)
+        } catch (e: Exception) {
+            // Best-effort cleanup — never let unregistration crash the host app.
+        }
         registeredCallback = null
         registeredOnWindowManager = null
     }

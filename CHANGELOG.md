@@ -30,6 +30,11 @@ member keeps its exact signature and behavior; nothing here is a breaking change
   "mirroring/AirPlay" — both surface through the same `UIScreen.isCaptured` signal
   `isScreenCaptured` already uses, so `isSupported` is always `true` there and the two streams
   report identically; this is documented on `ScreenRecordingDetector` itself.
+* **Fix:** declared the `android.permission.DETECT_SCREEN_RECORDING` manifest permission this
+  feature requires (missing in the initial implementation), and made registration fail soft —
+  some OEM builds deny it at runtime even when declared (observed on a Samsung device), which
+  previously crashed with an uncaught `SecurityException` instead of delivering a
+  `permission_denied` stream error like the plugin's other permission-gated streams do.
 
 **New — `SecureScreen` widget**: a declarative, ref-counted wrapper (`SecureScreen(child: ...)`)
 that engages `blockScreenshots` while mounted and releases it once no `SecureScreen` remains in the

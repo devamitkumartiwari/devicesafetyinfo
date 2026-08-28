@@ -183,10 +183,19 @@ await DeviceSafetyInfo.clearScreenshotOverlayMode();
 
 bool canDetectRecording = await ScreenRecordingDetector.isSupported;
 
-ScreenRecordingDetector.onScreenRecordingChanged.listen((isRecording) {
-  print("Screen recording: $isRecording");
-});
+ScreenRecordingDetector.onScreenRecordingChanged.listen(
+  (isRecording) => print("Screen recording: $isRecording"),
+  onError: (e) => print("Screen recording detection unavailable: $e"), // see caveat below
+);
 ```
+
+> **Known limitation**: `isSupported` reflects Android *OS version* support only (API 35+) — it
+> cannot know ahead of time whether a given device's manufacturer actually grants the underlying
+> `DETECT_SCREEN_RECORDING` permission to third-party apps at runtime, even though it's declared in
+> the plugin's manifest. On at least one Samsung device, the OS enforces this through an internal
+> Knox-branded `WindowManagerService` path that denies it regardless. When that happens, the stream
+> delivers a `permission_denied` error via `onError` instead of values — always attach one, as shown
+> above.
 
 ### 4. App Switcher (Recents) Security
 Control how your app appears in the recent apps / multitasking view.

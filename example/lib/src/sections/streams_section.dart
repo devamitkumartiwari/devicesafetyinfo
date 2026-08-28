@@ -2,23 +2,27 @@ import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 
 import '../platform_support.dart';
+import '../refreshable.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stream_tile.dart';
 
 /// Live streams: VPN status, screen-capture state, screenshot count, idle-timeout
 /// count, and call activity.
 class StreamsSection extends StatefulWidget {
-  const StreamsSection({super.key});
+  const StreamsSection({super.key, required this.idleTimeoutCount});
+
+  /// Shared with the app-wide `IdleTimeoutGuard` (which wraps every page, not just this
+  /// one) so the count stays correct regardless of which page is open when it fires.
+  final ValueNotifier<int> idleTimeoutCount;
 
   @override
   State<StreamsSection> createState() => StreamsSectionState();
 }
 
-class StreamsSectionState extends State<StreamsSection> {
+class StreamsSectionState extends State<StreamsSection> implements Refreshable {
   bool? _isVPN;
   bool _screenCaptureActive = false;
   int _screenshotCount = 0;
-  int _idleTimeoutCount = 0;
   bool? _isCallActive;
   String _callActivityStatus = 'No calls observed yet';
 
@@ -81,12 +85,7 @@ class StreamsSectionState extends State<StreamsSection> {
     }, onError: (e) => debugPrint('Call activity stream error: $e'));
   }
 
-  /// Called by the idle-timeout guard hosted in `main.dart` when the screen has seen
-  /// no touches for the configured timeout.
-  void recordIdleTimeout() {
-    if (mounted) setState(() => _idleTimeoutCount++);
-  }
-
+  @override
   Future<void> refresh() async {
     final callActive = await DeviceSafetyInfo.isCallActive;
     if (mounted) setState(() => _isCallActive = callActive);
@@ -121,12 +120,15 @@ class StreamsSectionState extends State<StreamsSection> {
               ? 'Android 34+: no permission. 24–33: needs READ_MEDIA_IMAGES.'
               : 'iOS: no permission needed.',
         ),
-        StreamTile(
-          title: 'Idle timeouts fired',
-          value: '$_idleTimeoutCount',
-          icon: Icons.timer_outlined,
-          color: Colors.blueGrey,
-          subtitle: 'IdleTimeoutGuard wraps this screen — fires after 30s with no touches.',
+        ValueListenableBuilder<int>(
+          valueListenable: widget.idleTimeoutCount,
+          builder: (context, count, _) => StreamTile(
+            title: 'Idle timeouts fired',
+            value: '$count',
+            icon: Icons.timer_outlined,
+            color: Colors.blueGrey,
+            subtitle: 'IdleTimeoutGuard wraps the whole app — fires after 30s with no touches anywhere.',
+          ),
         ),
         StreamTile(
           title: 'Call activity',

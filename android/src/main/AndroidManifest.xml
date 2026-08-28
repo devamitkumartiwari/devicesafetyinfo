@@ -3,6 +3,12 @@
     <!-- Required on Android 14+ (API 34+) for Activity.registerScreenCaptureCallback().
          Protection level: normal — auto-granted at install, no runtime prompt. -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
+    <!-- Required on Android 15+ (API 35+) for WindowManager.addScreenRecordingCallback(), backing
+         ScreenRecordingDetector. Declared manifest permission, but enforcement has been observed to
+         vary by OEM (e.g. Samsung routes this through a Knox-branded WindowManagerService path) —
+         ScreenRecordingFeature catches SecurityException and fails soft rather than assuming this
+         always succeeds just because it's declared. -->
+    <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
     <!-- Required to query (never to install) whether this app has been granted install-unknown-apps
          rights, for the isUnknownSourcesEnabled check. Without this, canRequestPackageInstalls()
          throws SecurityException on API 26+. -->

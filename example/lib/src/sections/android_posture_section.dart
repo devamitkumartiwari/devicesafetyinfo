@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 
 import '../platform_support.dart';
+import '../refreshable.dart';
 import '../widgets/check_tile.dart';
 import '../widgets/stream_tile.dart';
 
@@ -16,7 +17,8 @@ class AndroidPostureSection extends StatefulWidget {
   State<AndroidPostureSection> createState() => AndroidPostureSectionState();
 }
 
-class AndroidPostureSectionState extends State<AndroidPostureSection> {
+class AndroidPostureSectionState extends State<AndroidPostureSection>
+    implements Refreshable {
   bool? _isExternalStorage;
   bool? _isDeveloperMode;
   bool? _isAnyAccessibilityServiceEnabled;
@@ -32,6 +34,7 @@ class AndroidPostureSectionState extends State<AndroidPostureSection> {
     refresh();
   }
 
+  @override
   Future<void> refresh() async {
     if (!isAndroidPlatform || !mounted) return;
     try {

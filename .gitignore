@@ -31,7 +31,7 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
 
 # This is a package (not an app) - consumers resolve their own compatible
 # versions, so the lockfile isn't committed. example/pubspec.lock is an app
@@ -49,6 +49,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Native build caches (this plugin's own Android/iOS native modules)
-android/.cxx/
-android/.gradle/
+# Native build caches (CMake/Gradle) - covers this plugin's own android/ module and any
+# consuming app's android/app/.cxx (e.g. example/android/app/.cxx), at any depth
+.cxx/
+.gradle/

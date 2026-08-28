@@ -34,9 +34,9 @@ migrate_working_dir/
 build/
 
 # This is a package (not an app) - consumers resolve their own compatible
-# versions, so the lockfile isn't committed. example/pubspec.lock is an app
-# and is intentionally tracked instead.
-pubspec.lock
+# versions, so the lockfile isn't committed. Anchored to the root only -
+# example/pubspec.lock is an app and is intentionally tracked instead.
+/pubspec.lock
 
 # Symbolication related
 app.*.symbols

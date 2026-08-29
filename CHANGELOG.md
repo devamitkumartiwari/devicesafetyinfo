@@ -1,3 +1,15 @@
+## 1.5.1
+
+* **Fix:** `isRootedDevice()` crashed with a fatal `NoSuchMethodError` on real Android 7.0/7.1
+  (API 24/25) devices — the exact floor this package's README lists as the minimum supported
+  version (#19). `ShellExecutor.kt` called `Process.destroyForcibly()` and
+  `Process.waitFor(long, TimeUnit)` unconditionally; both were added in API 26. Since
+  `isRootedDevice()` typically runs unconditionally at app startup, this was a guaranteed,
+  100%-reproducible crash on API 24/25 hardware, not an edge case. Both calls are now guarded by
+  `Build.VERSION.SDK_INT`, with a polling-based bounded wait on API 24/25 so the 200ms timeout
+  behavior is preserved instead of falling back to an unbounded `waitFor()`. Thanks to
+  [@Enrrique-Rojas](https://github.com/Enrrique-Rojas) for the detailed report and diagnosis!
+
 ## 1.5.0
 
 **Internal restructuring — feature modules, not a rewrite.** `lib/`, the Android Kotlin plugin, and

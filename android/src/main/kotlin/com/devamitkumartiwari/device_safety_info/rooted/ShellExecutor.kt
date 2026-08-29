@@ -1,10 +1,44 @@
 package com.devamitkumartiwari.device_safety_info.rooted
 
+import android.os.Build
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 
 object ShellExecutor {
+
+    // Process.waitFor(long, TimeUnit) and Process.destroyForcibly() are API 26+.
+    // These helpers keep the same bounded-wait behavior on API 24/25 by polling
+    // exitValue() instead of falling back to an unbounded waitFor().
+    private fun waitForWithTimeout(process: Process, timeoutMs: Long): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
+        }
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            try {
+                process.exitValue()
+                return true
+            } catch (_: IllegalThreadStateException) {
+                Thread.sleep(10)
+            }
+        }
+        return try {
+            process.exitValue()
+            true
+        } catch (_: IllegalThreadStateException) {
+            false
+        }
+    }
+
+    private fun destroyProcess(process: Process?) {
+        process ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            process.destroyForcibly()
+        } else {
+            process.destroy()
+        }
+    }
 
     fun executeCommand(command: String): Boolean {
         val parts = command.trim().split("\\s+".toRegex())
@@ -25,14 +59,14 @@ object ShellExecutor {
             Thread { process.errorStream.use { it.readBytes() } }
                 .also { it.isDaemon = true; it.start() }
 
-            val finished = process.waitFor(200, TimeUnit.MILLISECONDS)
-            if (!finished) process.destroyForcibly()
+            val finished = waitForWithTimeout(process, 200)
+            if (!finished) destroyProcess(process)
             stdoutThread.join(50)
             stdoutLine != null
         } catch (_: Exception) {
             false
         } finally {
-            process?.destroyForcibly()
+            destroyProcess(process)
         }
     }
 
@@ -51,12 +85,12 @@ object ShellExecutor {
             process = ProcessBuilder("getprop", prop).redirectErrorStream(true).start()
             Thread { process.errorStream.use { it.readBytes() } }
                 .also { it.isDaemon = true; it.start() }
-            process.waitFor(200, TimeUnit.MILLISECONDS)
+            waitForWithTimeout(process, 200)
             BufferedReader(InputStreamReader(process.inputStream)).use { it.readLine() }
         } catch (_: Exception) {
             null
         } finally {
-            process?.destroyForcibly()
+            destroyProcess(process)
         }
     }
 }

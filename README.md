@@ -44,7 +44,7 @@ required third-party dependencies.
 
 ```yaml
 dependencies:
-  device_safety_info: ^1.5.1
+  device_safety_info: ^1.5.2
 ```
 
 ```dart

@@ -1,3 +1,15 @@
+## 1.5.2
+
+* **Fix:** `blockScreenshots(true)` crashed on iOS with `CALayerInvalid` ("layer ... is a part of
+  cycle in its layer tree") on the very first call, a guaranteed, 100%-reproducible crash on real
+  devices and simulators alike. `ScreenshotProtectionHandler.enableScreenshotBlocking()` added the
+  secure `UITextField` as a subview of the key window, then re-parented the window's own `CALayer`
+  into that field's secure sublayer — but since the field already lived inside the window's view
+  hierarchy, its secure sublayer was already a descendant of `window.layer`, so the re-parent made
+  the window layer its own ancestor, an illegal CoreAnimation cycle. The secure field is now hosted
+  in its own separate `UIWindow` so its layer tree never overlaps the target window's before the
+  re-parent happens.
+
 ## 1.5.1
 
 * **Fix:** `isRootedDevice()` crashed with a fatal `NoSuchMethodError` on real Android 7.0/7.1

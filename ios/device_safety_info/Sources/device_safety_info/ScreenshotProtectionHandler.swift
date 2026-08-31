@@ -25,6 +25,7 @@ final class ScreenshotProtectionHandler: DSIMethodHandler {
     // with isSecureTextEntry = true. The system prevents that secure layer's
     // contents from appearing in screenshots and screen recordings.
     private var secureTextField: UITextField?
+    private var secureFieldHostWindow: UIWindow?
     private var secureWindowOriginalSuperLayer: CALayer?
 
     // MARK: - Overlay mode state
@@ -65,8 +66,24 @@ final class ScreenshotProtectionHandler: DSIMethodHandler {
         let field = UITextField()
         field.isSecureTextEntry = true
 
+        // Host the field in its own window rather than adding it as a subview of
+        // `window`. If the field lived inside `window`'s view hierarchy, its secure
+        // sublayer would already be a descendant of `window.layer`, and reparenting
+        // `window.layer` into it below would make `window.layer` its own ancestor —
+        // a cycle that crashes CoreAnimation with "layer is a part of cycle in its
+        // layer tree". Keeping the field's layer tree fully separate avoids that.
+        let hostWindow: UIWindow
+        if let scene = window.windowScene {
+            hostWindow = UIWindow(windowScene: scene)
+        } else {
+            hostWindow = UIWindow(frame: .zero)
+        }
+        hostWindow.windowLevel = .init(rawValue: -.greatestFiniteMagnitude)
+        hostWindow.isHidden = false
+        hostWindow.addSubview(field)
+        secureFieldHostWindow = hostWindow
+
         secureWindowOriginalSuperLayer = window.layer.superlayer
-        window.addSubview(field)
 
         // The last sublayer of the text field's layer is the protected secure layer.
         if let secureSubLayer = field.layer.sublayers?.last {
@@ -83,6 +100,7 @@ final class ScreenshotProtectionHandler: DSIMethodHandler {
             originalParent.addSublayer(PluginHelpers.keyWindow?.layer ?? CALayer())
         }
         field.removeFromSuperview()
+        secureFieldHostWindow = nil
         secureTextField = nil
         secureWindowOriginalSuperLayer = nil
     }

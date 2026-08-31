@@ -1,6 +1,6 @@
 name: device_safety_info
 description: Device security toolkit for Flutter - root/jailbreak, hook, and debugger detection, screenshot and clipboard protection, overlay-attack defenses, VPN and update checks.
-version: 1.5.1
+version: 1.5.2
 homepage: https://github.com/devamitkumartiwari/devicesafetyinfo
 repository: https://github.com/devamitkumartiwari/devicesafetyinfo
 issue_tracker: https://github.com/devamitkumartiwari/devicesafetyinfo/issues

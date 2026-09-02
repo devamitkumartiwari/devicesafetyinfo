@@ -44,7 +44,7 @@ required third-party dependencies.
 
 ```yaml
 dependencies:
-  device_safety_info: ^1.5.2
+  device_safety_info: ^1.5.3
 ```
 
 ```dart
@@ -486,14 +486,12 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
 - **Unknown Sources Check**: a normal-protection permission, auto-granted with no runtime
   prompt — but Google Play treats it as a restricted permission requiring justification in Play
   Console's Permissions Declaration form, since it's the same permission that gates actually
-  installing packages (this plugin only ever queries it). If you don't use
-  `isUnknownSourcesEnabled`, remove it to skip that review step entirely — this requires the
-  `xmlns:tools` namespace on your `<manifest>` root (see `example/android/app/src/main/AndroidManifest.xml`
-  for a working example of both):
+  installing packages (this plugin only ever queries it). The plugin does **not** declare this
+  permission for you; add it yourself only if you use `isUnknownSourcesEnabled` (see
+  `example/android/app/src/main/AndroidManifest.xml` for a working example). Without it,
+  `isUnknownSourcesEnabled` degrades gracefully to `false` on API 26+ rather than crashing:
   ```xml
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-  <!-- Or, if you don't use isUnknownSourcesEnabled: -->
-  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
   ```
 - **Call Activity Detection (SIM-call signal)**: a **dangerous** runtime permission — this plugin
   cannot request it for you (no `permission_handler`-style dependency), so your app must request

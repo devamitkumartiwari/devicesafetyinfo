@@ -1,3 +1,17 @@
+## 1.5.3
+
+* **Breaking:** `REQUEST_INSTALL_PACKAGES` is no longer declared by the plugin's own
+  `AndroidManifest.xml`, so it no longer merges into every consuming app by default —
+  previously every integrator paid the Play Console sensitive-permission review cost for
+  this permission whether or not they used `isUnknownSourcesEnabled`, and had to know to
+  opt out via `tools:node="remove"` if they didn't want it. Apps that call
+  `isUnknownSourcesEnabled` must now add `<uses-permission android:name=
+  "android.permission.REQUEST_INSTALL_PACKAGES" />` to their own `AndroidManifest.xml` (see
+  README's [Permissions (Android)](README.md#permissions-android) section). Apps that don't
+  use the feature need no manifest change. Without the permission,
+  `isUnknownSourcesEnabled` already degraded to `false` via the existing
+  `SecurityException` catch in `UnknownSourcesCheck.kt`, so no native code changed.
+
 ## 1.5.2
 
 * **Fix:** `blockScreenshots(true)` crashed on iOS with `CALayerInvalid` ("layer ... is a part of

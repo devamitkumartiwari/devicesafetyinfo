@@ -1,13 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Required for onScreenshotTaken stream on Android API 24-33.
          API 34+ uses Activity.ScreenCaptureCallback which needs no permission. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Demonstrates opting out of a plugin-declared permission this app doesn't use: the plugin
-         declares REQUEST_INSTALL_PACKAGES for isUnknownSourcesEnabled, which this example app's
-         UI doesn't call. Removing it here avoids the Play Console sensitive-permission review
-         burden for apps that don't need that specific check. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+    <!-- Opt-in: the plugin no longer declares this permission itself, so any app that wants
+         isUnknownSourcesEnabled (used by this demo's "Sideloading permitted" tile) must add it
+         here. Apps that don't use the feature can simply omit this line. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:label="device_safety_info_example"
         android:name="${applicationName}"

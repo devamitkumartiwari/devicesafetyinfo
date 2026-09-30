@@ -63,7 +63,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.5.3"
+    version: "1.5.4"
   dispose_scope:
     dependency: transitive
     description:

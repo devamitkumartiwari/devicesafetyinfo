@@ -51,8 +51,15 @@ class RootDetectionFeature(private val host: PluginHost) : FeatureMethodHandler,
                     return
                 }
                 bgExecutor.execute {
-                    val isRooted = RootedDeviceCheck.isRootedDevice()
-                    cachedRooted = Pair(isRooted, System.currentTimeMillis())
+                    // Never let a checker failure crash the app or leave the Dart Future
+                    // pending; only cache results that were actually computed.
+                    val isRooted = try {
+                        RootedDeviceCheck.isRootedDevice().also {
+                            cachedRooted = Pair(it, System.currentTimeMillis())
+                        }
+                    } catch (_: Exception) {
+                        false
+                    }
                     mainHandler.post {
                         result.success(isRooted)
                         if (isRooted) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)
@@ -68,8 +75,13 @@ class RootDetectionFeature(private val host: PluginHost) : FeatureMethodHandler,
                     return
                 }
                 bgExecutor.execute {
-                    val isHooked = HookDetector.check()
-                    cachedHooked = Pair(isHooked, System.currentTimeMillis())
+                    val isHooked = try {
+                        HookDetector.check().also {
+                            cachedHooked = Pair(it, System.currentTimeMillis())
+                        }
+                    } catch (_: Exception) {
+                        false
+                    }
                     mainHandler.post {
                         result.success(isHooked)
                         if (isHooked) handleExitOrUninstall(exitIfTrue, uninstallIfTrue)

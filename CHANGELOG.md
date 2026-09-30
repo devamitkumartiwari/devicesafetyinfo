@@ -1,3 +1,18 @@
+## 1.5.4
+
+* **Fix:** `isRootedDevice` could crash the app on Android with
+  `java.io.InterruptedIOException: read interrupted by close() on another thread` or
+  `java.io.IOException: Stream closed`. `ShellExecutor` spawned `which su` (and `magisk`,
+  `busybox`, `daemonsu`) and read its stdout/stderr on raw background threads; when the
+  200 ms timeout destroyed the process, those streams were closed mid-read and the exception
+  escaped on a thread with no handler, killing the process. The root-command check now looks
+  the binaries up in `PATH` directly (the same lookup `which` performs), so no subprocess or
+  reader thread is created at all, and it is faster. The redundant stderr thread in the
+  `getprop` fallback was removed as well.
+* `isRootedDevice` / `isHooked` now return `false` instead of throwing if a native check
+  fails unexpectedly, so the Dart `Future` always completes. Failed checks are not cached.
+
+
 ## 1.5.3
 
 * **Breaking:** `REQUEST_INSTALL_PACKAGES` is no longer declared by the plugin's own

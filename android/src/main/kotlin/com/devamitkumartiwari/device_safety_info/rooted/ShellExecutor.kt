@@ -40,36 +40,6 @@ object ShellExecutor {
         }
     }
 
-    fun executeCommand(command: String): Boolean {
-        val parts = command.trim().split("\\s+".toRegex())
-        var process: Process? = null
-        return try {
-            process = ProcessBuilder(parts).redirectErrorStream(false).start()
-
-            // Drain stdout on a daemon thread concurrently with waitFor so a full
-            // output buffer can't deadlock the process before the timeout fires.
-            var stdoutLine: String? = null
-            val stdoutThread = Thread {
-                process.inputStream.bufferedReader().use { r ->
-                    stdoutLine = r.readLine()
-                    r.forEachLine { } // drain remaining lines
-                }
-            }.also { it.isDaemon = true; it.start() }
-
-            Thread { process.errorStream.use { it.readBytes() } }
-                .also { it.isDaemon = true; it.start() }
-
-            val finished = waitForWithTimeout(process, 200)
-            if (!finished) destroyProcess(process)
-            stdoutThread.join(50)
-            stdoutLine != null
-        } catch (_: Exception) {
-            false
-        } finally {
-            destroyProcess(process)
-        }
-    }
-
     fun getSystemProperty(prop: String): String? {
         // Read from Android's internal property cache via reflection — zero cost,
         // no shell spawn. Falls back to `getprop` only if reflection is restricted.
@@ -82,9 +52,9 @@ object ShellExecutor {
 
         var process: Process? = null
         return try {
+            // stderr is merged into stdout, and everything below runs on the calling
+            // thread inside this try, so a stream closed by destroyProcess can't escape.
             process = ProcessBuilder("getprop", prop).redirectErrorStream(true).start()
-            Thread { process.errorStream.use { it.readBytes() } }
-                .also { it.isDaemon = true; it.start() }
             waitForWithTimeout(process, 200)
             BufferedReader(InputStreamReader(process.inputStream)).use { it.readLine() }
         } catch (_: Exception) {

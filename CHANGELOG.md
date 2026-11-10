@@ -1,3 +1,11 @@
+## 1.5.5
+
+* **Fix (iOS):** `copyToClipboard(sensitive: false)` was ignored — the pasteboard item was always
+  marked `.localOnly`, so it never synced via Universal Clipboard. `.localOnly` is now set only
+  when `sensitive` is `true` (the default), matching the documented behavior and Android.
+* iOS: replaced deprecated `kUTTypePlainText` (`MobileCoreServices`) with
+  `UTType.plainText` (`UniformTypeIdentifiers`).
+
 ## 1.5.4
 
 * **Fix:** `isRootedDevice` could crash the app on Android with

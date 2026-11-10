@@ -99,6 +99,11 @@ void main() {
       expect(calls.single.arguments['autoClearMillis'], isNull);
     });
 
+    test('copyToClipboard forwards sensitive: false', () async {
+      await DeviceSafetyInfo.copyToClipboard('public', sensitive: false);
+      expect(calls.single.arguments['sensitive'], false);
+    });
+
     test('copyToClipboard passes autoClear as milliseconds', () async {
       await DeviceSafetyInfo.copyToClipboard(
         'otp',

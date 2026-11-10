@@ -1,6 +1,6 @@
 import Flutter
-import MobileCoreServices
 import UIKit
+import UniformTypeIdentifiers
 
 /// Stream handler for `clipboard_events` plus the `copyToClipboard`/`clearClipboard` method calls.
 ///
@@ -18,8 +18,9 @@ class ClipboardProtectionHandler: NSObject, FlutterStreamHandler, DSIMethodHandl
         case "copyToClipboard":
             let args = call.arguments as? [String: Any]
             let text = args?["text"] as? String ?? ""
+            let sensitive = args?["sensitive"] as? Bool ?? true
             let autoClearMillis = args?["autoClearMillis"] as? Int
-            copyToClipboard(text, autoClearMillis: autoClearMillis)
+            copyToClipboard(text, sensitive: sensitive, autoClearMillis: autoClearMillis)
             result(nil)
         case "clearClipboard":
             clearClipboard()
@@ -51,15 +52,21 @@ class ClipboardProtectionHandler: NSObject, FlutterStreamHandler, DSIMethodHandl
         eventSink?(nil)
     }
 
-    private func copyToClipboard(_ text: String, autoClearMillis: Int?) {
+    private func copyToClipboard(_ text: String, sensitive: Bool, autoClearMillis: Int?) {
         clipboardAutoClearWorkItem?.cancel()
         clipboardAutoClearWorkItem = nil
 
-        var options: [UIPasteboard.OptionsKey: Any] = [.localOnly: true]
+        // .localOnly keeps the item off Universal Clipboard (other Apple devices). It does not
+        // hide the item from other apps on this device; iOS has no equivalent of Android's
+        // EXTRA_IS_SENSITIVE preview hiding.
+        var options: [UIPasteboard.OptionsKey: Any] = [:]
+        if sensitive {
+            options[.localOnly] = true
+        }
         if let millis = autoClearMillis {
             options[.expirationDate] = Date().addingTimeInterval(TimeInterval(millis) / 1000)
         }
-        UIPasteboard.general.setItems([[kUTTypePlainText as String: text]], options: options)
+        UIPasteboard.general.setItems([[UTType.plainText.identifier: text]], options: options)
 
         if let millis = autoClearMillis {
             let workItem = DispatchWorkItem { [weak self] in self?.clearClipboard() }

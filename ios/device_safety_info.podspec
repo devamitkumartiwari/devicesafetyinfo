@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'device_safety_info'
-  s.version          = '1.5.4'
+  s.version          = '1.5.5'
   s.summary          = 'Flutter plugin for device security: root/jailbreak, emulator, VPN, hooking, screen capture, debugger detection.'
   s.description      = <<-DESC
 A Flutter plugin providing security-focused device checks including jailbreak/root detection,

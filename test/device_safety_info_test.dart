@@ -17,6 +17,12 @@ void main() {
             switch (call.method) {
               case 'isRootedDevice':
                 return false;
+              case 'rootCheck':
+                return {
+                  'level': 'low',
+                  'highRiskSignals': <String>[],
+                  'lowRiskSignals': ['path:/system/xbin/busybox'],
+                };
               case 'isRealDevice':
                 return true;
               case 'isScreenLock':
@@ -69,6 +75,14 @@ void main() {
 
     test('isRootedDevice returns false from mock', () async {
       expect(await DeviceSafetyInfo.isRootedDevice, false);
+    });
+
+    test('rootCheck parses a low-risk result', () async {
+      final r = await DeviceSafetyInfo.rootCheck;
+      expect(r.level, RiskLevel.low);
+      expect(r.isHighRisk, false);
+      expect(r.lowRiskSignals, ['path:/system/xbin/busybox']);
+      expect(r.highRiskSignals, isEmpty);
     });
 
     test('isRealDevice returns true from mock', () async {

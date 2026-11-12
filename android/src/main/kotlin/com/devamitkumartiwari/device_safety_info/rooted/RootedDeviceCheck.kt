@@ -1,24 +1,38 @@
 package com.devamitkumartiwari.device_safety_info.rooted
 
+import com.devamitkumartiwari.device_safety_info.core.RiskSignal
+import com.devamitkumartiwari.device_safety_info.core.RiskReport
+
 /**
  * A utility to determine if the device is rooted.
  *
- * This object consolidates results from multiple checks to provide a comprehensive
- * assessment of the device's root status. It checks for:
- *  - The presence of common root-related files (`su` binaries).
- *  - The availability of root-related commands in the system PATH.
- *  - System properties that indicate a non-standard or test-keys build.
+ * Every checker reports what it found as [RiskSignal]s tagged high- or low-risk:
+ *  - Root-related files (`su` binaries, Magisk, Superuser) — [RootFilesChecker].
+ *  - Root-related binaries in `PATH` — [RootCommandsChecker].
+ *  - System properties that indicate an insecure or modified build — [SystemPropsChecker].
+ *
+ * Only high-risk signals make [isRootedDevice] return `true`; low-risk signals are reported by
+ * [evaluate] so the app can decide its own policy (log, warn, step-up auth) without blocking
+ * users of stock firmware that happens to ship e.g. `busybox`.
  */
 object RootedDeviceCheck {
 
-    /**
-     * Checks if the device is rooted by combining multiple detection methods.
-     *
-     * @return `true` if any of the root indicators are found, `false` otherwise.
-     */
-    fun isRootedDevice(): Boolean {
-        return RootFilesChecker.checkSuFiles() ||
-                RootCommandsChecker.checkCommands() ||
-                SystemPropsChecker.checkSystemProps()
+    /** Runs every checker and returns all indicators found. A failing checker contributes none. */
+    fun evaluate(): RiskReport {
+        val signals = mutableListOf<RiskSignal>()
+        for (checker in listOf<() -> List<RiskSignal>>(
+            RootFilesChecker::signals,
+            RootCommandsChecker::signals,
+            SystemPropsChecker::signals,
+        )) {
+            try {
+                signals += checker()
+            } catch (_: Exception) {
+            }
+        }
+        return RiskReport(signals.distinctBy { it.id })
     }
+
+    /** `true` only when at least one high-risk root indicator is present. */
+    fun isRootedDevice(): Boolean = evaluate().isHighRisk
 }

@@ -36,3 +36,9 @@ __attribute__((visibility("default")))
 int32_t dsi_check_root_files(void) {
     return 0;
 }
+
+// Android only — iOS jailbreak detection is handled by IOSSecuritySuite.
+__attribute__((visibility("default")))
+int32_t dsi_root_files_level(void) {
+    return 0;
+}

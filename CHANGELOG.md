@@ -1,3 +1,80 @@
+## 1.6.0
+
+Root and emulator detection are now **tiered**: every signal is high or low risk, and the app
+chooses whether low-risk signals count. Fixes unrooted Xiaomi, Redmi and Samsung phones being
+blocked as "rooted" since 1.5.4.
+
+### New API
+
+* `RiskLevel` (`none` / `low` / `high`), `RiskPolicy` (`standard` / `strict`) and
+  `RiskCheckResult` (`level`, `highRiskSignals`, `lowRiskSignals`, `signals`, `isHighRisk`,
+  `isDetected({policy})`, `withSignal`, `fromMap`), shared by root and emulator checks.
+* `DeviceSafetyInfo.rootCheck` returns a `RiskCheckResult` with the root signals found, e.g.
+  `path:/system/bin/su` or `prop:ro.boot.verifiedbootstate=orange`.
+* `DeviceSafetyInfo.isRooted({RiskPolicy policy = RiskPolicy.standard})`: `standard` counts only
+  high-risk root signals (same as `isRootedDevice`); `strict` also counts low-risk ones.
+* `DeviceSafetyInfo.emulatorCheck` and `DeviceSafetyInfo.isEmulator({RiskPolicy policy})`: the
+  same model for emulator/simulator detection.
+* Native (Android): `dsi_root_files_level()` returns `0` none / `1` low / `2` high.
+
+```dart
+await DeviceSafetyInfo.isRooted();                            // standard: high-risk only
+await DeviceSafetyInfo.isRooted(policy: RiskPolicy.strict);   // strict: low + high
+final root = await DeviceSafetyInfo.rootCheck;                // level + signals
+await DeviceSafetyInfo.isEmulator(policy: RiskPolicy.strict);
+final emulator = await DeviceSafetyInfo.emulatorCheck;
+```
+
+### Behavior changes / fixes
+
+* **Android – `isRootedDevice`** now returns `true` only for **high-risk** signals. 1.5.4
+  reported many stock, unrooted Xiaomi, Redmi and Samsung devices as rooted: its in-process
+  `PATH` lookup counted files that merely *exist* (the old `which` only matched files the app
+  can execute) and counted a stock `busybox`.
+  * High-risk: executable `su` / `magisk` / `daemonsu`, Magisk / SuperSU / Superuser
+    artifacts, `frida-server`, `ro.secure=0`.
+  * Low-risk (only via `rootCheck` or `RiskPolicy.strict`): `busybox`, a non-executable `su`,
+    unlocked bootloader (`ro.boot.verifiedbootstate` `orange`/`yellow`), `test-keys` builds,
+    `ro.bootmode` `recovery`/`fastboot`.
+  * The native FFI file check (`checkRootFilesNative`) follows the same rule.
+* **Android – `isRealDevice`** now returns `false` only for **high-risk** emulator signals. It
+  used to match `unknown`, `generic` and `nox` anywhere in fingerprint / model / manufacturer /
+  brand / device / product, which flagged some real budget phones and GSI ROMs as emulators.
+  * High-risk: emulator hardware (`goldfish`, `ranchu`, `vbox86`, `nox`), `ro.kernel.qemu=1` /
+    `ro.boot.qemu=1` (new check), SDK / emulator / Genymotion build names, a fingerprint
+    starting with `generic`, or `generic` brand **and** device.
+  * Low-risk (only via `emulatorCheck` or `RiskPolicy.strict`): `unknown`, `generic` or `nox`
+    inside a single build field.
+* **iOS:** `rootCheck` reports any IOSSecuritySuite jailbreak hit as high-risk, with
+  IOSSecuritySuite's failure reasons as signals; `emulatorCheck` reports the Simulator as
+  high-risk. `isRootedDevice` / `isRealDevice` are unchanged on iOS.
+* **Migration:** no code changes required. To keep the old, stricter results use
+  `isRooted(policy: RiskPolicy.strict)` and `isEmulator(policy: RiskPolicy.strict)`.
+
+### Example app
+
+* **Detection** section (`example/lib/src/sections/detection_section.dart`):
+  * New **Root risk level** card (`rootCheck`) and **Emulator risk level** card
+    (`emulatorCheck`): a `None` / `Low` / `High` chip, the suggested handling, and every signal
+    tagged `HIGH` / `LOW`.
+  * New **Strict policy (root + emulator)** switch: off = `RiskPolicy.standard`, on =
+    `RiskPolicy.strict`.
+  * New **Rooted (selected policy)** and **Emulator (selected policy)** tiles showing
+    `isRooted(policy:)` / `isEmulator(policy:)` for the selected policy.
+  * Updated subtitles: **Device is rooted / jailbroken** and **Real device** now state that
+    they count high-risk signals only.
+  * `rootCheck` / `emulatorCheck` results are printed to the console for diagnostics.
+* New reusable widget `example/lib/src/widgets/risk_check_tile.dart` (`RiskCheckTile`).
+
+### Docs & tests
+
+* README: new **Root & emulator risk levels** section (signal tables, policies, usage),
+  **Migrating from 1.5.x**, and **Example app: tiered checks** with a self-contained example
+  screen.
+* New `test/risk_check_result_test.dart` (parsing, policies, signal merging, `rootCheck` /
+  `emulatorCheck` platform fallbacks) and a `rootCheck` test in
+  `test/device_safety_info_test.dart`.
+
 ## 1.5.5
 
 * **Fix (iOS):** `copyToClipboard(sensitive: false)` was ignored — the pasteboard item was always

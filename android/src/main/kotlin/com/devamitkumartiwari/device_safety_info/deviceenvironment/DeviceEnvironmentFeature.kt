@@ -24,6 +24,7 @@ class DeviceEnvironmentFeature(private val host: PluginHost) : FeatureMethodHand
 
     override val methods = setOf(
         "isRealDevice",
+        "emulatorCheck",
         "isExternalStorage",
         "isDeveloperMode",
         "isScreenLock",
@@ -40,6 +41,7 @@ class DeviceEnvironmentFeature(private val host: PluginHost) : FeatureMethodHand
     override fun handle(call: MethodCall, result: Result) {
         when (call.method) {
             "isRealDevice" -> result.success(RealDeviceCheck.isRealDevice())
+            "emulatorCheck" -> result.success(RealDeviceCheck.evaluate().toMap())
             "isExternalStorage" -> result.success(host.context?.let { ExternalStorageCheck.isExternalStorage(it) })
             "isDeveloperMode" -> result.success(host.context?.let { DevelopmentModeCheck.isDevMode(it) })
             "isScreenLock" -> result.success(host.context?.let { ScreenLockCheck.isDeviceScreenLocked(it) })

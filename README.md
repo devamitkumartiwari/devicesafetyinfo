@@ -17,6 +17,9 @@ required third-party dependencies.
 - [Why this package](#why-this-package)
 - [Usage](#usage)
   1. [Basic Security Checks](#1-basic-security-checks)
+     - [Root & emulator risk levels](#root--emulator-risk-levels)
+     - [Migrating from 1.5.x](#migrating-from-15x)
+     - [Example app: tiered checks](#example-app-tiered-checks)
   2. [Advanced Security Actions](#2-advanced-security-actions)
   3. [Screenshot & Recording Management](#3-screenshot--recording-management)
   4. [App Switcher (Recents) Security](#4-app-switcher-recents-security)
@@ -44,7 +47,7 @@ required third-party dependencies.
 
 ```yaml
 dependencies:
-  device_safety_info: ^1.5.5
+  device_safety_info: ^1.6.0
 ```
 
 ```dart
@@ -72,12 +75,22 @@ import 'package:device_safety_info/device_safety_info.dart';
 These simple getters provide quick boolean checks for common security states.
 
 ```dart
-// Checks whether device JailBroken or Rooted
+// Checks whether device JailBroken or Rooted (high-risk indicators only)
 // iOS: Uses IOSSecuritySuite. Android: Uses Native FFI + Root files check.
 bool isRooted = await DeviceSafetyInfo.isRootedDevice;
 
-// Checks whether device is Real or Emulator/Simulator
+// Choose your policy: RiskPolicy.standard (default) or RiskPolicy.strict
+bool rootedStrict = await DeviceSafetyInfo.isRooted(policy: RiskPolicy.strict);
+
+// Tiered root check: none / low / high, plus the signals that were found
+RiskCheckResult root = await DeviceSafetyInfo.rootCheck;
+
+// Checks whether device is Real or Emulator/Simulator (high-risk emulator indicators only)
 bool isReal = await DeviceSafetyInfo.isRealDevice;
+
+// Same tiered model as root: emulatorCheck for details, isEmulator for a policy-based yes/no
+RiskCheckResult emulator = await DeviceSafetyInfo.emulatorCheck;
+bool emulatorStrict = await DeviceSafetyInfo.isEmulator(policy: RiskPolicy.strict);
 
 // Checks for hooking frameworks (Frida, Xposed, Cydia Substrate, etc.)
 // Uses native scan of process memory maps for high reliability.
@@ -100,8 +113,196 @@ bool isExternal = await DeviceSafetyInfo.isExternalStorage;
 bool isDeveloperMode = await DeviceSafetyInfo.isDeveloperMode;
 ```
 
+#### Root & emulator risk levels
+Root and emulator detection are **tiered** (since 1.6.0). Every signal is classed as high or low
+risk, and you choose which ones count:
+
+| Type | Values / members | Meaning |
+|---|---|---|
+| `RiskLevel` | `none`, `low`, `high` | The most severe signal found |
+| `RiskPolicy` | `standard` (default), `strict` | `standard` counts only `high`; `strict` counts `low` and `high` |
+| `RiskCheckResult` | `level`, `highRiskSignals`, `lowRiskSignals`, `signals`, `isHighRisk`, `isDetected({policy})` | Full result with the reason for each signal |
+
+| Check | Detailed result | Yes/no with a policy | Legacy getter (= `standard`) |
+|---|---|---|---|
+| Root / jailbreak | `DeviceSafetyInfo.rootCheck` | `DeviceSafetyInfo.isRooted({policy})` | `isRootedDevice` |
+| Emulator / simulator | `DeviceSafetyInfo.emulatorCheck` | `DeviceSafetyInfo.isEmulator({policy})` | `!isRealDevice` |
+
+| Policy | Blocks | Allows |
+|---|---|---|
+| `RiskPolicy.standard` (default) | `high` signals only | `none` and `low` |
+| `RiskPolicy.strict` | `high` and `low` signals | `none` only |
+
+##### Root signals
+
+| Level | Android signals | Suggested handling |
+|---|---|---|
+| `high` | Executable `su` / `magisk` / `daemonsu`, Magisk / SuperSU / Superuser files, `frida-server`, `ro.secure=0` | Block |
+| `low` | `busybox`, non-executable `su`, unlocked bootloader (`ro.boot.verifiedbootstate` = `orange`/`yellow`), `test-keys` build, `ro.bootmode` = `recovery`/`fastboot` | Allow, log `signals`, optional step-up auth |
+| `none` | — | Allow |
+
+On iOS any IOSSecuritySuite jailbreak hit is `high`, with IOSSecuritySuite's reasons as signals.
+
+##### Emulator signals
+
+| Level | Android signals | Suggested handling |
+|---|---|---|
+| `high` | Emulator hardware (`goldfish`, `ranchu`, `vbox86`, `nox`), `ro.kernel.qemu=1` / `ro.boot.qemu=1`, `sdk_gphone` / `google_sdk` / `Android SDK built for x86` / `Emulator` / Genymotion names, fingerprint starting with `generic`, `generic` brand + device | Block |
+| `low` | `unknown`, `generic` or `nox` inside a single build field (seen on some real budget phones and GSI ROMs) | Allow, log `signals` |
+| `none` | — | Allow |
+
+On iOS the Simulator is always `high`.
+
+##### Usage
+
+```dart
+// Yes/no — standard policy (default): block only on clear evidence
+if (await DeviceSafetyInfo.isRooted()) blockApp();
+if (await DeviceSafetyInfo.isEmulator()) blockApp();
+
+// Yes/no — strict policy: also block on low-risk signals
+if (await DeviceSafetyInfo.isRooted(policy: RiskPolicy.strict)) blockApp();
+if (await DeviceSafetyInfo.isEmulator(policy: RiskPolicy.strict)) blockApp();
+
+// Detailed — block on high, allow + log on low
+final root = await DeviceSafetyInfo.rootCheck;
+switch (root.level) {
+  case RiskLevel.high:
+    blockApp(reasons: root.highRiskSignals);
+  case RiskLevel.low:
+    analytics.log('root_low_risk', root.lowRiskSignals); // allow the user in
+  case RiskLevel.none:
+    break;
+}
+
+// One result, either policy — no second native call
+final emulator = await DeviceSafetyInfo.emulatorCheck;
+final blockStandard = emulator.isDetected();                         // high only
+final blockStrict = emulator.isDetected(policy: RiskPolicy.strict);  // low or high
+debugPrint('$emulator'); // RiskCheckResult(level: low, high: [], low: [manufacturer:unknown])
+```
+
+##### Migrating from 1.5.x
+No code changes are required; the legacy getters became less aggressive.
+
+| API | 1.5.x | 1.6.0 |
+|---|---|---|
+| `isRootedDevice` | `true` for any root indicator, including stock `busybox` and unlocked bootloaders | `true` only for `high` root signals |
+| `isRealDevice` | `false` if `unknown` / `generic` / `nox` appeared in any build field | `false` only for `high` emulator signals |
+
+To keep the old, stricter behavior use `isRooted(policy: RiskPolicy.strict)` and
+`isEmulator(policy: RiskPolicy.strict)`.
+
+#### Example app: tiered checks
+The example app's **Detection** section
+([`example/lib/src/sections/detection_section.dart`](example/lib/src/sections/detection_section.dart))
+demonstrates all of the above:
+
+| Example UI | What it shows | API |
+|---|---|---|
+| **Device is rooted / jailbroken** | Legacy yes/no (high-risk only) | `isRootedDevice` |
+| **Root risk level** card | `None` / `Low` / `High` chip, suggested handling, every signal tagged `HIGH` / `LOW` | `rootCheck` |
+| **Emulator risk level** card | Same, for emulator signals | `emulatorCheck` |
+| **Strict policy (root + emulator)** switch | Off = `RiskPolicy.standard`, on = `RiskPolicy.strict` | — |
+| **Rooted (selected policy)** | Result under the selected policy | `isRooted(policy:)` |
+| **Emulator (selected policy)** | Result under the selected policy | `isEmulator(policy:)` |
+| **Real device (not emulator)** | Legacy yes/no (high-risk only) | `isRealDevice` |
+
+On a phone with only low-risk signals (e.g. a stock `busybox`), the risk card shows **Low** and
+turning the strict switch on flips **Rooted (selected policy)** from *No* to *Yes*. Both results are
+also printed to the console (`rootCheck: RiskCheckResult(...)`). The reusable card is
+[`example/lib/src/widgets/risk_check_tile.dart`](example/lib/src/widgets/risk_check_tile.dart).
+
+A minimal, self-contained version of the same screen:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:device_safety_info/device_safety_info.dart';
+
+class TieredChecksPage extends StatefulWidget {
+  const TieredChecksPage({super.key});
+
+  @override
+  State<TieredChecksPage> createState() => _TieredChecksPageState();
+}
+
+class _TieredChecksPageState extends State<TieredChecksPage> {
+  RiskPolicy _policy = RiskPolicy.standard;
+  RiskCheckResult? _root;
+  RiskCheckResult? _emulator;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final root = await DeviceSafetyInfo.rootCheck;
+    final emulator = await DeviceSafetyInfo.emulatorCheck;
+    if (!mounted) return;
+    setState(() {
+      _root = root;
+      _emulator = emulator;
+    });
+  }
+
+  Widget _card(String title, RiskCheckResult? r) {
+    if (r == null) return ListTile(title: Text(title), trailing: const Text('…'));
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            title: Text(title),
+            subtitle: Text(
+              'Blocked under ${_policy.name} policy: '
+              '${r.isDetected(policy: _policy) ? 'yes' : 'no'}',
+            ),
+            trailing: Chip(label: Text(r.level.name.toUpperCase())),
+          ),
+          for (final s in r.highRiskSignals) ListTile(dense: true, title: Text('HIGH  $s')),
+          for (final s in r.lowRiskSignals) ListTile(dense: true, title: Text('LOW   $s')),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Tiered checks')),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          children: [
+            SwitchListTile(
+              title: const Text('Strict policy (root + emulator)'),
+              subtitle: Text('RiskPolicy.${_policy.name}'),
+              value: _policy == RiskPolicy.strict,
+              onChanged: (on) => setState(
+                () => _policy = on ? RiskPolicy.strict : RiskPolicy.standard,
+              ),
+            ),
+            _card('Root risk level', _root),
+            _card('Emulator risk level', _emulator),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
 ### 2. Advanced Security Actions
-For Root and Hook detection, you can take immediate action like closing the app.
+For Hook detection, you can take immediate action like closing the app. For root and emulator
+detection, decide with a policy (see [Root & emulator risk levels](#root--emulator-risk-levels)):
+
+```dart
+if (await DeviceSafetyInfo.isRooted() || await DeviceSafetyInfo.isEmulator()) {
+  // Show your own blocking screen, then close the app.
+}
+```
 
 ```dart
 // Check for hooks and optionally exit or uninstall
@@ -390,7 +591,8 @@ IdleTimeoutGuard(
 ### 14. Risk Summary
 Aggregates several of the checks above (rooted, hooked, debugger, screen capture, VPN, missing
 screen lock) into a single list of plain-language risk flags, for showing a consolidated warning
-before a sensitive action.
+before a sensitive action. The `rooted` flag uses `isRootedDevice`, so it is raised only for
+high-risk root signals (see [Root & emulator risk levels](#root--emulator-risk-levels)).
 
 ```dart
 final flags = await RiskSummary.evaluate();
@@ -507,8 +709,8 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
 
 | Feature | Android | iOS | Description |
 | :--- | :---: | :---: | :--- |
-| **Root/Jailbreak Detection** | ✅ | ✅ | Check if the device is rooted or jailbroken. |
-| **Real Device Check** | ✅ | ✅ | Distinguish between physical devices and emulators. |
+| **Root/Jailbreak Detection** | ✅ | ✅ | Check if the device is rooted or jailbroken. Tiered `none` / `low` / `high` with `RiskPolicy.standard` / `strict` (`rootCheck`, `isRooted`). |
+| **Real Device Check** | ✅ | ✅ | Distinguish between physical devices and emulators. Tiered `none` / `low` / `high` with `RiskPolicy.standard` / `strict` (`emulatorCheck`, `isEmulator`). |
 | **Hook Detection** | ✅ | ✅ | Detect frameworks like Frida, Xposed, or Cydia Substrate. |
 | **Debugger Detection** | ✅ | ✅ | Check if a debugger is attached to the process. |
 | **Screen Lock Status** | ✅ | ✅ | Check if PIN, Pattern, or Biometrics are enabled. |

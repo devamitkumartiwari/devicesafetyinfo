@@ -63,12 +63,23 @@ class DeviceSafetyFfi {
   }
 
   /// Checks common root indicator file paths via native `stat()` (Android only).
-  /// Always returns `false` on iOS — handled by IOSSecuritySuite.
+  /// Returns `true` only for high-risk files (an executable `su`, Magisk, Superuser,
+  /// frida-server). Always returns `false` on iOS — handled by IOSSecuritySuite.
   static bool checkRootFilesNative() {
     try {
       return (_lookup('dsi_check_root_files')?.call() ?? 0) != 0;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Native root-file risk level (Android only): `0` none, `1` low-risk (an `su` file exists but
+  /// is not executable by this app), `2` high-risk. Always `0` on iOS.
+  static int rootFilesLevel() {
+    try {
+      return _lookup('dsi_root_files_level')?.call() ?? 0;
+    } catch (_) {
+      return 0;
     }
   }
 }

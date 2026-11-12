@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../core/device_safety_channels.dart';
+import '../core/risk_check_result.dart';
 
 /// The state of Google Play Protect, read from the OS setting its toggle controls. There is no
 /// public "Play Protect API" — SafetyNet's Verify Apps API, which used to expose this, was fully
@@ -28,10 +29,35 @@ class DeviceChecks {
     return false;
   }
 
+  /// `false` only for high-risk emulator indicators — see [emulatorCheck].
   static Future<bool> get isRealDevice async {
     final bool? isRealDevice = await DeviceSafetyChannels.method
         .invokeMethod<bool>('isRealDevice');
     return isRealDevice ?? false;
+  }
+
+  static Future<RiskCheckResult> get emulatorCheck async {
+    try {
+      final map = await DeviceSafetyChannels.method
+          .invokeMethod<Map<Object?, Object?>>('emulatorCheck');
+      return map == null ? RiskCheckResult.clean : RiskCheckResult.fromMap(map);
+    } on MissingPluginException {
+      // Platform without an emulatorCheck implementation: fall back to the boolean check.
+      final real =
+          await DeviceSafetyChannels.method.invokeMethod<bool>(
+            'isRealDevice',
+          ) ??
+          true;
+      return real
+          ? RiskCheckResult.clean
+          : const RiskCheckResult(
+              level: RiskLevel.high,
+              highRiskSignals: ['platform:isRealDevice'],
+            );
+    } on PlatformException catch (e) {
+      debugPrint("Failed to run emulatorCheck: '${e.message}'.");
+      return RiskCheckResult.clean;
+    }
   }
 
   static Future<bool> get isDeveloperMode async {

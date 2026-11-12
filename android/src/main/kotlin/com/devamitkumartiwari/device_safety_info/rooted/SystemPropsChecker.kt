@@ -1,37 +1,39 @@
 package com.devamitkumartiwari.device_safety_info.rooted
 
+import com.devamitkumartiwari.device_safety_info.core.RiskSignal
+
 /**
  * A utility to check for system properties that may indicate a rooted device.
  *
- * This object checks several `ro.` (read-only) properties that can reveal if the
- * device is running a non-standard or insecure build, which is common on rooted devices.
+ * Only `ro.secure=0` is high-risk. The rest also occur on unrooted devices — an unlocked
+ * bootloader (`orange`/`yellow` verified-boot state), OEM firmware signed with `test-keys`,
+ * or an odd `ro.bootmode` — so they are reported as low-risk.
  */
 object SystemPropsChecker {
 
-    // A map where the key is the system property to check, and the value is a lambda
-    // function that returns true if the property's value indicates a rooted state.
-    private val propsToChecks: Map<String, (String) -> Boolean> = mapOf(
-        // "test-keys" is often found on custom ROMs and rooted devices.
-        "ro.build.tags" to { it.contains("test-keys") },
-        // ro.debuggable removed: value "1" appears on all standard debug builds,
-        // causing false positives on unrooted developer devices.
-        // A value of "0" means the device is not running in a secure mode.
-        "ro.secure" to { it == "0" },
+    private class PropCheck(val prop: String, val highRisk: Boolean, val matches: (String) -> Boolean)
+
+    private val propChecks = listOf(
+        // A value of "0" means the device is not running in a secure mode (adbd runs as root).
+        PropCheck("ro.secure", highRisk = true) { it == "0" },
+        // "test-keys" is common on custom ROMs, but some OEM/MediaTek stock builds use it too.
+        // ro.debuggable is intentionally not checked: "1" appears on all standard debug builds.
+        PropCheck("ro.build.tags", highRisk = false) { it.contains("test-keys") },
         // Booting into recovery or fastboot can be part of the rooting process.
-        "ro.bootmode" to { it == "recovery" || it == "fastboot" },
-        // An "orange" or "yellow" state indicates that the bootloader is unlocked.
-        "ro.boot.verifiedbootstate" to { it == "orange" || it == "yellow" }
+        PropCheck("ro.bootmode", highRisk = false) { it == "recovery" || it == "fastboot" },
+        // "orange" = unlocked bootloader, "yellow" = custom verified-boot key. Neither means root.
+        PropCheck("ro.boot.verifiedbootstate", highRisk = false) { it == "orange" || it == "yellow" },
     )
 
-    /**
-     * Checks for system properties that indicate the device might be rooted.
-     *
-     * @return `true` if any of the properties match a known root indicator, `false` otherwise.
-     */
-    fun checkSystemProps(): Boolean {
-        return propsToChecks.any { (prop, check) ->
-            val value = ShellExecutor.getSystemProperty(prop)
-            value != null && check(value)
+    fun signals(): List<RiskSignal> = propChecks.mapNotNull { check ->
+        val value = ShellExecutor.getSystemProperty(check.prop)
+        if (value != null && check.matches(value)) {
+            RiskSignal("prop:${check.prop}=$value", check.highRisk)
+        } else {
+            null
         }
     }
+
+    /** Backward-compatible boolean: `true` if a high-risk property matched. */
+    fun checkSystemProps(): Boolean = signals().any { it.highRisk }
 }

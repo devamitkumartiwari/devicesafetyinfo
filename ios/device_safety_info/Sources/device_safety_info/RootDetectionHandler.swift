@@ -10,15 +10,38 @@ private func dsi_is_debugger_attached() -> Int32
 /// one native C-level debugger check.
 final class RootDetectionHandler: DSIMethodHandler {
     let methods: Set<String> = [
-        "isRootedDevice", "isRealDevice", "isHooked", "isDebuggerAttached",
+        "isRootedDevice", "rootCheck", "isRealDevice", "emulatorCheck", "isHooked", "isDebuggerAttached",
     ]
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "isRootedDevice":
             result(IOSSecuritySuite.amIJailbroken())
+        case "rootCheck":
+            // IOSSecuritySuite's indicators (Cydia/Sileo, writable system paths, suspicious
+            // dylibs, ...) don't occur on stock iOS, so any hit is reported as high-risk.
+            let check = IOSSecuritySuite.amIJailbrokenWithFailMessage()
+            let signals = check.jailbroken
+                ? check.failMessage
+                    .split(separator: ",")
+                    .map { "ios:" + $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { $0 != "ios:" }
+                : []
+            result([
+                "level": check.jailbroken ? "high" : "none",
+                "highRiskSignals": check.jailbroken && signals.isEmpty ? ["ios:jailbroken"] : signals,
+                "lowRiskSignals": [String](),
+            ])
         case "isRealDevice":
             result(!IOSSecuritySuite.amIRunInEmulator())
+        case "emulatorCheck":
+            // The iOS Simulator is unambiguous, so it is always high-risk.
+            let simulator = IOSSecuritySuite.amIRunInEmulator()
+            result([
+                "level": simulator ? "high" : "none",
+                "highRiskSignals": simulator ? ["ios:simulator"] : [String](),
+                "lowRiskSignals": [String](),
+            ])
         case "isHooked":
             result(IOSSecuritySuite.amIReverseEngineered())
         case "isDebuggerAttached":

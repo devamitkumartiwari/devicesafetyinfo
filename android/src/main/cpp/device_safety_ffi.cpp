@@ -108,31 +108,47 @@ int32_t dsi_is_debugger_attached() {
     return 0;
 }
 
-// Checks for common root indicator files using the C-level stat() syscall.
-// Using stat() directly is harder to hook than Java's File.exists().
+// Checks for common root indicator files using C-level stat()/access() syscalls, which are
+// harder to hook than Java's File.exists().
+//
+// Returns 0 = nothing found, 1 = low-risk only (an `su` file exists but this app cannot execute
+// it — some stock OEM ROMs ship one), 2 = high-risk (an executable `su`, or a Magisk/Superuser/
+// frida-server artifact, none of which ship on stock firmware).
 __attribute__((visibility("default")))
-int32_t dsi_check_root_files() {
-    const char* root_paths[] = {
+int32_t dsi_root_files_level() {
+    const char* su_paths[] = {
         "/system/xbin/su",
         "/system/bin/su",
         "/sbin/su",
         "/data/local/xbin/su",
         "/data/local/bin/su",
+    };
+    const char* high_risk_paths[] = {
         "/system/bin/magisk",
         "/sbin/magisk",
         "/data/adb/magisk",
         "/system/app/Superuser.apk",
-        "/data/local/tmp/frida-server"
+        "/data/local/tmp/frida-server",
     };
-    constexpr int num_paths = 10;
 
     struct stat st;
-    for (int i = 0; i < num_paths; i++) {
-        if (stat(root_paths[i], &st) == 0) {
-            return 1;
+    for (const char* path : high_risk_paths) {
+        if (stat(path, &st) == 0) return 2;
+    }
+    int32_t level = 0;
+    for (const char* path : su_paths) {
+        if (stat(path, &st) == 0) {
+            if (access(path, X_OK) == 0) return 2;
+            level = 1;
         }
     }
-    return 0;
+    return level;
+}
+
+// Backward-compatible boolean: 1 only when a high-risk root file is present.
+__attribute__((visibility("default")))
+int32_t dsi_check_root_files() {
+    return dsi_root_files_level() == 2 ? 1 : 0;
 }
 
 } // extern "C"

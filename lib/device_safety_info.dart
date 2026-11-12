@@ -13,6 +13,7 @@ import 'src/clipboard/clipboard_protection.dart';
 import 'src/core/device_safety_channels.dart';
 import 'src/device_checks/device_checks.dart';
 import 'src/overlay_attack/overlay_attack_detector.dart';
+import 'src/core/risk_check_result.dart';
 import 'src/root_detection/root_detection.dart';
 import 'src/screen_capture/screen_capture_detector.dart';
 import 'src/screenshot/screenshot_overlay_mode.dart';
@@ -30,6 +31,7 @@ export 'vpn_state.dart';
 export 'src/call_activity/call_activity.dart'
     show CallActivitySource, CallActivityState, CallActivityEvent;
 export 'src/device_checks/device_checks.dart' show PlayProtectStatus;
+export 'src/core/risk_check_result.dart';
 export 'src/screen_recording/screen_recording_detector.dart';
 export 'src/screenshot/screenshot_overlay_mode.dart';
 export 'src/screenshot/secure_screen.dart';
@@ -49,11 +51,58 @@ class DeviceSafetyInfo {
   static Future<bool> get isExternalStorage => DeviceChecks.isExternalStorage;
 
   /// Returns true if the device is a real device, false if it's an emulator.
+  ///
+  /// Since 1.6.0 this is `false` only for **high-risk** emulator indicators (emulator hardware
+  /// such as `goldfish`/`ranchu`, `ro.kernel.qemu=1`, SDK/Genymotion build names). Weak words
+  /// that real budget phones also report — `unknown`, `generic`, `nox` in a build field — no
+  /// longer make it `false`; use [emulatorCheck] / [isEmulator] to see or apply them.
   static Future<bool> get isRealDevice => DeviceChecks.isRealDevice;
+
+  /// Detailed emulator/simulator evaluation with a risk [RiskCheckResult.level]
+  /// (`none` / `low` / `high`) and the individual signals that were found.
+  /// iOS only ever reports `none` or `high`.
+  static Future<RiskCheckResult> get emulatorCheck =>
+      DeviceChecks.emulatorCheck;
+
+  /// Emulator/simulator check with a caller-chosen [RiskPolicy].
+  ///
+  /// * [RiskPolicy.standard] (default) — `true` only for clear emulator evidence; same result
+  ///   as `!isRealDevice`.
+  /// * [RiskPolicy.strict] — also `true` for weak indicators (`unknown`, `generic`, `nox` in a
+  ///   build field). Expect some real budget phones and custom ROMs to be flagged.
+  static Future<bool> isEmulator({
+    RiskPolicy policy = RiskPolicy.standard,
+  }) async => (await DeviceChecks.emulatorCheck).isDetected(policy: policy);
 
   /// Returns true if the device is rooted or jailbroken, false otherwise.
   /// Combines native C stat() check (Android) with the platform-level check.
+  ///
+  /// Since 1.6.0 this is `true` only for **high-risk** indicators (see [RiskLevel.high]).
+  /// Weak indicators that also occur on stock firmware — a stock `busybox`, a non-executable
+  /// `su`, an unlocked bootloader, a `test-keys` build — no longer make it `true`; use
+  /// [rootCheck] to see them.
   static Future<bool> get isRootedDevice => RootDetection.isRootedDevice;
+
+  /// Detailed root/jailbreak evaluation with a risk [RiskCheckResult.level]
+  /// (`none` / `low` / `high`) and the individual signals that were found.
+  ///
+  /// Recommended policy: block on [RiskLevel.high]; on [RiskLevel.low] allow the user,
+  /// log [RiskCheckResult.signals], and optionally require step-up verification for sensitive
+  /// actions. iOS only ever reports `none` or `high`.
+  static Future<RiskCheckResult> get rootCheck => RootDetection.rootCheck;
+
+  /// Root/jailbreak check with a caller-chosen [RiskPolicy].
+  ///
+  /// * [RiskPolicy.standard] (default) — `true` only for clear root evidence; same result as
+  ///   [isRootedDevice]. Avoids blocking users of stock firmware that ships e.g. `busybox`.
+  /// * [RiskPolicy.strict] — also `true` for weak indicators (stock `busybox`, non-executable
+  ///   `su`, unlocked bootloader, `test-keys` build). Expect some false positives on unrooted
+  ///   Xiaomi/Redmi/Samsung/MediaTek devices.
+  ///
+  /// Use [rootCheck] instead if you also need the level or the individual signals.
+  static Future<bool> isRooted({
+    RiskPolicy policy = RiskPolicy.standard,
+  }) async => (await RootDetection.rootCheck).isDetected(policy: policy);
 
   /// Returns true if developer mode is enabled on the device, false otherwise.
   /// Android only.

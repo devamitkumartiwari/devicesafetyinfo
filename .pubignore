@@ -8,3 +8,7 @@ ios/.symlinks/
 ios/Pods/
 example/build/
 pubspec.lock
+# Build outputs and tool caches (e.g. created by `flutter test`)
+build/
+.dart_tool/
+**/.cxx/

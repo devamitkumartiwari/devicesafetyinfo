@@ -1,5 +1,6 @@
 // Built-in Kotlin (AGP 9+): the Android Gradle Plugin comes from the consuming app, and Kotlin
 // is compiled by AGP itself, so this module declares no buildscript classpath and applies no KGP.
+// The native checks (src/dsi.c) are built by the Dart build hook (hook/build.dart), not here.
 plugins {
     id("com.android.library")
 }
@@ -16,14 +17,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    // TEMPORARY (removed in the build-hooks step): the C checks are still built with CMake.
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.18.1+"
-        }
     }
 
     testOptions {
@@ -45,5 +38,7 @@ dependencies {
     // Play Integrity tokens add implementation("com.google.android.play:integrity:<ver>")
     // themselves; without it the integrity API reports "unsupported" instead of crashing.
     compileOnly("com.google.android.play:integrity:1.6.0")
+    // Pigeon's generated host APIs use coroutines for @async methods.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }

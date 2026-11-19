@@ -1,5 +1,7 @@
 // swift-tools-version: 6.0
 // Swift Package Manager is the only iOS integration (CocoaPods support was dropped in 2.0.0).
+// The native C checks (src/dsi.c) are built by the Dart build hook, not by this package.
+// Sources in subfolders (Core/, Features/, Generated/) are picked up automatically.
 import PackageDescription
 
 let package = Package(
@@ -20,18 +22,11 @@ let package = Package(
         .package(name: "FlutterFramework", path: "../FlutterFramework"),
     ],
     targets: [
-        // TEMPORARY (removed in the build-hooks step): SwiftPM can't mix Swift and C in one
-        // target, so the C checks live in their own target until build hooks compile them.
-        .target(
-            name: "device_safety_ffi",
-            path: "Sources/device_safety_ffi"
-        ),
         .target(
             name: "device_safety_info",
             dependencies: [
                 .product(name: "IOSSecuritySuite", package: "IOSSecuritySuite"),
                 .product(name: "FlutterFramework", package: "FlutterFramework"),
-                "device_safety_ffi",
             ],
             path: "Sources/device_safety_info",
             resources: [

@@ -32,6 +32,16 @@ jobs:
             echo "::error::lib/ must depend only on widgets/services/foundation"; exit 1
           fi
 
+      - name: Pigeon output is up to date
+        run: |
+          dart run pigeon --input pigeon/device_safety_api.dart
+          git diff --exit-code -- lib/src/core/platform/generated android/src/main/kotlin ios/device_safety_info/Sources
+      - name: FFIgen output is up to date
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq libclang-dev
+          dart run ffigen --config ffigen.yaml
+          git diff --exit-code -- lib/src/core/platform/generated/dsi_bindings.g.dart
+
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test --coverage

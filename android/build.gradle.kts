@@ -68,6 +68,13 @@ android {
     }
 }
 
+dependencies {
+    // Opt-in Play Integrity: compiled against but NOT shipped to consuming apps. Apps that call
+    // AppIntegrity.preparePlayIntegrity() add implementation("com.google.android.play:integrity:<ver>")
+    // themselves; without it PlayIntegrityFeature reports UNSUPPORTED instead of crashing.
+    compileOnly("com.google.android.play:integrity:1.6.0")
+}
+
 project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension::class.java) {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

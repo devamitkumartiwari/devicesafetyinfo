@@ -1,3 +1,39 @@
+## 1.7.0
+
+Adds **platform attestation**: Google Play Integrity on Android and Apple App Attest / DeviceCheck
+on iOS. The plugin gets the tokens; your server verifies them.
+
+### New API
+
+* `AppIntegrity` (exported from `package:device_safety_info/device_safety_info.dart` and
+  `package:device_safety_info/app_integrity.dart`):
+  * Android: `isPlayIntegrityAvailable`, `preparePlayIntegrity({cloudProjectNumber})`,
+    `requestPlayIntegrityToken({requestHash})` (Play Integrity standard requests).
+  * iOS: `isAppAttestSupported`, `generateAppAttestKey()`, `attestAppAttestKey({keyId, challenge})`,
+    `generateAppAttestAssertion({keyId, clientData})`, `isDeviceCheckSupported`,
+    `generateDeviceCheckToken()`.
+* `AttestationException` / `AttestationErrorCode`: typed failures (`unsupported`, `notPrepared`,
+  `providerInvalid`, `playServicesUnavailable`, `network`, `tooManyRequests`, `invalidKey`,
+  `invalidInput`, `serverUnavailable`, `unknown`).
+
+### Setup notes
+
+* **Play Integrity is opt-in.** The plugin compiles against `com.google.android.play:integrity` but
+  doesn't ship it. Apps that use it add
+  `implementation("com.google.android.play:integrity:1.6.0")`. Without it, the calls throw
+  `AttestationErrorCode.unsupported` and nothing crashes. Apps that don't use `AppIntegrity` gain no
+  new dependency.
+* **App Attest** needs the `com.apple.developer.devicecheck.appattest-environment` entitlement in
+  the app. iOS links the system `DeviceCheck` framework; there's no new third-party dependency.
+* **Server verification is required.** `example/server_dotnet` is a reference ASP.NET Core verifier
+  covering Play Integrity decode and policy, App Attest attestation and assertion validation, and the
+  DeviceCheck APIs.
+
+### Example app
+
+* New **App Integrity** screen under Device Integrity. It runs the full round trip when given
+  `--dart-define=INTEGRITY_SERVER_URL=...` (plus `PLAY_CLOUD_PROJECT_NUMBER` on Android).
+
 ## 1.6.0
 
 Root and emulator detection are now **tiered**: every signal is high or low risk, and the app

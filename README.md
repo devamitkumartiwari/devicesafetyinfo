@@ -37,6 +37,7 @@ required third-party dependencies.
   16. [Unknown Sources / Sideloading Check](#16-unknown-sources--sideloading-check-android-only)
   17. [Call-Screening Role](#17-call-screening-role-android-only-api-29)
   18. [Call Activity Detection](#18-call-activity-detection)
+  19. [App Integrity — Play Integrity / App Attest / DeviceCheck](#19-app-integrity--play-integrity--app-attest--devicecheck)
 - [Permissions (Android)](#permissions-android)
 - [Features at a Glance](#features-at-a-glance)
 - [Platform Support](#platform-support)
@@ -657,6 +658,99 @@ cooperation needed). iOS reports `callKitObserved` (via CallKit's `CXCallObserve
 calls the calling app routed through CallKit) or `audioInterrupted` (a lower-confidence fallback
 for VoIP apps that don't integrate CallKit, via `AVAudioSession` interruption notifications).
 
+### 19. App Integrity — Play Integrity / App Attest / DeviceCheck
+`AppIntegrity` produces **attestation tokens** that let your server confirm a request comes from a
+genuine copy of your app on a genuine device:
+
+| Platform | API | What the server learns |
+| :--- | :--- | :--- |
+| Android | Google **Play Integrity** (standard requests) | App binary recognized by Play, device integrity (basic / device / strong), licensing, Play Protect status |
+| iOS | Apple **App Attest** | Requests are signed by a Secure Enclave key that Apple attested belongs to your unmodified app |
+| iOS | Apple **DeviceCheck** | 2 bits per device you can set/read server-side (e.g. "promo already redeemed"), surviving reinstalls |
+
+> **Server verification is required.** The plugin only *gets* tokens — it never decides trust
+> on-device, because an attacker controlling the device can patch any local check. Your backend
+> verifies each token with Google / Apple. A complete reference verifier (ASP.NET Core) lives in
+> [`example/server_dotnet`](example/server_dotnet/README.md). No backend? Firebase App Check wraps
+> the same APIs and verifies for you.
+
+```
+Server: GET /challenge ─▶ app ─▶ AppIntegrity gets a token bound to that challenge
+app ─▶ POST token + challenge ─▶ server verifies with Google / Apple ─▶ allow / step-up / block
+```
+
+**Android setup**
+1. Play Console → *App integrity* → link a Google Cloud project; enable the *Play Integrity API*.
+2. Add the library to **your app** — the plugin doesn't bundle it (without it, calls throw
+   `AttestationErrorCode.unsupported`):
+   ```kotlin
+   // android/app/build.gradle.kts
+   dependencies { implementation("com.google.android.play:integrity:1.6.0") }
+   ```
+3. Note the Cloud **project number** for `preparePlayIntegrity`.
+
+**iOS setup**
+1. Xcode → Runner → *Signing & Capabilities* → **+ App Attest** (adds
+   `com.apple.developer.devicecheck.appattest-environment`; `development` / `production`).
+2. Test on a physical device — the simulator doesn't support App Attest.
+
+```dart
+// Android — prepare once (e.g. app start), then one token per sensitive request
+await AppIntegrity.preparePlayIntegrity(cloudProjectNumber: 123456789012);
+final challenge = await api.getChallenge();
+final token = await AppIntegrity.requestPlayIntegrityToken(requestHash: challenge);
+await api.verifyAndroid(token: token, challenge: challenge);
+
+// iOS — attest a key once per install, persist keyId (it isn't secret)
+var keyId = prefs.getString('appAttestKeyId');
+if (keyId == null) {
+  keyId = await AppIntegrity.generateAppAttestKey();
+  final challenge = await api.getChallenge();
+  final attestation = await AppIntegrity.attestAppAttestKey(keyId: keyId, challenge: challenge);
+  await api.attestIos(keyId: keyId, attestation: attestation, challenge: challenge);
+  await prefs.setString('appAttestKeyId', keyId);
+}
+// iOS — sign each sensitive request (clientData must include a server nonce)
+final body = jsonEncode({'action': 'transfer', 'amount': 100, 'nonce': await api.getChallenge()});
+final assertion = await AppIntegrity.generateAppAttestAssertion(keyId: keyId, clientData: body);
+await api.post('/transfer', body: body, headers: {'X-App-Key-Id': keyId, 'X-App-Assertion': assertion});
+
+// iOS — DeviceCheck
+final dcToken = await AppIntegrity.generateDeviceCheckToken();
+
+// Capability checks (never throw; false on the other platform)
+await AppIntegrity.isPlayIntegrityAvailable; // Android + dependency added
+await AppIntegrity.isAppAttestSupported;     // iOS device, not simulator
+await AppIntegrity.isDeviceCheckSupported;
+```
+
+Failures throw `AttestationException` with a `code`:
+
+| `AttestationErrorCode` | Meaning / what to do |
+| :--- | :--- |
+| `unsupported` | Wrong platform, simulator, missing entitlement, or Play Integrity dependency not added |
+| `notPrepared` | Call `preparePlayIntegrity` first |
+| `providerInvalid` | Token provider expired — call `preparePlayIntegrity` again and retry |
+| `playServicesUnavailable` | No / outdated Google Play on the device — fall back to step-up auth |
+| `network`, `tooManyRequests`, `serverUnavailable` | Transient — retry with backoff |
+| `invalidKey` | App Attest key invalidated — delete the stored keyId, generate + attest a new one |
+| `invalidInput` | Bad argument (e.g. `requestHash` over 500 chars, invalid project number) |
+| `unknown` | Anything else — see `platformCode` |
+
+**Server checklist** (implemented in the .NET sample):
+- Issue one-time challenges and reject reused/expired ones.
+- *Play Integrity:* decode via Google's `decodeIntegrityToken`; check `requestHash`, package name,
+  timestamp freshness, `PLAY_RECOGNIZED`, and `MEETS_DEVICE_INTEGRITY` (or stronger).
+- *App Attest:* validate the certificate chain to Apple's App Attestation Root CA, the nonce
+  extension, keyId, rpIdHash (`TEAMID.bundle.id`), counter 0 and environment AAGUID; store the
+  public key. For assertions verify the signature and that the counter strictly increases.
+- *DeviceCheck:* call Apple's `validate_device_token` / `query_two_bits` / `update_two_bits` with an
+  ES256 JWT signed by your `.p8` key.
+
+**Limits:** Play Integrity standard requests have a default daily quota (~10k/day, raisable);
+devices without Google Play can't produce tokens; sideloaded or debug builds get weaker verdicts.
+App Attest needs iOS 14+ on real hardware and isn't available in most app extensions.
+
 ## Permissions (Android)
 
 Add these to your `AndroidManifest.xml` if you use the respective features:
@@ -717,6 +811,8 @@ Add these to your `AndroidManifest.xml` if you use the respective features:
 | **Store Install Check** | ✅ | ✅ | Verify if installed from Google Play / App Store. |
 | **Developer Mode** | ✅ | ❌ | Check if Developer Options are enabled. |
 | **External Storage Check** | ✅ | ❌ | Check if the app is installed on external storage. |
+| **Google Play Integrity** | ✅ | ➖ | Opt-in. Request Play Integrity tokens for **server-side** verification of app and device integrity. See [§19](#19-app-integrity--play-integrity--app-attest--devicecheck). |
+| **Apple App Attest / DeviceCheck** | ➖ | ✅ | Generate App Attest keys, attestations and per-request assertions, plus DeviceCheck tokens, for **server-side** verification. See [§19](#19-app-integrity--play-integrity--app-attest--devicecheck). |
 
 ### Screenshot & Screen Recording Protection
 

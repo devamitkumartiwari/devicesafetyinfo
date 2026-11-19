@@ -20,6 +20,7 @@ import 'src/screenshot/screenshot_overlay_mode.dart';
 import 'src/screenshot/screenshot_protection.dart';
 import 'src/vpn/vpn_check.dart';
 
+export 'app_integrity.dart';
 export 'idle_timeout_guard.dart';
 export 'ioc_domain_blocker.dart';
 export 'malware_package_detector.dart';

@@ -50,6 +50,8 @@ android {
 }
 
 dependencies {
+    // Opt-in for AppIntegrity Play Integrity support — the plugin itself doesn't bundle it.
+    implementation("com.google.android.play:integrity:1.6.0")
     androidTestUtil("androidx.test:orchestrator:1.5.1")
 }
 

@@ -25,6 +25,7 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
     private let vpnHandler = VpnHandler()
     private let deviceEnvironmentHandler = DeviceEnvironmentHandler()
     private let versionCheckHandler = VersionCheckHandler()
+    private let appAttestHandler = AppAttestHandler()
 
     // Flat method-dispatch table, mirroring the Android side's FeatureMethodHandler map. The
     // first handler whose `methods` contains the incoming method name wins.
@@ -40,6 +41,7 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
         deviceEnvironmentHandler,
         versionCheckHandler,
         callActivityStreamHandler,
+        appAttestHandler,
     ]
 
     public static func register(with registrar: FlutterPluginRegistrar) {

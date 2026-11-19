@@ -3,6 +3,7 @@ import 'package:device_safety_info/device_safety_info.dart';
 
 import '../sections/actions_section.dart';
 import '../sections/android_posture_section.dart';
+import '../sections/app_integrity_section.dart';
 import '../sections/banking_defenses_section.dart';
 import '../sections/danger_zone_section.dart';
 import '../sections/detection_section.dart';
@@ -130,6 +131,16 @@ class _HomePageState extends State<HomePage> {
           ctx,
           'Android Posture',
           (key) => AndroidPostureSection(key: key),
+        ),
+      ),
+      _FeatureMenuItem(
+        title: 'App Integrity',
+        subtitle: 'Play Integrity, App Attest, and DeviceCheck tokens',
+        icon: Icons.verified_user_outlined,
+        open: (ctx) => _openRefreshable<AppIntegritySectionState>(
+          ctx,
+          'App Integrity',
+          (key) => AppIntegritySection(key: key),
         ),
       ),
     ]),

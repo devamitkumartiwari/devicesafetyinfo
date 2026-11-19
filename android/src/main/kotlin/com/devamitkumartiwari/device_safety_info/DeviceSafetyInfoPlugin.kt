@@ -10,6 +10,7 @@ import com.devamitkumartiwari.device_safety_info.core.Disposable
 import com.devamitkumartiwari.device_safety_info.core.FeatureMethodHandler
 import com.devamitkumartiwari.device_safety_info.core.PluginHost
 import com.devamitkumartiwari.device_safety_info.deviceenvironment.DeviceEnvironmentFeature
+import com.devamitkumartiwari.device_safety_info.integrity.PlayIntegrityFeature
 import com.devamitkumartiwari.device_safety_info.malware.MalwareFeature
 import com.devamitkumartiwari.device_safety_info.overlay.OverlayAttackFeature
 import com.devamitkumartiwari.device_safety_info.rootdetection.RootDetectionFeature
@@ -65,6 +66,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
         val malwareFeature = MalwareFeature(this)
         val versionCheckFeature = VersionCheckFeature(this)
         val deviceEnvironmentFeature = DeviceEnvironmentFeature(this)
+        val playIntegrityFeature = PlayIntegrityFeature(this)
 
         val features: List<FeatureMethodHandler> = listOf(
             rootDetectionFeature,
@@ -79,6 +81,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
             malwareFeature,
             versionCheckFeature,
             deviceEnvironmentFeature,
+            playIntegrityFeature,
         )
 
         methodHandlers = buildMap {

@@ -12,3 +12,5 @@ pubspec.lock
 build/
 .dart_tool/
 **/.cxx/
+# Server-side verification sample (not part of the Flutter package)
+example/server_dotnet/

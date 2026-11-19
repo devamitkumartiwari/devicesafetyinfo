@@ -44,6 +44,10 @@ let package = Package(
                 // NSObject-based plugin registration are Swift 5 idiomatic. Swift 6
                 // strict-concurrency checking would require a larger migration.
                 .swiftLanguageVersion(.v5)
+            ],
+            linkerSettings: [
+                // App Attest + DeviceCheck (AppAttestHandler.swift).
+                .linkedFramework("DeviceCheck")
             ]
         ),
     ]

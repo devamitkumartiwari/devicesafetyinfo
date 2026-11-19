@@ -13,8 +13,8 @@ topics:
   - device-integrity
 
 environment:
-  sdk: '>=3.13.0 <4.0.0'
-  flutter: '>=3.24.0'
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
 
 dependencies:
   flutter:
@@ -24,9 +24,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: any
-
-
+  flutter_lints: ^6.0.0
 
 flutter:
 

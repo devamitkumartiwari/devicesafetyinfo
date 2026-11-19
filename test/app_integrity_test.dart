@@ -146,18 +146,21 @@ void main() {
       expect(await AppIntegrity.generateDeviceCheckToken(), 'ZGM=');
     });
 
-    test('Android-only methods throw unsupported without a channel call', () async {
-      await expectLater(
-        AppIntegrity.preparePlayIntegrity(cloudProjectNumber: 1),
-        throwsA(isA<AttestationException>()),
-      );
-      await expectLater(
-        AppIntegrity.requestPlayIntegrityToken(requestHash: 'x'),
-        throwsA(isA<AttestationException>()),
-      );
-      expect(await AppIntegrity.isPlayIntegrityAvailable, isFalse);
-      expect(calls, isEmpty);
-    });
+    test(
+      'Android-only methods throw unsupported without a channel call',
+      () async {
+        await expectLater(
+          AppIntegrity.preparePlayIntegrity(cloudProjectNumber: 1),
+          throwsA(isA<AttestationException>()),
+        );
+        await expectLater(
+          AppIntegrity.requestPlayIntegrityToken(requestHash: 'x'),
+          throwsA(isA<AttestationException>()),
+        );
+        expect(await AppIntegrity.isPlayIntegrityAvailable, isFalse);
+        expect(calls, isEmpty);
+      },
+    );
   });
 
   group('error mapping', () {

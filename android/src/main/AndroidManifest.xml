@@ -9,8 +9,4 @@
          ScreenRecordingFeature catches SecurityException and fails soft rather than assuming this
          always succeeds just because it's declared. -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
-    <!-- Dangerous/runtime permission — the host app must request runtime grant itself (this plugin
-         has no permission-request dependency). Backs the SIM-call signal for onCallActivityChanged
-         / isCallActive; the plugin degrades to VoIP-only detection if never granted. -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 </manifest>

@@ -18,9 +18,13 @@ class AppIntegrity {
 
   static bool get _android =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-  static bool get _ios => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get _ios =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-  static Future<T?> _call<T>(String method, [Map<String, Object?>? args]) async {
+  static Future<T?> _call<T>(
+    String method, [
+    Map<String, Object?>? args,
+  ]) async {
     try {
       return await DeviceSafetyChannels.method.invokeMethod<T>(method, args);
     } on PlatformException catch (e) {

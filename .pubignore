@@ -4,8 +4,6 @@
 .DS_Store
 CODE_REVIEW.md
 android/build/
-ios/.symlinks/
-ios/Pods/
 example/build/
 pubspec.lock
 # Build outputs and tool caches (e.g. created by `flutter test`)

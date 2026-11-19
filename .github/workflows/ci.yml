@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v2.0.0]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.50.0"
+
+jobs:
+  dart:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: (cd example && flutter pub get)
+
+      - name: lib/ must not import material or cupertino
+        run: |
+          if grep -rnE "package:flutter/(material|cupertino)\.dart" lib; then
+            echo "::error::lib/ must depend only on widgets/services/foundation"; exit 1
+          fi
+
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test --coverage
+
+  android:
+    name: Android build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build example APK
+        working-directory: example
+        run: flutter build apk --debug
+      - name: Plugin manifest must not request READ_PHONE_STATE
+        run: |
+          if grep -n "READ_PHONE_STATE" android/src/main/AndroidManifest.xml; then exit 1; fi
+
+  ios:
+    name: iOS build (SwiftPM only)
+    runs-on: macos-15
+    steps:
+      # Checked out into a folder named after the package: SwiftPM rejects the local package
+      # override when the folder name differs from the package name (see CONTRIBUTING.md).
+      - uses: actions/checkout@v4
+        with:
+          path: device_safety_info
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter config --enable-swift-package-manager
+      - name: Build example for iOS
+        working-directory: device_safety_info/example
+        run: flutter build ios --no-codesign --debug
+      - name: No Podfile may be generated
+        working-directory: device_safety_info/example/ios
+        run: test ! -e Podfile

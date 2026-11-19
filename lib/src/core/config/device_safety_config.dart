@@ -26,6 +26,7 @@ final class DeviceSafetyConfig {
     Set<String> accessibilityAllowlist = const {},
     Set<String> notificationListenerAllowlist = const {},
     Set<String> malwarePackages = const {},
+    Set<String> iocBlocklist = const {},
     this.logger,
   }) : policies = Map.unmodifiable(policies),
        signalOverrides = Map.unmodifiable(signalOverrides),
@@ -34,7 +35,8 @@ final class DeviceSafetyConfig {
        notificationListenerAllowlist = Set.unmodifiable(
          notificationListenerAllowlist,
        ),
-       malwarePackages = Set.unmodifiable(malwarePackages);
+       malwarePackages = Set.unmodifiable(malwarePackages),
+       iocBlocklist = Set.unmodifiable(iocBlocklist);
 
   /// Policy for every check not listed in [policies].
   final RiskPolicy defaultPolicy;
@@ -70,6 +72,10 @@ final class DeviceSafetyConfig {
   /// Package names whose presence the malware check reports.
   final Set<String> malwarePackages;
 
+  /// Initial IOC domain blocklist (exact hosts and `*.suffix` wildcards). It can be replaced
+  /// or loaded from a feed later through `DeviceSafety.ioc`.
+  final Set<String> iocBlocklist;
+
   /// Receives diagnostic messages. `null` discards them.
   final DeviceSafetyLogger? logger;
 
@@ -91,6 +97,7 @@ final class DeviceSafetyConfig {
     Set<String>? accessibilityAllowlist,
     Set<String>? notificationListenerAllowlist,
     Set<String>? malwarePackages,
+    Set<String>? iocBlocklist,
     DeviceSafetyLogger? logger,
   }) => DeviceSafetyConfig(
     defaultPolicy: defaultPolicy ?? this.defaultPolicy,
@@ -105,6 +112,7 @@ final class DeviceSafetyConfig {
     notificationListenerAllowlist:
         notificationListenerAllowlist ?? this.notificationListenerAllowlist,
     malwarePackages: malwarePackages ?? this.malwarePackages,
+    iocBlocklist: iocBlocklist ?? this.iocBlocklist,
     logger: logger ?? this.logger,
   );
 }

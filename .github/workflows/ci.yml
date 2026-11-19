@@ -42,6 +42,9 @@ jobs:
           dart run ffigen --config ffigen.yaml
           git diff --exit-code -- lib/src/core/platform/generated/dsi_bindings.g.dart
 
+      - name: Package skill lints
+        run: dart run skills_lint --skills-directory skills --published-skill-name --pub-archive-includes-skill
+
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test --coverage
@@ -63,6 +66,9 @@ jobs:
       - name: Build example APK
         working-directory: example
         run: flutter build apk --debug
+      - name: Kotlin unit tests
+        working-directory: example/android
+        run: ./gradlew :device_safety_info:testDebugUnitTest
       - name: Plugin manifest must not request READ_PHONE_STATE
         run: |
           if grep -n "READ_PHONE_STATE" android/src/main/AndroidManifest.xml; then exit 1; fi

@@ -5,7 +5,8 @@ import 'dart:math';
 import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 
-import '../platform_support.dart';
+import 'package:flutter/foundation.dart';
+
 import '../refreshable.dart';
 import '../widgets/demo_card.dart';
 import '../widgets/section_header.dart';
@@ -35,7 +36,8 @@ class AppIntegritySectionState extends State<AppIntegritySection>
   bool? _appAttestSupported;
   bool? _deviceCheckSupported;
   bool _prepared = false;
-  String? _keyId; // demo only — a real app persists this (e.g. shared_preferences)
+  String?
+  _keyId; // demo only — a real app persists this (e.g. shared_preferences)
   bool _busy = false;
   final List<String> _log = [];
 
@@ -48,9 +50,9 @@ class AppIntegritySectionState extends State<AppIntegritySection>
   @override
   Future<void> refresh() async {
     final results = await Future.wait([
-      AppIntegrity.isPlayIntegrityAvailable,
-      AppIntegrity.isAppAttestSupported,
-      AppIntegrity.isDeviceCheckSupported,
+      DeviceSafety.integrity.isPlayIntegrityAvailable(),
+      DeviceSafety.integrity.isAppAttestSupported(),
+      DeviceSafety.integrity.isDeviceCheckSupported(),
     ]);
     if (!mounted) return;
     setState(() {
@@ -135,7 +137,7 @@ class AppIntegritySectionState extends State<AppIntegritySection>
         );
         return;
       }
-      await AppIntegrity.preparePlayIntegrity(
+      await DeviceSafety.integrity.preparePlayIntegrity(
         cloudProjectNumber: _cloudProjectNumber,
       );
       _prepared = true;
@@ -144,16 +146,16 @@ class AppIntegritySectionState extends State<AppIntegritySection>
     final challenge = await _challenge();
     String token;
     try {
-      token = await AppIntegrity.requestPlayIntegrityToken(
+      token = await DeviceSafety.integrity.requestPlayIntegrityToken(
         requestHash: challenge,
       );
     } on AttestationException catch (e) {
       if (e.code != AttestationErrorCode.providerInvalid) rethrow;
       _add('Provider expired — preparing again.');
-      await AppIntegrity.preparePlayIntegrity(
+      await DeviceSafety.integrity.preparePlayIntegrity(
         cloudProjectNumber: _cloudProjectNumber,
       );
-      token = await AppIntegrity.requestPlayIntegrityToken(
+      token = await DeviceSafety.integrity.requestPlayIntegrityToken(
         requestHash: challenge,
       );
     }
@@ -163,9 +165,9 @@ class AppIntegritySectionState extends State<AppIntegritySection>
 
   Future<void> _appAttest() => _run('App Attest', () async {
     if (_keyId == null) {
-      final keyId = await AppIntegrity.generateAppAttestKey();
+      final keyId = await DeviceSafety.integrity.generateAppAttestKey();
       final challenge = await _challenge();
-      final attestation = await AppIntegrity.attestAppAttestKey(
+      final attestation = await DeviceSafety.integrity.attestAppAttestKey(
         keyId: keyId,
         challenge: challenge,
       );
@@ -181,7 +183,7 @@ class AppIntegritySectionState extends State<AppIntegritySection>
       'action': 'demo',
       'nonce': await _challenge(),
     });
-    final assertion = await AppIntegrity.generateAppAttestAssertion(
+    final assertion = await DeviceSafety.integrity.generateAppAttestAssertion(
       keyId: _keyId!,
       clientData: clientData,
     );
@@ -194,7 +196,7 @@ class AppIntegritySectionState extends State<AppIntegritySection>
   });
 
   Future<void> _deviceCheck() => _run('DeviceCheck', () async {
-    final token = await AppIntegrity.generateDeviceCheckToken();
+    final token = await DeviceSafety.integrity.generateDeviceCheckToken();
     _add('Token ${_preview(token)}');
     await _verify('/ios/devicecheck', {'token': token});
   });
@@ -216,7 +218,7 @@ class AppIntegritySectionState extends State<AppIntegritySection>
               style: hint,
             ),
             const SizedBox(height: 8),
-            if (isAndroidPlatform) ...[
+            if (defaultTargetPlatform == TargetPlatform.android) ...[
               Text(
                 'Play Integrity library present: ${yesNo(_playIntegrityAvailable)}',
               ),

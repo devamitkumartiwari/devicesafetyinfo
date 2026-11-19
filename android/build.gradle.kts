@@ -40,5 +40,8 @@ dependencies {
     compileOnly("com.google.android.play:integrity:1.6.0")
     // Pigeon's generated host APIs use coroutines for @async methods.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    // Built-in Kotlin doesn't infer the kotlin-test JUnit binding the way KGP did; name it.
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.12.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
 }

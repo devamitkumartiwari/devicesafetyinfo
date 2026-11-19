@@ -1,22 +1,71 @@
-## 1.7.0
+## 2.0.0
+
+A rewrite around one entry point, `DeviceSafety`, with typed results, configurable policies and
+a type-safe platform layer. **Breaking**: see [MIGRATION.md](MIGRATION.md).
+
+### Breaking changes
+
+* **Minimum Flutter 3.50 / Dart 3.14.**
+* **iOS: Swift Package Manager only.** The podspec is gone; CocoaPods is no longer supported.
+* **Android: built-in Kotlin.** The plugin no longer applies the Kotlin Gradle plugin, ships no
+  Gradle wrapper, and no longer filters ABIs (Flutter decides).
+* **`READ_PHONE_STATE` is no longer declared by the plugin.** Apps that want SIM call detection
+  declare and request it themselves; without it, call detection uses VoIP/audio signals only.
+* `DeviceSafetyInfo`, `VPNCheck`, `RiskSummary`, `NewVersionChecker`, `IOCDomainBlocker`,
+  `MalwarePackageDetector`, `ScreenCapture`, `ScreenRecordingDetector`, `AppIntegrity` and the
+  top-level `lib/*.dart` libraries are removed. Use `DeviceSafety.*` from
+  `package:device_safety_info/device_safety_info.dart`.
+* Detection APIs return `CheckResult` instead of `bool` and never throw; failures are reported as
+  `CheckStatus.error` / `timedOut` instead of silently returning `false`.
+* The plugin never terminates or uninstalls the app (`exitProcessIfTrue` / `uninstallIfTrue`
+  removed). Listen to `DeviceSafety.threats`; `DeviceSafety.terminateApp()` is available as an
+  explicit opt-in.
+* `checkFridaByMaps()` / `checkRootFilesNative()` and the per-check FFI symbols are removed; the
+  native checks are merged into `root`, `hooking` and `debugger`.
+* Signal ids are now stable `check.signal[:detail]` strings (`root.su_executable:/sbin/su`), not
+  1.x's `su:/sbin/su` style.
+
+### New
+
+* `DeviceSafetyConfig`: per-check policy (`off` / `standard` / `strict`), per-signal level
+  overrides, per-check fail mode (`open` / `closed`), cache TTL, timeout, allowlists for
+  accessibility services and notification listeners, malware package list, IOC blocklist and a
+  logger.
+* Every detection check (root, emulator, hooking, debugger, developer mode, screen lock, store
+  install, external storage, unknown sources, Play Protect, accessibility, notification listeners,
+  VPN/proxy, screen capture, malware) is tiered into high/low signals and honors the policy.
+* `DeviceSafety.assess()`: every check in one platform round trip, in parallel natively and
+  alongside the native C checks, returning a `RiskAssessment` with plain-language `flags`.
+* `DeviceSafety.threats`: detection flips plus live events (screenshot, capture/recording
+  started, tapjacking touch, VPN connected).
+* Results are cached (30 s default) with in-flight de-duplication and a per-check timeout.
+* New signals: Xposed/LSPosed classes in the process, iOS dyld injection scan (C), ADB enabled,
+  HTTP proxy, external presentation display, debuggable build, accessibility services that can
+  read window content.
+* Sealed `DeviceSafetyException` hierarchy for action APIs (`UnsupportedPlatformException`,
+  `PermissionMissingException`, `NativeFailureException`, `AttestationException`).
+* `package:device_safety_info/testing.dart` and `DeviceSafety.forTesting` for faking the platform
+  in app tests.
+* PrivacyInfo.xcprivacy for the iOS plugin.
+
+### Platform attestation (first released here; developed as 1.7.0)
 
 Adds **platform attestation**: Google Play Integrity on Android and Apple App Attest / DeviceCheck
 on iOS. The plugin gets the tokens; your server verifies them.
 
-### New API
+#### API
 
-* `AppIntegrity` (exported from `package:device_safety_info/device_safety_info.dart` and
-  `package:device_safety_info/app_integrity.dart`):
-  * Android: `isPlayIntegrityAvailable`, `preparePlayIntegrity({cloudProjectNumber})`,
+* `DeviceSafety.integrity`:
+  * Android: `isPlayIntegrityAvailable()`, `preparePlayIntegrity({cloudProjectNumber})`,
     `requestPlayIntegrityToken({requestHash})` (Play Integrity standard requests).
-  * iOS: `isAppAttestSupported`, `generateAppAttestKey()`, `attestAppAttestKey({keyId, challenge})`,
-    `generateAppAttestAssertion({keyId, clientData})`, `isDeviceCheckSupported`,
+  * iOS: `isAppAttestSupported()`, `generateAppAttestKey()`, `attestAppAttestKey({keyId, challenge})`,
+    `generateAppAttestAssertion({keyId, clientData})`, `isDeviceCheckSupported()`,
     `generateDeviceCheckToken()`.
 * `AttestationException` / `AttestationErrorCode`: typed failures (`unsupported`, `notPrepared`,
   `providerInvalid`, `playServicesUnavailable`, `network`, `tooManyRequests`, `invalidKey`,
   `invalidInput`, `serverUnavailable`, `unknown`).
 
-### Setup notes
+#### Setup notes
 
 * **Play Integrity is opt-in.** The plugin compiles against `com.google.android.play:integrity` but
   doesn't ship it. Apps that use it add
@@ -29,10 +78,27 @@ on iOS. The plugin gets the tokens; your server verifies them.
   covering Play Integrity decode and policy, App Attest attestation and assertion validation, and the
   DeviceCheck APIs.
 
-### Example app
+#### Example app
 
 * New **App Integrity** screen under Device Integrity. It runs the full round trip when given
   `--dart-define=INTEGRITY_SERVER_URL=...` (plus `PLAY_CLOUD_PROJECT_NUMBER` on Android).
+
+### Internals
+
+* Platform calls go through Pigeon-generated, type-checked APIs (one host API per feature) and
+  event channels, replacing ~50 string-dispatched method names and 7 hand-wired event channels.
+* Dart code is organized as `lib/src/core` plus `lib/src/features/<feature>/{domain,data,presentation}`;
+  Kotlin and Swift as `core/` plus `features/<feature>/`.
+* Native C checks are one `dsi_collect_signals(mask)` call (`src/dsi.c`), built for Android and
+  iOS by a Dart build hook and bound with `@Native` FFIgen bindings; they run on a background
+  isolate and are ABI-version checked.
+* All blocking Android checks run on one shared, bounded background pool; nothing blocking runs on
+  the Android main thread or the Flutter UI isolate.
+
+### Performance
+
+Measured with `example/integration_test/perf_test.dart` (profile mode); see
+`example/integration_test/PERF_BASELINE.md` for the full numbers and method.
 
 ## 1.6.0
 

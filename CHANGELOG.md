@@ -40,8 +40,42 @@ a type-safe platform layer. **Breaking**: see [MIGRATION.md](MIGRATION.md).
   and a `getprop` that times out is no longer read.
 * Native Frida maps scan: removed thread-name patterns that can't appear in `/proc/self/maps`,
   read whole lines, and aligned the C root paths with the Kotlin ones.
+* `assess()`: an accessibility, notification-listener or malware list the platform couldn't read
+  is now an error instead of an empty (clean) list.
+* **Modern root coverage (Android):** KernelSU, APatch and Magisk 24+ files and binaries
+  (`ksud`, `apd`, `resetprop`); systemless-root mounts and read-write system partitions
+  (`root.mount_marker`, `root.system_rw`, `root.system_overlay`); installed root-manager apps
+  (`root.manager_app`, high) and root-cloaking / patching apps (`root.cloak_app`, low), declared
+  in the plugin's `<queries>`; build properties `service.adb.root`, SELinux permissive,
+  LineageOS root access, `ro.debuggable=1` on a `user` build (high) and `ro.build.type`
+  eng/userdebug, unlocked vbmeta, `ro.allow.mock.location` (low).
+* **Frida, Xposed and Zygisk (Android):** the C library now also finds Frida's agent threads
+  (`hooking.frida_threads`), injector file descriptors (`hooking.frida_fds`) and inline hooks in
+  libc by comparing its code with the file on disk (`hooking.text_patched`). Kotlin finds
+  LSPosed/EdXposed/Riru/Zygisk/Shamiko mappings (`hooking.framework_mapped`) and Xposed frames in
+  the call stack (`hooking.stack_frame`). Frida server probes in `/data/local/tmp`, which apps
+  can't see on Android 10+, were removed. `hooking.xposed`, `hooking.substrate` and
+  `hooking.shadowhook` are now one signal, `hooking.system_library:<lib>`; `hooking.freeda_server`
+  is now `hooking.frida_server`.
+* **Emulators:** QEMU pipes and vendor emulator files (Genymotion, BlueStacks, Nox, MEmu,
+  LDPlayer, ttVM) and QEMU-only properties (high); x86-only CPU, no motion sensors, a network
+  operator named "Android" (low).
+* **C library:** on arm64 and x86_64 Android it reads files with direct system calls, so
+  hooking libc doesn't blind it. Detection strings for Kotlin and C come from one source
+  (`tool/signatures.json`) and are stored encoded, so they don't appear in `strings libdsi.so`
+  or the DEX. Built with stack protector, `_FORTIFY_SOURCE`, full RELRO and a stripped symbol
+  table. iOS gains a C jailbreak-file check (`root.native_jailbreak_files`) that runs off the main
+  thread, and `DYLD_INSERT_LIBRARIES` detection. C ABI version 2.
+* `integrity.layer_mismatch:root_files` (low) when the Kotlin and C root-file checks disagree:
+  one layer is being hooked.
 
 ### New
+
+* `DeviceSafety.tampering` (`CheckType.tampering`): detects a repackaged or re-signed app by its
+  signing certificate (Android, `DeviceSafetyConfig.expectedSigningCertificates`) or provisioning
+  profile team (iOS, `expectedIosTeamId`). `signingInfo()` returns the values to configure.
+* Example server: optional Play Integrity policies for licensing, Play Protect, app access risk
+  and recent device activity.
 
 * `DeviceSafetyConfig`: per-check policy (`off` / `standard` / `strict`), per-signal level
   overrides, per-check fail mode (`open` / `closed`), cache TTL, timeout, allowlists for

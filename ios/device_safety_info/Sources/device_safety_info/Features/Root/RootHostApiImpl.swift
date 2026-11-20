@@ -3,9 +3,12 @@ import UIKit
 
 /// Jailbreak and simulator signals.
 enum JailbreakSignals {
-    /// IOSSecuritySuite's failed checks as signals. A registered `cydia://` URL scheme alone is
-    /// weak evidence (some legitimate apps register it), so it's low risk; every other failed
-    /// check is high. Must run on the main thread: the URL-scheme check calls `canOpenURL`.
+    /// IOSSecuritySuite's failed checks as signals. A registered jailbreak-app URL scheme
+    /// (`sileo://`, `zbra://`, `filza://`, `undecimus://`) alone is weak evidence, so it's low
+    /// risk; every other failed check is high. Must run on the main thread: IOSSecuritySuite
+    /// runs its URL-scheme check (`canOpenURL`) together with the others and offers no way to
+    /// skip it. The C jailbreak-file check (`root.native_jailbreak_files`) runs off the main
+    /// thread as a second opinion.
     static func report() -> RiskReport {
         let result = IOSSecuritySuite.amIJailbrokenWithFailedChecks()
         return report(

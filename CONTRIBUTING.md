@@ -44,12 +44,42 @@ cd example && flutter build ios --no-codesign
 grep -rnE "package:flutter/(material|cupertino)\.dart" lib && echo "fix these imports"
 # generated code is up to date
 dart run pigeon --input pigeon/device_safety_api.dart && git diff --exit-code
-dart run ffigen --config ffigen.yaml && git diff --exit-code   # needs libclang
+dart run ffigen --config ffigen.yaml && git diff --exit-code   # needs libclang (see below)
+dart run tool/gen_signatures.dart --check                     # detection strings (also a unit test)
 # Kotlin unit tests (after building the example once)
 cd example/android && ./gradlew :device_safety_info:testDebugUnitTest
+# C checks on a connected device or emulator (needs the Android NDK)
+tool/run_native_tests.sh arm64-v8a   # or x86_64 for the emulator
+# end-to-end on a clean device or emulator
+cd example && flutter test integration_test/plugin_test.dart -d <device>
 # package skill
 dart run skills_lint --skills-directory skills --published-skill-name
 ```
+
+## Detection strings
+
+Paths, package names and markers live in `tool/signatures.json`, the single source for both
+Kotlin and C. After editing it run `dart run tool/gen_signatures.dart`; it rewrites
+`src/dsi_signatures.g.h`, `android/.../generated/Signatures.g.kt` (both encoded, so the strings
+don't appear in the binaries) and the `<queries>` block of the plugin's `AndroidManifest.xml`.
+
+## FFI bindings without a system LLVM
+
+ffigen needs libclang. The Android NDK ships one; on Windows, add these to a temporary copy of
+`ffigen.yaml` (`<llvm>` is `<ndk>/toolchains/llvm/prebuilt/windows-x86_64`):
+
+```yaml
+llvm-path: ['<llvm>']
+compiler-opts:
+  - '--target=aarch64-linux-android24'
+  - '-isystem<llvm>/lib/clang/<version>/include'
+  - '-isystem<llvm>/sysroot/usr/include'
+  - '-isystem<llvm>/sysroot/usr/include/aarch64-linux-android'
+```
+
+## Device test matrix
+
+Before a release that changes detection, run through [docs/testing.md](docs/testing.md).
 
 ## Performance benchmark
 

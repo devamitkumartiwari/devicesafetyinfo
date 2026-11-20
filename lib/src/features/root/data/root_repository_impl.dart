@@ -18,5 +18,6 @@ final class RootRepositoryImpl implements RootRepository {
     _platform.rootCheck(),
     _ffi.collect(mask: NativeChecksFfi.rootMask),
     (n) => n.rootSignals,
+    crossCheck: rootLayerMismatch,
   );
 }

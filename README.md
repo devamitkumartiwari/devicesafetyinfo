@@ -157,6 +157,8 @@ await DeviceSafety.initialize(DeviceSafetyConfig(
   notificationListenerAllowlist: {'com.google.android.wearable.app'},
   malwarePackages: {'com.example.known.malware'},
   iocBlocklist: {'evil.example', '*.phishing.example'},
+  expectedSigningCertificates: {'AB:CD:...'},  // tampering check (Android)
+  expectedIosTeamId: 'ABCDE12345',             // tampering check (iOS)
   logger: (message, {error, stackTrace}) => log(message, error: error),
 ));
 ```
@@ -169,11 +171,12 @@ clears cached results. Signal overrides match the part of the id before `:`, so
 
 | Check (`CheckType`) | High (standard and strict) | Low (strict only) |
 |---|---|---|
-| `root` (Android) | `root.su_executable`, `root.binary_executable`, `root.manager_file` (Magisk, Superuser), `root.ro_secure_off`, `root.native_files` | `root.su_present`, `root.binary_present`, `root.busybox`, `root.test_keys`, `root.recovery_boot`, `root.verifiedboot_unlocked`, `root.native_su_present` |
-| `root` (iOS jailbreak) | `root.jailbreak_<check>` for each failed IOSSecuritySuite check | `root.jailbreak_urlSchemes` |
-| `emulator` | `emulator.hardware`, `emulator.qemu`, `emulator.build_name`, `emulator.generic_fingerprint`, `emulator.generic_brand_device`, `emulator.simulator` | `emulator.generic_build` |
-| `hooking` | `hooking.frida_maps`, `hooking.frida_port`, `hooking.frida_server`, `hooking.xposed`, `hooking.xposed_class`, `hooking.substrate`, `hooking.shadowhook`, `hooking.dyld_injection`, iOS `hooking.<check>` | `hooking.rwx_library:<lib>` (a library mapped writable and executable outside system/app paths) |
+| `root` (Android) | `root.su_executable`, `root.binary_executable` (`su`, `magisk`, `ksud`, `apd`, `resetprop` in `PATH`), `root.manager_file` (Magisk, KernelSU, APatch, SuperSU files), `root.manager_app` (Magisk, KernelSU, APatch, SuperSU, LSPosed... installed), `root.mount_marker` / `root.system_rw` / `root.system_overlay` (systemless-root mounts, read-write system partitions), `root.ro_secure_off`, `root.adb_root`, `root.selinux_permissive`, `root.selinux_disabled`, `root.lineage_root_access`, `root.debuggable_user_build`, `root.native_files`, `root.native_mounts` | `root.su_present`, `root.binary_present`, `root.busybox`, `root.cloak_app` (RootCloak, Hide My Applist, Lucky Patcher...), `root.test_keys`, `root.debug_build`, `root.recovery_boot`, `root.verifiedboot_unlocked`, `root.bootloader_unlocked`, `root.mock_location_allowed`, `root.native_su_present`, `root.checker_error` |
+| `root` (iOS jailbreak) | `root.jailbreak_<check>` for each failed IOSSecuritySuite check, `root.native_jailbreak_files` (`/var/jb`, Sileo, Substrate, ... checked from C) | `root.jailbreak_urlSchemes` |
+| `emulator` | `emulator.hardware`, `emulator.qemu`, `emulator.qemu_prop`, `emulator.file` (QEMU pipes; Genymotion, BlueStacks, Nox, MEmu, LDPlayer files), `emulator.build_name`, `emulator.generic_fingerprint`, `emulator.generic_brand_device`, `emulator.simulator` | `emulator.generic_build`, `emulator.x86_only`, `emulator.no_motion_sensors`, `emulator.network_operator` |
+| `hooking` | `hooking.frida_maps`, `hooking.frida_threads` (`gum-js-loop`, ...), `hooking.frida_fds` (injector pipes), `hooking.frida_port`, `hooking.frida_server`, `hooking.text_patched` (libc code differs from disk: an inline hook), `hooking.framework_mapped` (LSPosed, EdXposed, Riru, Zygisk modules, Shamiko in memory), `hooking.xposed_class`, `hooking.stack_frame` (Xposed/Substrate frames in the call stack), `hooking.system_library`, `hooking.dyld_injection`, iOS `hooking.<check>` | `hooking.rwx_library:<lib>` (a library mapped writable and executable outside system/app paths) |
 | `debugger` | `debugger.attached`, `debugger.traced` | `debugger.debuggable_build` |
+| `tampering` | `tampering.signature_mismatch`, `tampering.signature_unreadable` (Android), `tampering.team_id_mismatch` (iOS) | `tampering.provisioning_profile` (iOS) |
 | `developerMode` | | `developer_mode.enabled`, `developer_mode.adb_enabled` |
 | `screenLock` | `screen_lock.none` | |
 | `storeInstall` | | `store_install.unknown_installer` |
@@ -185,10 +188,34 @@ clears cached results. Signal overrides match the part of the id before `:`, so
 | `vpn` | | `vpn.active`, `vpn.http_proxy` |
 | `screenCapture` | `screen_capture.recording`, `screen_capture.mirroring` | `screen_capture.external_display` |
 | `malware` | `malware.installed:<package>` | |
-| `root`, `hooking`, `debugger` (cross-cutting) | | `integrity.native_unavailable` (the bundled C library didn't load on Android/iOS), `integrity.platform_check_failed` (the platform half failed; reported next to high C evidence), `root.checker_error:<checker>` (Android) |
+| `root`, `hooking`, `debugger` (cross-cutting) | | `integrity.native_unavailable` (the bundled C library didn't load on Android/iOS), `integrity.platform_check_failed` (the platform half failed; reported next to high C evidence), `integrity.layer_mismatch:root_files` (Kotlin and C disagree about the same root files: one layer is being hooked) |
 
 Signals whose `source` is `SignalSource.ffi` come from C code (`src/dsi.c`) called through FFI on a
-background isolate. It's harder to hook than Java/Kotlin or Swift.
+background isolate. On arm64 and x86_64 Android it reads files with direct system calls, so
+hooking libc (what most Frida root-bypass scripts do) doesn't hide anything from it, and its
+detection strings are stored encoded. That makes it harder to defeat than Kotlin or Swift, not
+impossible: see [Attestation](#attestation) for the check an attacker can't fake on the device.
+
+### Tampering (repackaged apps)
+
+```dart
+// Find your certificate's SHA-256 once (or copy it from Play Console › App integrity):
+print((await DeviceSafety.tampering.signingInfo()).certificateSha256);
+
+await DeviceSafety.initialize(DeviceSafetyConfig(
+  expectedSigningCertificates: {'AB:CD:...'},  // Play app signing key (+ upload key for sideloads)
+  expectedIosTeamId: 'ABCDE12345',
+));
+```
+
+Without `expectedSigningCertificates` the Android check reports `unsupported`.
+
+### What on-device checks can't see
+
+Magisk's DenyList and Shamiko unmount root from the processes they hide it from, Magisk can
+reinstall itself under a random package name, and a determined attacker can patch this
+package's code. A clean result is not proof of a clean device. Pair the checks with
+server-verified attestation for anything valuable.
 
 ## Threat stream
 
@@ -254,6 +281,27 @@ final assertion = await DeviceSafety.integrity.generateAppAttestAssertion(
 Failures throw `AttestationException` with an `AttestationErrorCode` (`notPrepared`,
 `providerInvalid`, `network`, `tooManyRequests`, `invalidKey`, `unsupported`, ...).
 
+### Attestation is the root check that can't be hidden on the device
+
+Every on-device check, this package's included, can eventually be patched by someone who
+controls the device. Treat the on-device checks as fast, offline signals. Treat a
+server-verified Play Integrity / App Attest verdict as the authority for anything valuable.
+How to bind a token to a request:
+
+1. Your server issues a random, single-use challenge for the action (login, payment).
+2. The app computes `requestHash = base64url(SHA-256(challenge + canonical request body))`
+   and requests the token with it, then sends the token alongside the request.
+3. The server decodes the token, checks that `requestHash`, the package name, the signing
+   certificate and the timestamp match, and only then applies its verdict policy.
+
+Typical policy: require `MEETS_DEVICE_INTEGRITY` for normal use and `MEETS_STRONG_INTEGRITY`
+for high-risk actions. Root-hiding modules can spoof the former but not the latter, which is
+backed by hardware key attestation. Also consider rejecting `appRecognitionVerdict` other than
+`PLAY_RECOGNIZED`, and the optional environment verdicts (Play Protect, app access risk, recent
+device activity). The [example server](example/server_dotnet) implements all of these.
+Play Integrity needs a network connection, so decide what an offline client may do; the
+on-device checks still apply there.
+
 ## Other tools
 
 ```dart
@@ -314,6 +362,10 @@ The plugin declares only `ACCESS_NETWORK_STATE`, `DETECT_SCREEN_CAPTURE` and
 
 ## iOS setup
 
+IOSSecuritySuite runs all its jailbreak checks in one call that includes `canOpenURL`, so the
+`root` check briefly runs on the main thread on iOS (a few file lookups, then cached). The C
+jailbreak-file check runs on a background isolate.
+
 ### Jailbreak URL schemes
 
 The jailbreak check includes IOSSecuritySuite's URL-scheme test (`root.jailbreak_urlSchemes`).
@@ -323,12 +375,10 @@ fires. Add to `Info.plist`:
 ```xml
 <key>LSApplicationQueriesSchemes</key>
 <array>
-  <string>cydia</string>
   <string>sileo</string>
   <string>zbra</string>
   <string>filza</string>
   <string>undecimus</string>
-  <string>activator</string>
 </array>
 ```
 
@@ -337,6 +387,7 @@ fires. Add to `Info.plist`:
 | Feature | Android | iOS |
 |---|---|---|
 | Root / jailbreak, emulator, hooking, debugger | ✅ | ✅ |
+| Tampering (re-signed app) | ✅ (needs `expectedSigningCertificates`) | ✅ |
 | Screen lock, store install | ✅ | ✅ |
 | Developer mode, external storage, unknown sources, Play Protect | ✅ | unsupported |
 | Accessibility / notification-listener abuse, malware packages | ✅ | unsupported |

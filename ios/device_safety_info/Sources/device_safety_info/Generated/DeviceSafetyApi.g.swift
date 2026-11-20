@@ -371,6 +371,58 @@ struct BatchRequestMsg: Hashable, CustomStringConvertible {
   }
 }
 
+/// How the app was signed, for the tampering check. Compared in Dart against
+/// `DeviceSafetyConfig.expectedSigningCertificates` / `expectedIosTeamId`.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct SigningInfoMsg: Hashable, CustomStringConvertible {
+  /// (Android) Lowercase hex SHA-256 of each current signing certificate.
+  var certificateSha256: [String]
+  /// (iOS) Whether the bundle contains `embedded.mobileprovision`. App Store and TestFlight
+  /// builds don't; development, ad-hoc, enterprise and re-signed builds do.
+  var hasProvisioningProfile: Bool
+  /// (iOS) The `TeamIdentifier` from the provisioning profile, when there is one.
+  var teamId: String? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> SigningInfoMsg? {
+    let certificateSha256 = pigeonVar_list[0] as! [String]
+    let hasProvisioningProfile = pigeonVar_list[1] as! Bool
+    let teamId: String? = nilOrValue(pigeonVar_list[2])
+
+    return SigningInfoMsg(
+      certificateSha256: certificateSha256,
+      hasProvisioningProfile: hasProvisioningProfile,
+      teamId: teamId
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      certificateSha256,
+      hasProvisioningProfile,
+      teamId,
+    ]
+  }
+  static func == (lhs: SigningInfoMsg, rhs: SigningInfoMsg) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.certificateSha256, rhs.certificateSha256) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.hasProvisioningProfile, rhs.hasProvisioningProfile) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.teamId, rhs.teamId)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("SigningInfoMsg")
+    DeviceSafetyApiPigeonInternal.deepHash(value: certificateSha256, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: hasProvisioningProfile, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: teamId, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "SigningInfoMsg(certificateSha256: \(String(describing: certificateSha256)), hasProvisioningProfile: \(String(describing: hasProvisioningProfile)), teamId: \(String(describing: teamId)))"
+  }
+}
+
 /// Generated class from Pigeon that represents data sent in messages.
 struct BatchResultMsg: Hashable, CustomStringConvertible {
   /// Keyed by `CheckType.id`, for every requested check the platform evaluates itself.
@@ -379,6 +431,11 @@ struct BatchResultMsg: Hashable, CustomStringConvertible {
   var accessibilityServices: [AccessibilityServiceMsg]
   var notificationListeners: [String]
   var installedPackages: [String]
+  /// Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
+  /// whose list couldn't be read. Their empty lists above mean "unknown", not "clean".
+  var failedLists: [String]
+  /// Present when `tampering` was requested and the signing info could be read.
+  var signing: SigningInfoMsg? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -387,12 +444,16 @@ struct BatchResultMsg: Hashable, CustomStringConvertible {
     let accessibilityServices = pigeonVar_list[1] as! [AccessibilityServiceMsg]
     let notificationListeners = pigeonVar_list[2] as! [String]
     let installedPackages = pigeonVar_list[3] as! [String]
+    let failedLists = pigeonVar_list[4] as! [String]
+    let signing: SigningInfoMsg? = nilOrValue(pigeonVar_list[5])
 
     return BatchResultMsg(
       reports: reports,
       accessibilityServices: accessibilityServices,
       notificationListeners: notificationListeners,
-      installedPackages: installedPackages
+      installedPackages: installedPackages,
+      failedLists: failedLists,
+      signing: signing
     )
   }
   func toList() -> [Any?] {
@@ -401,13 +462,15 @@ struct BatchResultMsg: Hashable, CustomStringConvertible {
       accessibilityServices,
       notificationListeners,
       installedPackages,
+      failedLists,
+      signing,
     ]
   }
   static func == (lhs: BatchResultMsg, rhs: BatchResultMsg) -> Bool {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.reports, rhs.reports) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.accessibilityServices, rhs.accessibilityServices) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.notificationListeners, rhs.notificationListeners) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.installedPackages, rhs.installedPackages)
+    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.reports, rhs.reports) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.accessibilityServices, rhs.accessibilityServices) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.notificationListeners, rhs.notificationListeners) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.installedPackages, rhs.installedPackages) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.failedLists, rhs.failedLists) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.signing, rhs.signing)
   }
 
   func hash(into hasher: inout Hasher) {
@@ -416,10 +479,12 @@ struct BatchResultMsg: Hashable, CustomStringConvertible {
     DeviceSafetyApiPigeonInternal.deepHash(value: accessibilityServices, hasher: &hasher)
     DeviceSafetyApiPigeonInternal.deepHash(value: notificationListeners, hasher: &hasher)
     DeviceSafetyApiPigeonInternal.deepHash(value: installedPackages, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: failedLists, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: signing, hasher: &hasher)
   }
 
   public var description: String {
-    return "BatchResultMsg(reports: \(String(describing: reports)), accessibilityServices: \(String(describing: accessibilityServices)), notificationListeners: \(String(describing: notificationListeners)), installedPackages: \(String(describing: installedPackages)))"
+    return "BatchResultMsg(reports: \(String(describing: reports)), accessibilityServices: \(String(describing: accessibilityServices)), notificationListeners: \(String(describing: notificationListeners)), installedPackages: \(String(describing: installedPackages)), failedLists: \(String(describing: failedLists)), signing: \(String(describing: signing)))"
   }
 }
 
@@ -593,12 +658,14 @@ private class DeviceSafetyApiPigeonCodecReader: FlutterStandardReader {
     case 135:
       return BatchRequestMsg.fromList(self.readValue() as! [Any?])
     case 136:
-      return BatchResultMsg.fromList(self.readValue() as! [Any?])
+      return SigningInfoMsg.fromList(self.readValue() as! [Any?])
     case 137:
-      return OverlayConfigMsg.fromList(self.readValue() as! [Any?])
+      return BatchResultMsg.fromList(self.readValue() as! [Any?])
     case 138:
-      return AppInfoMsg.fromList(self.readValue() as! [Any?])
+      return OverlayConfigMsg.fromList(self.readValue() as! [Any?])
     case 139:
+      return AppInfoMsg.fromList(self.readValue() as! [Any?])
+    case 140:
       return CallEventMsg.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -629,17 +696,20 @@ private class DeviceSafetyApiPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? BatchRequestMsg {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? BatchResultMsg {
+    } else if let value = value as? SigningInfoMsg {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? OverlayConfigMsg {
+    } else if let value = value as? BatchResultMsg {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? AppInfoMsg {
+    } else if let value = value as? OverlayConfigMsg {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? CallEventMsg {
+    } else if let value = value as? AppInfoMsg {
       super.writeByte(139)
+      super.writeValue(value.toList())
+    } else if let value = value as? CallEventMsg {
+      super.writeByte(140)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -1285,6 +1355,7 @@ class CallHostApiSetup {
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol AppInfoHostApi {
   func packageInfo() throws -> AppInfoMsg
+  func signingInfo() async throws -> SigningInfoMsg
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -1305,6 +1376,21 @@ class AppInfoHostApiSetup {
       }
     } else {
       packageInfoChannel.setMessageHandler(nil)
+    }
+    let signingInfoChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.AppInfoHostApi.signingInfo\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      signingInfoChannel.setMessageHandler { _, reply in
+        Task { @MainActor in
+          do {
+            let result = try await api.signingInfo()
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      signingInfoChannel.setMessageHandler(nil)
     }
   }
 }

@@ -27,6 +27,8 @@ final class DeviceSafetyConfig {
     Set<String> notificationListenerAllowlist = const {},
     Set<String> malwarePackages = const {},
     Set<String> iocBlocklist = const {},
+    Set<String> expectedSigningCertificates = const {},
+    this.expectedIosTeamId,
     this.logger,
   }) : policies = Map.unmodifiable(policies),
        signalOverrides = Map.unmodifiable(signalOverrides),
@@ -36,7 +38,10 @@ final class DeviceSafetyConfig {
          notificationListenerAllowlist,
        ),
        malwarePackages = Set.unmodifiable(malwarePackages),
-       iocBlocklist = Set.unmodifiable(iocBlocklist);
+       iocBlocklist = Set.unmodifiable(iocBlocklist),
+       expectedSigningCertificates = Set.unmodifiable(
+         expectedSigningCertificates,
+       );
 
   /// Policy for every check not listed in [policies].
   final RiskPolicy defaultPolicy;
@@ -76,6 +81,16 @@ final class DeviceSafetyConfig {
   /// or loaded from a feed later through `DeviceSafety.ioc`.
   final Set<String> iocBlocklist;
 
+  /// (Android) SHA-256 digests of the certificates your app is legitimately signed with, for
+  /// the tampering check. Any common format works (`AB:CD:...`, plain hex). Include both your
+  /// upload key and Play's app signing key if you test sideloaded builds. Empty disables the
+  /// Android tampering check.
+  final Set<String> expectedSigningCertificates;
+
+  /// (iOS) Your Apple Developer team id, for the tampering check. A provisioning profile from
+  /// another team is reported as high risk.
+  final String? expectedIosTeamId;
+
   /// Receives diagnostic messages. `null` discards them.
   final DeviceSafetyLogger? logger;
 
@@ -98,6 +113,8 @@ final class DeviceSafetyConfig {
     Set<String>? notificationListenerAllowlist,
     Set<String>? malwarePackages,
     Set<String>? iocBlocklist,
+    Set<String>? expectedSigningCertificates,
+    String? expectedIosTeamId,
     DeviceSafetyLogger? logger,
   }) => DeviceSafetyConfig(
     defaultPolicy: defaultPolicy ?? this.defaultPolicy,
@@ -113,6 +130,9 @@ final class DeviceSafetyConfig {
         notificationListenerAllowlist ?? this.notificationListenerAllowlist,
     malwarePackages: malwarePackages ?? this.malwarePackages,
     iocBlocklist: iocBlocklist ?? this.iocBlocklist,
+    expectedSigningCertificates:
+        expectedSigningCertificates ?? this.expectedSigningCertificates,
+    expectedIosTeamId: expectedIosTeamId ?? this.expectedIosTeamId,
     logger: logger ?? this.logger,
   );
 }

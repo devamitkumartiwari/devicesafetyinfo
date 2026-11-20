@@ -301,12 +301,74 @@ class BatchRequestMsg {
   }
 }
 
+/// How the app was signed, for the tampering check. Compared in Dart against
+/// `DeviceSafetyConfig.expectedSigningCertificates` / `expectedIosTeamId`.
+class SigningInfoMsg {
+  SigningInfoMsg({
+    required this.certificateSha256,
+    required this.hasProvisioningProfile,
+    this.teamId,
+  });
+
+  /// (Android) Lowercase hex SHA-256 of each current signing certificate.
+  List<String> certificateSha256;
+
+  /// (iOS) Whether the bundle contains `embedded.mobileprovision`. App Store and TestFlight
+  /// builds don't; development, ad-hoc, enterprise and re-signed builds do.
+  bool hasProvisioningProfile;
+
+  /// (iOS) The `TeamIdentifier` from the provisioning profile, when there is one.
+  String? teamId;
+
+  List<Object?> _toList() {
+    return <Object?>[certificateSha256, hasProvisioningProfile, teamId];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static SigningInfoMsg decode(Object result) {
+    result as List<Object?>;
+    return SigningInfoMsg(
+      certificateSha256: (result[0]! as List<Object?>).cast<String>(),
+      hasProvisioningProfile: result[1]! as bool,
+      teamId: result[2] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! SigningInfoMsg || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(certificateSha256, other.certificateSha256) &&
+        _deepEquals(hasProvisioningProfile, other.hasProvisioningProfile) &&
+        _deepEquals(teamId, other.teamId);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'SigningInfoMsg(certificateSha256: $certificateSha256, hasProvisioningProfile: $hasProvisioningProfile, teamId: $teamId)';
+  }
+}
+
 class BatchResultMsg {
   BatchResultMsg({
     required this.reports,
     required this.accessibilityServices,
     required this.notificationListeners,
     required this.installedPackages,
+    required this.failedLists,
+    this.signing,
   });
 
   /// Keyed by `CheckType.id`, for every requested check the platform evaluates itself.
@@ -319,12 +381,21 @@ class BatchResultMsg {
 
   List<String> installedPackages;
 
+  /// Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
+  /// whose list couldn't be read. Their empty lists above mean "unknown", not "clean".
+  List<String> failedLists;
+
+  /// Present when `tampering` was requested and the signing info could be read.
+  SigningInfoMsg? signing;
+
   List<Object?> _toList() {
     return <Object?>[
       reports,
       accessibilityServices,
       notificationListeners,
       installedPackages,
+      failedLists,
+      signing,
     ];
   }
 
@@ -341,6 +412,8 @@ class BatchResultMsg {
           .cast<AccessibilityServiceMsg>(),
       notificationListeners: (result[2]! as List<Object?>).cast<String>(),
       installedPackages: (result[3]! as List<Object?>).cast<String>(),
+      failedLists: (result[4]! as List<Object?>).cast<String>(),
+      signing: result[5] as SigningInfoMsg?,
     );
   }
 
@@ -356,7 +429,9 @@ class BatchResultMsg {
     return _deepEquals(reports, other.reports) &&
         _deepEquals(accessibilityServices, other.accessibilityServices) &&
         _deepEquals(notificationListeners, other.notificationListeners) &&
-        _deepEquals(installedPackages, other.installedPackages);
+        _deepEquals(installedPackages, other.installedPackages) &&
+        _deepEquals(failedLists, other.failedLists) &&
+        _deepEquals(signing, other.signing);
   }
 
   @override
@@ -365,7 +440,7 @@ class BatchResultMsg {
 
   @override
   String toString() {
-    return 'BatchResultMsg(reports: $reports, accessibilityServices: $accessibilityServices, notificationListeners: $notificationListeners, installedPackages: $installedPackages)';
+    return 'BatchResultMsg(reports: $reports, accessibilityServices: $accessibilityServices, notificationListeners: $notificationListeners, installedPackages: $installedPackages, failedLists: $failedLists, signing: $signing)';
   }
 }
 
@@ -564,17 +639,20 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is BatchRequestMsg) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is BatchResultMsg) {
+    } else if (value is SigningInfoMsg) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is OverlayConfigMsg) {
+    } else if (value is BatchResultMsg) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is AppInfoMsg) {
+    } else if (value is OverlayConfigMsg) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is CallEventMsg) {
+    } else if (value is AppInfoMsg) {
       buffer.putUint8(139);
+      writeValue(buffer, value.encode());
+    } else if (value is CallEventMsg) {
+      buffer.putUint8(140);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -602,12 +680,14 @@ class _PigeonCodec extends StandardMessageCodec {
       case 135:
         return BatchRequestMsg.decode(readValue(buffer)!);
       case 136:
-        return BatchResultMsg.decode(readValue(buffer)!);
+        return SigningInfoMsg.decode(readValue(buffer)!);
       case 137:
-        return OverlayConfigMsg.decode(readValue(buffer)!);
+        return BatchResultMsg.decode(readValue(buffer)!);
       case 138:
-        return AppInfoMsg.decode(readValue(buffer)!);
+        return OverlayConfigMsg.decode(readValue(buffer)!);
       case 139:
+        return AppInfoMsg.decode(readValue(buffer)!);
+      case 140:
         return CallEventMsg.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -1422,6 +1502,24 @@ class AppInfoHostApi {
       isNullValid: false,
     );
     return pigeonVar_replyValue! as AppInfoMsg;
+  }
+
+  Future<SigningInfoMsg> signingInfo() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.AppInfoHostApi.signingInfo$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as SigningInfoMsg;
   }
 }
 

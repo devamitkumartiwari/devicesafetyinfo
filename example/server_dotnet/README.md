@@ -116,7 +116,24 @@ curl -s -X POST localhost:5080/android/verify -H 'content-type: application/json
 5. `appIntegrity.appRecognitionVerdict == PLAY_RECOGNIZED`. Optionally, the signing certificate digest is in `AllowedCertificateSha256Digests`.
 6. `deviceIntegrity.deviceRecognitionVerdict` contains `RequiredDeviceVerdict`. This is `MEETS_DEVICE_INTEGRITY` by default; use `MEETS_STRONG_INTEGRITY` for high-risk actions.
 
-The response also includes `appLicensingVerdict`, `playProtectVerdict` and `appsDetected` (app-access risk), so your policy can use them.
+7. Optional environment policies, all off by default:
+   - `RequireLicensed`: `accountDetails.appLicensingVerdict` must be `LICENSED`.
+   - `RejectedPlayProtectVerdicts`: e.g. `["HIGH_RISK"]`. Needs environment details enabled in Play Console.
+   - `RejectedAppAccessRisks`: e.g. `["UNKNOWN_CONTROLLING", "UNKNOWN_CAPTURING"]`, apps from outside Play that can control or read the screen.
+   - `MaxDeviceActivityLevel`: e.g. `"LEVEL_2"`. `recentDeviceActivity` above it means this device asked for unusually many tokens, typical of device farms and token replay.
+
+Every verdict field is returned in `details`, so you can log it or apply your own rules.
+
+**Device verdict cheat sheet** (what a rooted or hooked device typically gets):
+
+| Setup | `deviceRecognitionVerdict` |
+|---|---|
+| Stock, locked bootloader | `MEETS_DEVICE_INTEGRITY` (+ `MEETS_STRONG_INTEGRITY` with recent security patches) |
+| Unlocked bootloader, or root with Magisk/KernelSU | usually `MEETS_BASIC_INTEGRITY` only, or nothing |
+| Root hidden with Play Integrity Fix-style modules | can spoof `MEETS_DEVICE_INTEGRITY`, but not `MEETS_STRONG_INTEGRITY` (hardware-backed) |
+| Emulator | none |
+
+Require `MEETS_STRONG_INTEGRITY` for your most sensitive actions; it's the verdict that root-hiding modules can't fake.
 
 ### App Attest attestation (`AppAttestVerifier.VerifyAttestation`)
 

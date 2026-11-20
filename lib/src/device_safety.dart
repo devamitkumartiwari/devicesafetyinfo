@@ -44,6 +44,8 @@ import 'features/root/presentation/root_api.dart';
 import 'features/screen_protection/data/screen_protection_repository_impl.dart';
 import 'features/screen_protection/presentation/screen_protection_api.dart';
 import 'features/screen_protection/presentation/widgets/secure_screen.dart';
+import 'features/tampering/data/tampering_repository_impl.dart';
+import 'features/tampering/presentation/tampering_api.dart';
 import 'features/version_check/data/version_repository_impl.dart';
 import 'features/version_check/presentation/version_check_api.dart';
 import 'features/vpn/data/vpn_repository_impl.dart';
@@ -166,6 +168,13 @@ final class DeviceSafetyClient {
   late final MalwareApi malware = MalwareApi(
     _runner,
     MalwareRepositoryImpl(_platform.malware),
+    () => _config,
+  );
+
+  /// Repackaged / re-signed app detection.
+  late final TamperingApi tampering = TamperingApi(
+    _runner,
+    TamperingRepositoryImpl(_platform.appInfo),
     () => _config,
   );
 
@@ -338,6 +347,9 @@ abstract final class DeviceSafety {
 
   /// Known-malware package detection.
   static MalwareApi get malware => instance.malware;
+
+  /// Repackaged / re-signed app detection.
+  static TamperingApi get tampering => instance.tampering;
 
   /// Live call detection.
   static CallActivityApi get calls => instance.calls;

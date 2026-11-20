@@ -23,6 +23,29 @@ class RunnerTests: XCTestCase {
     XCTAssertEqual(report.signals.map { $0.highRisk }, [true, false])
   }
 
+  func testTeamIdIsReadFromProvisioningProfile() {
+    // A provisioning profile is CMS-wrapped; the plist sits between binary bytes.
+    let plist = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0"><dict>
+      <key>TeamIdentifier</key><array><string>ABCDE12345</string></array>
+      </dict></plist>
+      """
+    var data = Data([0x30, 0x82, 0x01, 0x00])
+    data.append(Data(plist.utf8))
+    data.append(Data([0xa0, 0x82]))
+    XCTAssertEqual(SigningInfoReader.teamId(inProfile: data), "ABCDE12345")
+    XCTAssertNil(SigningInfoReader.teamId(inProfile: Data([0x30, 0x82])))
+  }
+
+  func testAppWithoutProfileReportsNone() {
+    // The XCTest bundle has no embedded.mobileprovision.
+    let info = SigningInfoReader.read(bundle: Bundle(for: RunnerTests.self))
+    XCTAssertFalse(info.hasProvisioningProfile)
+    XCTAssertNil(info.teamId)
+  }
+
   func testJailbrokenWithoutDetailsStillReportsHighRisk() {
     let report = JailbreakSignals.report(jailbroken: true, failedChecks: [])
     XCTAssertEqual(report.signals.map { $0.id }, ["root.jailbreak"])

@@ -88,6 +88,10 @@ final class RiskFlag {
         'Known harmful app installed',
         'An app on the configured malware list is installed.',
       ),
+      CheckType.tampering => (
+        'App has been modified',
+        'This copy of the app was re-signed, possibly after being altered.',
+      ),
     };
     return RiskFlag(type: type, title: title, description: description);
   }

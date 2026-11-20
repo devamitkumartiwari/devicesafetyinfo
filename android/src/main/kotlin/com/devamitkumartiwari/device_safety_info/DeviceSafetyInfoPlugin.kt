@@ -88,7 +88,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, ActivityAware, PluginHost {
         val calls = CallActivityMonitor(this)
         val integrity = IntegrityHostApiImpl(this)
 
-        RootHostApi.setUp(m, RootHostApiImpl(runner))
+        RootHostApi.setUp(m, RootHostApiImpl(this, runner))
         HookingHostApi.setUp(m, HookingHostApiImpl(this, runner))
         PostureHostApi.setUp(m, PostureHostApiImpl(this, runner))
         BatchHostApi.setUp(m, BatchHostApiImpl(this, runner, recording))
@@ -99,7 +99,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, ActivityAware, PluginHost {
         ClipboardHostApi.setUp(m, clipboard)
         OverlayAttackHostApi.setUp(m, OverlayAttackHostApiImpl(this))
         CallHostApi.setUp(m, CallHostApiImpl(this))
-        AppInfoHostApi.setUp(m, AppInfoHostApiImpl(this))
+        AppInfoHostApi.setUp(m, AppInfoHostApiImpl(this, runner))
         IntegrityHostApi.setUp(m, integrity)
 
         ScreenshotTakenStreamHandler.register(m, screenshots)

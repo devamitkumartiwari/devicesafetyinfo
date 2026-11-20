@@ -57,12 +57,34 @@ class BatchRequestMsg {
   List<String> malwarePackages;
 }
 
+/// How the app was signed, for the tampering check. Compared in Dart against
+/// `DeviceSafetyConfig.expectedSigningCertificates` / `expectedIosTeamId`.
+class SigningInfoMsg {
+  SigningInfoMsg(
+    this.certificateSha256,
+    this.hasProvisioningProfile,
+    this.teamId,
+  );
+
+  /// (Android) Lowercase hex SHA-256 of each current signing certificate.
+  List<String> certificateSha256;
+
+  /// (iOS) Whether the bundle contains `embedded.mobileprovision`. App Store and TestFlight
+  /// builds don't; development, ad-hoc, enterprise and re-signed builds do.
+  bool hasProvisioningProfile;
+
+  /// (iOS) The `TeamIdentifier` from the provisioning profile, when there is one.
+  String? teamId;
+}
+
 class BatchResultMsg {
   BatchResultMsg(
     this.reports,
     this.accessibilityServices,
     this.notificationListeners,
     this.installedPackages,
+    this.failedLists,
+    this.signing,
   );
 
   /// Keyed by `CheckType.id`, for every requested check the platform evaluates itself.
@@ -72,6 +94,13 @@ class BatchResultMsg {
   List<AccessibilityServiceMsg> accessibilityServices;
   List<String> notificationListeners;
   List<String> installedPackages;
+
+  /// Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
+  /// whose list couldn't be read. Their empty lists above mean "unknown", not "clean".
+  List<String> failedLists;
+
+  /// Present when `tampering` was requested and the signing info could be read.
+  SigningInfoMsg? signing;
 }
 
 enum OverlayModeMsg { none, blur, color, image }
@@ -218,6 +247,9 @@ abstract class CallHostApi {
 @HostApi()
 abstract class AppInfoHostApi {
   AppInfoMsg packageInfo();
+
+  @async
+  SigningInfoMsg signingInfo();
 }
 
 @HostApi()

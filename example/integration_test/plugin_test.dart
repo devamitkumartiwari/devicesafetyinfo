@@ -40,6 +40,7 @@ void main() {
     'vpn': () => DeviceSafety.vpn,
     'screenCapture': () => DeviceSafety.screen,
     'malware': () => DeviceSafety.malware,
+    'tampering': () => DeviceSafety.tampering,
   };
 
   for (final MapEntry(:key, :value) in detections.entries) {
@@ -57,6 +58,65 @@ void main() {
       if (!kDebugMode) {
         expect((await DeviceSafety.debugger.check()).detected, isFalse);
       }
+    },
+  );
+
+  test('signals on this device (diagnostic)', () async {
+    for (final api in [
+      DeviceSafety.root,
+      DeviceSafety.emulator,
+      DeviceSafety.hooking,
+    ]) {
+      final r = await api.check(refresh: true);
+      debugPrint('${api.type.id}: ${r.status.name} ${r.signals}');
+      if (api.type != CheckType.emulator) {
+        expect(
+          r.signals.where((s) => s.level == RiskLevel.high),
+          isEmpty,
+          reason: 'high-risk signal on a clean device: ${r.signals}',
+        );
+      }
+    }
+  });
+
+  test(
+    'tampering: the real signing certificate passes, another fails',
+    () async {
+      final info = await DeviceSafety.tampering.signingInfo();
+      if (defaultTargetPlatform != TargetPlatform.android) {
+        debugPrint('iOS provisioning profile: ${info.hasProvisioningProfile}');
+        return;
+      }
+      expect(info.certificateSha256, isNotEmpty);
+      expect(info.certificateSha256.first, matches(RegExp(r'^[0-9a-f]{64}$')));
+      debugPrint('signing certificate: ${info.certificateSha256.first}');
+
+      // Unconfigured: can't decide.
+      expect(
+        (await DeviceSafety.tampering.check(refresh: true)).status,
+        CheckStatus.unsupported,
+      );
+      await DeviceSafety.initialize(
+        DeviceSafetyConfig(
+          expectedSigningCertificates: {
+            info.certificateSha256.first.toUpperCase(),
+          },
+        ),
+      );
+      expect(await DeviceSafety.tampering.isDetected(refresh: true), isFalse);
+      await DeviceSafety.initialize(
+        DeviceSafetyConfig(expectedSigningCertificates: {'00' * 32}),
+      );
+      final r = await DeviceSafety.tampering.check(refresh: true);
+      expect(r.detected, isTrue);
+      expect(r.signals.single.key, 'tampering.signature_mismatch');
+      // The batch path agrees.
+      final a = await DeviceSafety.assess(
+        checks: [CheckType.tampering],
+        refresh: true,
+      );
+      expect(a.results[CheckType.tampering]!.detected, isTrue);
+      await DeviceSafety.initialize();
     },
   );
 

@@ -29,10 +29,58 @@ void main() {
   group('root', () {
     test('platform high signal is detected under standard', () async {
       f.root.root = report([high('root.su_executable:/system/bin/su')]);
+      f.ffi = const FakeNativeChecks(dsi.DSI_ROOT_FILES_HIGH);
+      make();
       final r = await DeviceSafety.root.check();
       expect(r.status, CheckStatus.completed);
       expect(r.detected, isTrue);
-      expect(r.signals.single.key, 'root.su_executable');
+      expect(r.signals.map((s) => s.key), [
+        'root.su_executable',
+        'root.native_files',
+      ]);
+    });
+
+    test('Kotlin and C disagreeing on root files is flagged', () async {
+      // Kotlin found nothing (hooked), C found Magisk.
+      f.ffi = const FakeNativeChecks(dsi.DSI_ROOT_FILES_HIGH);
+      make();
+      var r = await DeviceSafety.root.check();
+      expect(
+        r.signals.map((s) => s.id),
+        contains('integrity.layer_mismatch:root_files'),
+      );
+      // C found nothing (libc hooked), Kotlin found su.
+      f.ffi = const FakeNativeChecks();
+      f.root.root = report([high('root.manager_file:/sbin/magisk')]);
+      make();
+      r = await DeviceSafety.root.check();
+      expect(
+        r.signals.map((s) => s.id),
+        contains('integrity.layer_mismatch:root_files'),
+      );
+    });
+
+    test(
+      'no layer mismatch when both layers agree or the library is missing',
+      () async {
+        expect((await DeviceSafety.root.check()).signals, isEmpty);
+        f.ffi = const FakeNativeChecks(0, false);
+        f.root.root = report([high('root.manager_file:/sbin/magisk')]);
+        make();
+        final r = await DeviceSafety.root.check();
+        expect(
+          r.signals.map((s) => s.id),
+          isNot(contains('integrity.layer_mismatch:root_files')),
+        );
+      },
+    );
+
+    test('an unsupported report stays unsupported after merging', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      f.root.root = report([], supported: false);
+      f.ffi = const FakeNativeChecks(0, false);
+      make();
+      expect((await DeviceSafety.root.check()).status, CheckStatus.unsupported);
     });
 
     test('low signal only counts under strict', () async {
@@ -49,8 +97,8 @@ void main() {
       make();
       final r = await DeviceSafety.root.check();
       expect(r.detected, isTrue);
-      expect(r.signals.single.id, 'root.native_files');
-      expect(r.signals.single.source, SignalSource.ffi);
+      expect(r.signals.first.id, 'root.native_files');
+      expect(r.signals.first.source, SignalSource.ffi);
     });
 
     test('native library unavailable keeps platform support', () async {

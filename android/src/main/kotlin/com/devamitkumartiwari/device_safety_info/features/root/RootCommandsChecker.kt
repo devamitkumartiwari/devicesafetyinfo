@@ -1,15 +1,13 @@
 package com.devamitkumartiwari.device_safety_info.features.root
 
 import com.devamitkumartiwari.device_safety_info.core.RiskSignal
-
+import com.devamitkumartiwari.device_safety_info.generated.Signatures
 import java.io.File
 
 /**
- * A utility to check for the presence of common root-related commands.
- *
- * This checker looks up binaries like `su` in every directory of the process's `PATH`,
- * the same lookup `which su` performs, but in-process: no subprocess is spawned, so there
- * are no stream-reader threads that can race the process being destroyed.
+ * Looks up root binaries (`su`, `magisk`, KernelSU's `ksud`, APatch's `apd`, `resetprop`, ...)
+ * in every directory of the process's `PATH`: the lookup `which su` performs, but in-process,
+ * so no subprocess is spawned.
  *
  * Like `which`, a binary only counts as high-risk when this app can execute it. A file that
  * merely exists (common for stock `su`/`busybox` on some Xiaomi, Redmi and Samsung ROMs) is
@@ -17,20 +15,15 @@ import java.io.File
  */
 object RootCommandsChecker {
 
-    // Binaries that indicate root when executable.
-    private val rootBinaries = arrayOf(
-        "su",         // Superuser binary
-        "magisk",     // Magisk root manager
-        "daemonsu"    // A daemon for managing superuser access
-    )
-
-    // Binaries that are suspicious but ship on some stock ROMs — never high-risk.
-    private val lowRiskBinaries = arrayOf(
-        "busybox"     // Multi-call binary; shipped by some OEMs
-    )
-
-    fun signals(): List<RiskSignal> {
-        val dirs = (System.getenv("PATH") ?: return emptyList())
+    /** All inputs are injectable for tests. */
+    fun signals(
+        path: String? = System.getenv("PATH"),
+        isFile: (File) -> Boolean = { it.isFile },
+        canExecute: (File) -> Boolean = { it.canExecute() },
+        rootBinaries: List<String> = Signatures.rootBinaries,
+        lowRiskBinaries: List<String> = Signatures.lowRiskBinaries,
+    ): List<RiskSignal> {
+        val dirs = (path ?: return emptyList())
             .split(':')
             .filter { it.isNotEmpty() }
             .distinct()
@@ -38,8 +31,8 @@ object RootCommandsChecker {
         for (dir in dirs) {
             for (bin in rootBinaries) {
                 val f = File(dir, bin)
-                if (f.isFile) {
-                    val exec = f.canExecute()
+                if (isFile(f)) {
+                    val exec = canExecute(f)
                     found += RiskSignal(
                         if (exec) "root.binary_executable:${f.path}" else "root.binary_present:${f.path}",
                         exec,
@@ -48,10 +41,9 @@ object RootCommandsChecker {
             }
             for (bin in lowRiskBinaries) {
                 val f = File(dir, bin)
-                if (f.isFile) found += RiskSignal("root.busybox:${f.path}", highRisk = false)
+                if (isFile(f)) found += RiskSignal("root.busybox:${f.path}", highRisk = false)
             }
         }
         return found
     }
-
 }

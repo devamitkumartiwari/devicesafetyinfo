@@ -1,5 +1,6 @@
 package com.devamitkumartiwari.device_safety_info.features.root
 
+import android.content.Context
 import com.devamitkumartiwari.device_safety_info.core.RiskSignal
 import com.devamitkumartiwari.device_safety_info.core.RiskReport
 
@@ -7,9 +8,11 @@ import com.devamitkumartiwari.device_safety_info.core.RiskReport
  * Root detection on the JVM side.
  *
  * Every checker reports what it found as [RiskSignal]s tagged high- or low-risk:
- *  - Root-related files (`su` binaries, Magisk, Superuser) — [RootFilesChecker].
+ *  - Root-related files (`su`, Magisk, KernelSU, APatch, SuperSU) — [RootFilesChecker].
  *  - Root-related binaries in `PATH` — [RootCommandsChecker].
  *  - System properties that indicate an insecure or modified build — [SystemPropsChecker].
+ *  - Systemless-root mounts and read-write system partitions — [MountChecker].
+ *  - Installed root-manager and root-cloaking apps — [RootPackagesChecker] (needs a context).
  *
  * The Dart policy decides what counts as "rooted"; under the standard policy only high-risk
  * signals do, so low-risk ones (a stock `busybox`, an unlocked bootloader) never block users.
@@ -19,14 +22,16 @@ object RootedDeviceCheck {
     /** Thrown when every checker failed, so Dart reports an error instead of a clean result. */
     class AllCheckersFailed(cause: Throwable) : RuntimeException("Every root checker failed", cause)
 
-    private val checkers: List<Pair<String, () -> List<RiskSignal>>> = listOf(
+    private fun checkers(context: Context?): List<Pair<String, () -> List<RiskSignal>>> = listOfNotNull(
         "files" to { RootFilesChecker.signals() },
         "commands" to { RootCommandsChecker.signals() },
         "props" to { SystemPropsChecker.signals() },
+        "mounts" to { MountChecker.signals() },
+        context?.let { ctx -> "packages" to { RootPackagesChecker.signals(ctx) } },
     )
 
-    /** Runs every checker on this device. */
-    fun evaluate(): RiskReport = evaluate(checkers)
+    /** Runs every checker on this device. [context] enables the installed-app check. */
+    fun evaluate(context: Context?): RiskReport = evaluate(checkers(context))
 
     /**
      * Runs [checkers] and returns every indicator found.

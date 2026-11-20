@@ -48,7 +48,11 @@ enum CheckType {
   overlayAttack,
 
   /// An app from the configured malware package list is installed (Android).
-  malware;
+  malware,
+
+  /// The app was repackaged or re-signed: an unexpected signing certificate (Android) or
+  /// provisioning profile (iOS).
+  tampering;
 
   /// Stable string id sent to the platform side (the enum name).
   String get id => name;

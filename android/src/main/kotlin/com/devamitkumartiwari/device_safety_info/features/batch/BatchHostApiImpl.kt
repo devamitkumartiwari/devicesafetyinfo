@@ -6,6 +6,7 @@ import com.devamitkumartiwari.device_safety_info.core.PluginHost
 import com.devamitkumartiwari.device_safety_info.core.RiskReport
 import com.devamitkumartiwari.device_safety_info.core.requireContext
 import com.devamitkumartiwari.device_safety_info.features.accessibility.AccessibilityAbuseDetector
+import com.devamitkumartiwari.device_safety_info.features.app_integrity.SigningInfoReader
 import com.devamitkumartiwari.device_safety_info.features.emulator.RealDeviceCheck
 import com.devamitkumartiwari.device_safety_info.features.hooking.HookDetector
 import com.devamitkumartiwari.device_safety_info.features.malware.MalwarePackageDetector
@@ -36,8 +37,8 @@ class BatchHostApiImpl(
 ) : BatchHostApi {
 
     private val reporters: Map<String, (Context) -> RiskReport> = mapOf(
-        "root" to { _ -> RootedDeviceCheck.evaluate() },
-        "emulator" to { _ -> RealDeviceCheck.evaluate() },
+        "root" to { ctx -> RootedDeviceCheck.evaluate(ctx) },
+        "emulator" to { ctx -> RealDeviceCheck.evaluate(ctx) },
         "hooking" to { _ -> HookDetector.hookReport() },
         "debugger" to { ctx -> HookDetector.debuggerReport(ctx) },
         "developerMode" to PostureReports::developerMode,
@@ -65,22 +66,44 @@ class BatchHostApiImpl(
             }
         }
 
+        // A list that can't be read is reported in failedLists, never as an empty (clean) list.
+        val failed = java.util.Collections.synchronizedList(mutableListOf<String>())
+        suspend fun <T> list(id: String, block: () -> List<T>): List<T> = try {
+            bg.run { block() }
+        } catch (_: Throwable) {
+            failed += id
+            emptyList()
+        }
+
         val accessibility = if ("accessibility" in ids) {
-            async { safeList { bg.run { AccessibilityAbuseDetector.enabledServices(ctx) } } }
+            async { list("accessibility") { AccessibilityAbuseDetector.enabledServices(ctx) } }
         } else {
             null
         }
         val listeners = if ("notificationListener" in ids) {
-            async { safeList { bg.run { NotificationListenerAbuseDetector.getEnabledNotificationListeners(ctx) } } }
+            async {
+                list("notificationListener") {
+                    NotificationListenerAbuseDetector.getEnabledNotificationListeners(ctx)
+                }
+            }
         } else {
             null
         }
         val installed = if ("malware" in ids && request.malwarePackages.isNotEmpty()) {
             async {
-                safeList {
-                    bg.run {
-                        request.malwarePackages.filter { MalwarePackageDetector.isPackageInstalled(ctx, it) }
-                    }
+                list("malware") {
+                    request.malwarePackages.filter { MalwarePackageDetector.isPackageInstalled(ctx, it) }
+                }
+            }
+        } else {
+            null
+        }
+        val signing = if ("tampering" in ids) {
+            async {
+                try {
+                    bg.run { SigningInfoReader.read(ctx) }
+                } catch (_: Throwable) {
+                    null
                 }
             }
         } else {
@@ -93,12 +116,8 @@ class BatchHostApiImpl(
             accessibilityServices = accessibility?.await() ?: emptyList<AccessibilityServiceMsg>(),
             notificationListeners = listeners?.await() ?: emptyList(),
             installedPackages = installed?.await() ?: emptyList(),
+            failedLists = failed.toList(),
+            signing = signing?.await(),
         )
-    }
-
-    private suspend fun <T> safeList(block: suspend () -> List<T>): List<T> = try {
-        block()
-    } catch (_: Throwable) {
-        emptyList()
     }
 }

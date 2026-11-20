@@ -34,7 +34,12 @@ Dart 3.14+; iOS builds with Swift Package Manager only.
   e.g. `{'vpn.active': RiskLevel.high}` or `{'emulator.generic_build':
   RiskLevel.none}`.
 - `failModes: {CheckType.root: FailMode.closed}` makes errors and timeouts
-  count as detected. Use it for checks an attacker could break on purpose.
+  count as detected. Use it for checks an attacker could break on purpose
+  (root, hooking, debugger, tampering).
+- For the tampering (repackaged app) check, set `expectedSigningCertificates`
+  (Android SHA-256 digests; `DeviceSafety.tampering.signingInfo()` shows the
+  current one) and `expectedIosTeamId`. Without them it reports `unsupported`
+  on Android.
 - Allowlist trusted accessibility services and notification listeners, or they
   are reported.
 

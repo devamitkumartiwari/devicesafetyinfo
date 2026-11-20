@@ -1,6 +1,7 @@
 import '../result/risk_signal.dart';
 import '../utils/platform_guard.dart';
 import 'generated/device_safety_api.g.dart';
+import 'generated/dsi_bindings.g.dart' as dsi;
 import 'mappers.dart';
 import 'native_checks_ffi.dart';
 
@@ -22,6 +23,25 @@ const RiskSignal platformCheckFailedSignal = RiskSignal(
   source: SignalSource.dart,
 );
 
+/// Reported when the Kotlin and C root checks disagree about the same file list: one found an
+/// executable `su` or a root-manager artifact and the other didn't. Both read the same paths,
+/// so a disagreement means one layer was hooked to hide them (or, rarely, a race).
+const RiskSignal layerMismatchSignal = RiskSignal(
+  'integrity.layer_mismatch:root_files',
+  RiskLevel.low,
+  source: SignalSource.dart,
+);
+
+/// Cross-checks the Android root file lookups of both layers; see [layerMismatchSignal].
+List<RiskSignal> rootLayerMismatch(CheckReport platform, NativeChecks native) {
+  if (!native.supported || !PlatformGuard.isAndroid) return const [];
+  final platformFound = platform.signals.any(
+    (s) => s.key == 'root.su_executable' || s.key == 'root.manager_file',
+  );
+  final nativeFound = native.bits & dsi.DSI_ROOT_FILES_HIGH != 0;
+  return platformFound == nativeFound ? const [] : const [layerMismatchSignal];
+}
+
 /// The native half of a check as a report: [signals] plus [nativeUnavailableSignal] when the
 /// library didn't run on a platform it ships for.
 CheckReport nativeReport(NativeChecks native, List<RiskSignal> signals) =>
@@ -41,11 +61,15 @@ bool hasHighRisk(CheckReport report) =>
 /// [platformCheckFailedSignal]) instead of being discarded with the error. Without such
 /// evidence the platform error is rethrown, so the runner reports `CheckStatus.error` and the
 /// configured fail mode applies.
+///
+/// [crossCheck] can add signals that compare the two halves when both ran.
 Future<CheckReport> mergePlatformWithNative(
   Future<CheckReportMsg> platform,
   Future<NativeChecks> native,
-  List<RiskSignal> Function(NativeChecks) pick,
-) async {
+  List<RiskSignal> Function(NativeChecks) pick, {
+  List<RiskSignal> Function(CheckReport platform, NativeChecks native)?
+  crossCheck,
+}) async {
   // Listen to the native future right away so a failure there is never an unhandled error
   // while the platform call is still pending. A native failure is an unavailable library.
   final nativeOrUnavailable = native.catchError(
@@ -62,7 +86,18 @@ Future<CheckReport> mergePlatformWithNative(
   }
   final n = await nativeOrUnavailable;
   final fromNative = nativeReport(n, pick(n));
-  if (msg != null) return msg.toDomain().merge(fromNative);
+  if (msg != null) {
+    final fromPlatform = msg.toDomain();
+    return fromPlatform
+        .merge(fromNative)
+        // supported: false so the extra signals never change the merged support flag.
+        .merge(
+          CheckReport(
+            crossCheck?.call(fromPlatform, n) ?? const [],
+            supported: false,
+          ),
+        );
+  }
   if (hasHighRisk(fromNative)) {
     return CheckReport([
       ...fromNative.signals,

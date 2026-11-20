@@ -26,6 +26,14 @@ final class NativeChecks {
       const RiskSignal('root.native_files', RiskLevel.high, source: .ffi),
     if (_has(dsi.DSI_ROOT_FILES_LOW))
       const RiskSignal('root.native_su_present', RiskLevel.low, source: .ffi),
+    if (_has(dsi.DSI_ROOT_MOUNTS))
+      const RiskSignal('root.native_mounts', RiskLevel.high, source: .ffi),
+    if (_has(dsi.DSI_JB_FILES))
+      const RiskSignal(
+        'root.native_jailbreak_files',
+        RiskLevel.high,
+        source: .ffi,
+      ),
   ];
 
   /// Hooking indicators.
@@ -36,6 +44,12 @@ final class NativeChecks {
       const RiskSignal('hooking.frida_port', RiskLevel.high, source: .ffi),
     if (_has(dsi.DSI_DYLD_INJECTION))
       const RiskSignal('hooking.dyld_injection', RiskLevel.high, source: .ffi),
+    if (_has(dsi.DSI_FRIDA_THREADS))
+      const RiskSignal('hooking.frida_threads', RiskLevel.high, source: .ffi),
+    if (_has(dsi.DSI_FRIDA_FDS))
+      const RiskSignal('hooking.frida_fds', RiskLevel.high, source: .ffi),
+    if (_has(dsi.DSI_TEXT_PATCHED))
+      const RiskSignal('hooking.text_patched', RiskLevel.high, source: .ffi),
   ];
 
   /// Debugger indicators.
@@ -60,18 +74,28 @@ final class NativeChecksFfi implements NativeChecksSource {
   static const int allMask = dsi.DSI_ALL_CHECKS;
 
   /// Mask for root checks.
-  static const int rootMask = dsi.DSI_ROOT_FILES_HIGH | dsi.DSI_ROOT_FILES_LOW;
+  static const int rootMask =
+      dsi.DSI_ROOT_FILES_HIGH |
+      dsi.DSI_ROOT_FILES_LOW |
+      dsi.DSI_ROOT_MOUNTS |
+      dsi.DSI_JB_FILES;
 
   /// Mask for hooking checks.
   static const int hookingMask =
-      dsi.DSI_FRIDA_MAPS | dsi.DSI_FRIDA_PORT | dsi.DSI_DYLD_INJECTION;
+      dsi.DSI_FRIDA_MAPS |
+      dsi.DSI_FRIDA_PORT |
+      dsi.DSI_DYLD_INJECTION |
+      dsi.DSI_FRIDA_THREADS |
+      dsi.DSI_FRIDA_FDS |
+      dsi.DSI_TEXT_PATCHED;
 
   /// Mask for the debugger check.
   static const int debuggerMask = dsi.DSI_DEBUGGER;
 
   @override
   Future<NativeChecks> collect({int mask = allMask}) =>
-      // The port probe can block for ~100 ms, so never run on the caller's isolate.
+      // The port probe can block for ~100 ms and the libc comparison reads ~1 MB, so never run on
+      // the caller's isolate.
       Isolate.run(() => _collectSync(mask));
 
   static NativeChecks _collectSync(int mask) {

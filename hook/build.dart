@@ -19,7 +19,21 @@ void main(List<String> args) async {
       name: 'dsi',
       assetName: 'src/core/platform/generated/dsi_bindings.g.dart',
       sources: ['src/dsi.c'],
-      flags: ['-fvisibility=hidden', '-O2'],
+      flags: [
+        '-fvisibility=hidden',
+        '-O2',
+        '-fstack-protector-strong',
+        '-D_FORTIFY_SOURCE=2',
+        '-ffunction-sections',
+        '-fdata-sections',
+        if (os == OS.android) ...[
+          // Drop the local symbol table (exported dsi_* symbols stay in .dynsym), unused
+          // sections, and make the GOT read-only after load.
+          '-Wl,--strip-all',
+          '-Wl,--gc-sections',
+          '-Wl,-z,relro,-z,now',
+        ],
+      ],
     );
     await builder.run(
       input: input,

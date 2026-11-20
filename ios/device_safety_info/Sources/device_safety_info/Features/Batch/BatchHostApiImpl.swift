@@ -15,9 +15,10 @@ final class BatchHostApiImpl: BatchHostApi {
             }
             return out
         }
+        let signing = ids.contains("tampering") ? SigningInfoReader.read() : nil
         return BatchResultMsg(
             reports: reports, accessibilityServices: [], notificationListeners: [],
-            installedPackages: [])
+            installedPackages: [], failedLists: [], signing: signing)
     }
 
     private static func report(for id: String) async -> RiskReport? {

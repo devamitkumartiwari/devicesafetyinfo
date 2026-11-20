@@ -79,6 +79,7 @@ class FakeBatchApi extends Fake implements BatchHostApi {
     accessibilityServices: [],
     notificationListeners: [],
     installedPackages: [],
+    failedLists: [],
   );
   final List<BatchRequestMsg> requests = [];
   Object? error;
@@ -194,6 +195,14 @@ class FakeCallApi extends Fake implements CallHostApi {
 }
 
 class FakeAppInfoApi extends Fake implements AppInfoHostApi {
+  SigningInfoMsg signing = SigningInfoMsg(
+    certificateSha256: ['ab' * 32],
+    hasProvisioningProfile: false,
+  );
+
+  @override
+  Future<SigningInfoMsg> signingInfo() async => signing;
+
   @override
   Future<AppInfoMsg> packageInfo() async => AppInfoMsg(
     packageName: 'com.example.app',

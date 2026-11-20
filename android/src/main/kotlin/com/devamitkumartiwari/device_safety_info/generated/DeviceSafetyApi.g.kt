@@ -415,6 +415,62 @@ data class BatchRequestMsg (
   }
 }
 
+/**
+ * How the app was signed, for the tampering check. Compared in Dart against
+ * `DeviceSafetyConfig.expectedSigningCertificates` / `expectedIosTeamId`.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class SigningInfoMsg (
+  /** (Android) Lowercase hex SHA-256 of each current signing certificate. */
+  val certificateSha256: List<String>,
+  /**
+   * (iOS) Whether the bundle contains `embedded.mobileprovision`. App Store and TestFlight
+   * builds don't; development, ad-hoc, enterprise and re-signed builds do.
+   */
+  val hasProvisioningProfile: Boolean,
+  /** (iOS) The `TeamIdentifier` from the provisioning profile, when there is one. */
+  val teamId: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): SigningInfoMsg {
+      val certificateSha256 = pigeonVar_list[0] as List<String>
+      val hasProvisioningProfile = pigeonVar_list[1] as Boolean
+      val teamId = pigeonVar_list[2] as String?
+      return SigningInfoMsg(certificateSha256, hasProvisioningProfile, teamId)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      certificateSha256,
+      hasProvisioningProfile,
+      teamId,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as SigningInfoMsg
+    return DeviceSafetyApiPigeonUtils.deepEquals(this.certificateSha256, other.certificateSha256) && DeviceSafetyApiPigeonUtils.deepEquals(this.hasProvisioningProfile, other.hasProvisioningProfile) && DeviceSafetyApiPigeonUtils.deepEquals(this.teamId, other.teamId)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.certificateSha256)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.hasProvisioningProfile)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.teamId)
+    return result
+  }
+  override fun toString(): String {
+    return "SigningInfoMsg(certificateSha256=$certificateSha256, hasProvisioningProfile=$hasProvisioningProfile, teamId=$teamId)"
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class BatchResultMsg (
   /** Keyed by `CheckType.id`, for every requested check the platform evaluates itself. */
@@ -422,7 +478,14 @@ data class BatchResultMsg (
   /** Raw lists for the checks whose allowlists live in Dart. */
   val accessibilityServices: List<AccessibilityServiceMsg>,
   val notificationListeners: List<String>,
-  val installedPackages: List<String>
+  val installedPackages: List<String>,
+  /**
+   * Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
+   * whose list couldn't be read. Their empty lists above mean "unknown", not "clean".
+   */
+  val failedLists: List<String>,
+  /** Present when `tampering` was requested and the signing info could be read. */
+  val signing: SigningInfoMsg? = null
 )
  {
   companion object {
@@ -431,7 +494,9 @@ data class BatchResultMsg (
       val accessibilityServices = pigeonVar_list[1] as List<AccessibilityServiceMsg>
       val notificationListeners = pigeonVar_list[2] as List<String>
       val installedPackages = pigeonVar_list[3] as List<String>
-      return BatchResultMsg(reports, accessibilityServices, notificationListeners, installedPackages)
+      val failedLists = pigeonVar_list[4] as List<String>
+      val signing = pigeonVar_list[5] as SigningInfoMsg?
+      return BatchResultMsg(reports, accessibilityServices, notificationListeners, installedPackages, failedLists, signing)
     }
   }
   fun toList(): List<Any?> {
@@ -440,6 +505,8 @@ data class BatchResultMsg (
       accessibilityServices,
       notificationListeners,
       installedPackages,
+      failedLists,
+      signing,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -450,7 +517,7 @@ data class BatchResultMsg (
       return true
     }
     val other = other as BatchResultMsg
-    return DeviceSafetyApiPigeonUtils.deepEquals(this.reports, other.reports) && DeviceSafetyApiPigeonUtils.deepEquals(this.accessibilityServices, other.accessibilityServices) && DeviceSafetyApiPigeonUtils.deepEquals(this.notificationListeners, other.notificationListeners) && DeviceSafetyApiPigeonUtils.deepEquals(this.installedPackages, other.installedPackages)
+    return DeviceSafetyApiPigeonUtils.deepEquals(this.reports, other.reports) && DeviceSafetyApiPigeonUtils.deepEquals(this.accessibilityServices, other.accessibilityServices) && DeviceSafetyApiPigeonUtils.deepEquals(this.notificationListeners, other.notificationListeners) && DeviceSafetyApiPigeonUtils.deepEquals(this.installedPackages, other.installedPackages) && DeviceSafetyApiPigeonUtils.deepEquals(this.failedLists, other.failedLists) && DeviceSafetyApiPigeonUtils.deepEquals(this.signing, other.signing)
   }
 
   override fun hashCode(): Int {
@@ -459,10 +526,12 @@ data class BatchResultMsg (
     result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.accessibilityServices)
     result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.notificationListeners)
     result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.installedPackages)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.failedLists)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.signing)
     return result
   }
   override fun toString(): String {
-    return "BatchResultMsg(reports=$reports, accessibilityServices=$accessibilityServices, notificationListeners=$notificationListeners, installedPackages=$installedPackages)"
+    return "BatchResultMsg(reports=$reports, accessibilityServices=$accessibilityServices, notificationListeners=$notificationListeners, installedPackages=$installedPackages, failedLists=$failedLists, signing=$signing)"
   }
 }
 
@@ -644,20 +713,25 @@ private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BatchResultMsg.fromList(it)
+          SigningInfoMsg.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          OverlayConfigMsg.fromList(it)
+          BatchResultMsg.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppInfoMsg.fromList(it)
+          OverlayConfigMsg.fromList(it)
         }
       }
       139.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          AppInfoMsg.fromList(it)
+        }
+      }
+      140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           CallEventMsg.fromList(it)
         }
@@ -695,20 +769,24 @@ private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is BatchResultMsg -> {
+      is SigningInfoMsg -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is OverlayConfigMsg -> {
+      is BatchResultMsg -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is AppInfoMsg -> {
+      is OverlayConfigMsg -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is CallEventMsg -> {
+      is AppInfoMsg -> {
         stream.write(139)
+        writeValue(stream, value.toList())
+      }
+      is CallEventMsg -> {
+        stream.write(140)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1445,6 +1523,7 @@ interface CallHostApi {
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface AppInfoHostApi {
   fun packageInfo(): AppInfoMsg
+  suspend fun signingInfo(): SigningInfoMsg
 
   companion object {
     /** The codec used by AppInfoHostApi. */
@@ -1465,6 +1544,23 @@ interface AppInfoHostApi {
               DeviceSafetyApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.AppInfoHostApi.signingInfo$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.signingInfo())
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
           }
         } else {
           channel.setMessageHandler(null)

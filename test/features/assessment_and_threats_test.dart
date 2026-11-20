@@ -45,6 +45,7 @@ void main() {
         ],
         notificationListeners: [],
         installedPackages: ['com.evil'],
+        failedLists: [],
       );
       make(DeviceSafetyConfig(malwarePackages: {'com.evil'}));
 
@@ -97,6 +98,7 @@ void main() {
         accessibilityServices: [],
         notificationListeners: [],
         installedPackages: [],
+        failedLists: [],
       );
       make(DeviceSafetyConfig(failModes: {CheckType.root: FailMode.closed}));
       final a = await DeviceSafety.assess(
@@ -124,6 +126,7 @@ void main() {
         accessibilityServices: [],
         notificationListeners: [],
         installedPackages: [],
+        failedLists: [],
       );
       f.ffi = const FakeNativeChecks(dsi.DSI_ROOT_FILES_HIGH);
       make();

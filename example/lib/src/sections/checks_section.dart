@@ -29,6 +29,7 @@ class _ChecksSectionState extends State<ChecksSection> {
     ('VPN / proxy', () => DeviceSafety.vpn),
     ('Screen capture', () => DeviceSafety.screen),
     ('Malware packages', () => DeviceSafety.malware),
+    ('Tampering (re-signed app)', () => DeviceSafety.tampering),
   ];
 
   final Map<String, CheckResult> _results = {};

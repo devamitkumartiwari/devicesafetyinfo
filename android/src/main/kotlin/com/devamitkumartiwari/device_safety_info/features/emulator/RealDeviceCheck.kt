@@ -31,29 +31,44 @@ object RealDeviceCheck {
     // Words that emulators use but some real devices/ROMs also report.
     private val weakWords = listOf("unknown", "generic", "nox")
 
-    /** Runs every emulator check and returns all indicators found. */
-    fun evaluate(): RiskReport {
+    /** Runs every emulator check against this device and returns all indicators found. */
+    fun evaluate(): RiskReport = evaluate(
+        hardware = Build.HARDWARE.orEmpty(),
+        buildFields = linkedMapOf(
+            "fingerprint" to Build.FINGERPRINT.orEmpty(),
+            "model" to Build.MODEL.orEmpty(),
+            "manufacturer" to Build.MANUFACTURER.orEmpty(),
+            "brand" to Build.BRAND.orEmpty(),
+            "device" to Build.DEVICE.orEmpty(),
+            "product" to Build.PRODUCT.orEmpty(),
+        ),
+        property = ::systemProperty,
+    )
+
+    /**
+     * The detection logic, independent of the device: [buildFields] maps a field name
+     * (`fingerprint`, `model`, `manufacturer`, `brand`, `device`, `product`) to its value and
+     * [property] reads a system property.
+     */
+    fun evaluate(
+        hardware: String,
+        buildFields: Map<String, String>,
+        property: (String) -> String?,
+    ): RiskReport {
         val signals = mutableListOf<RiskSignal>()
 
         // --- High-risk: hardware
-        val hardware = Build.HARDWARE.orEmpty().lowercase()
-        if (emulatorHardware.any { hardware.contains(it) }) {
-            signals += RiskSignal("emulator.hardware:$hardware", highRisk = true)
+        val hw = hardware.lowercase()
+        if (emulatorHardware.any { hw.contains(it) }) {
+            signals += RiskSignal("emulator.hardware:$hw", highRisk = true)
         }
 
         // --- High-risk: QEMU kernel properties (set by every Android emulator image)
         for (prop in listOf("ro.kernel.qemu", "ro.boot.qemu")) {
-            if (systemProperty(prop) == "1") signals += RiskSignal("emulator.qemu:$prop", highRisk = true)
+            if (property(prop) == "1") signals += RiskSignal("emulator.qemu:$prop", highRisk = true)
         }
 
-        val fields = linkedMapOf(
-            "fingerprint" to Build.FINGERPRINT,
-            "model" to Build.MODEL,
-            "manufacturer" to Build.MANUFACTURER,
-            "brand" to Build.BRAND,
-            "device" to Build.DEVICE,
-            "product" to Build.PRODUCT,
-        ).mapValues { it.value.orEmpty().lowercase() }
+        val fields = buildFields.mapValues { it.value.lowercase() }
 
         // --- High-risk: emulator-only names
         val highFields = mutableSetOf<String>()
@@ -63,11 +78,11 @@ object RealDeviceCheck {
                 highFields += name
             }
         }
-        if (fields["fingerprint"]!!.startsWith("generic")) {
+        if (fields["fingerprint"].orEmpty().startsWith("generic")) {
             signals += RiskSignal("emulator.generic_fingerprint", highRisk = true)
             highFields += "fingerprint"
         }
-        if (fields["brand"]!!.startsWith("generic") && fields["device"]!!.startsWith("generic")) {
+        if (fields["brand"].orEmpty().startsWith("generic") && fields["device"].orEmpty().startsWith("generic")) {
             signals += RiskSignal("emulator.generic_brand_device", highRisk = true)
             highFields += "brand"
             highFields += "device"

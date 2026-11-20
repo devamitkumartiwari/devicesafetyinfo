@@ -8,15 +8,20 @@ enum JailbreakSignals {
     /// check is high. Must run on the main thread: the URL-scheme check calls `canOpenURL`.
     static func report() -> RiskReport {
         let result = IOSSecuritySuite.amIJailbrokenWithFailedChecks()
-        guard result.jailbroken else { return .empty }
-        var signals = result.failedChecks.map { failed -> RiskSignal in
-            let name = String(describing: failed.check)
-            return RiskSignal(id: "root.jailbreak_\(name)", highRisk: name != "urlSchemes")
+        return report(
+            jailbroken: result.jailbroken,
+            failedChecks: result.failedChecks.map { String(describing: $0.check) })
+    }
+
+    /// The mapping, independent of the device. `failedChecks` are IOSSecuritySuite
+    /// `FailedCheck` case names.
+    static func report(jailbroken: Bool, failedChecks: [String]) -> RiskReport {
+        guard jailbroken else { return .empty }
+        let signals = failedChecks.map { name in
+            RiskSignal(id: "root.jailbreak_\(name)", highRisk: name != "urlSchemes")
         }
-        if signals.isEmpty {
-            signals = [RiskSignal(id: "root.jailbreak", highRisk: true)]
-        }
-        return RiskReport(signals: signals)
+        return RiskReport(
+            signals: signals.isEmpty ? [RiskSignal(id: "root.jailbreak", highRisk: true)] : signals)
     }
 
     static func simulatorReport() -> RiskReport {

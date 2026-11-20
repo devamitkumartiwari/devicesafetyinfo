@@ -40,20 +40,21 @@ object RootFilesChecker {
         "/data/local/tmp/magiskhide",
     )
 
-    fun signals(): List<RiskSignal> {
+    /** [exists] and [canExecute] probe a path; injectable for tests. */
+    fun signals(
+        exists: (String) -> Boolean = { File(it).exists() },
+        canExecute: (String) -> Boolean = { File(it).canExecute() },
+    ): List<RiskSignal> {
         val found = mutableListOf<RiskSignal>()
         for (path in suPaths) {
-            val f = File(path)
-            if (f.exists()) {
-                val exec = f.canExecute()
+            if (exists(path)) {
+                val exec = canExecute(path)
                 found += RiskSignal(if (exec) "root.su_executable:$path" else "root.su_present:$path", exec)
             }
         }
         for (path in rootManagerPaths) {
-            if (File(path).exists()) found += RiskSignal("root.manager_file:$path", highRisk = true)
+            if (exists(path)) found += RiskSignal("root.manager_file:$path", highRisk = true)
         }
         return found
     }
-
-    /** Backward-compatible boolean: `true` if any high-risk root file is present. */
 }

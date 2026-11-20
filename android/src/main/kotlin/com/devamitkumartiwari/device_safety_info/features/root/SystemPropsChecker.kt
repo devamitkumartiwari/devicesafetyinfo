@@ -30,14 +30,15 @@ object SystemPropsChecker {
         PropCheck("root.verifiedboot_unlocked", "ro.boot.verifiedbootstate", highRisk = false) { it == "orange" || it == "yellow" },
     )
 
-    fun signals(): List<RiskSignal> = propChecks.mapNotNull { check ->
-        val value = ShellExecutor.getSystemProperty(check.prop)
+    /** [property] reads a system property; injectable for tests. */
+    fun signals(
+        property: (String) -> String? = ShellExecutor::getSystemProperty,
+    ): List<RiskSignal> = propChecks.mapNotNull { check ->
+        val value = property(check.prop)
         if (value != null && check.matches(value)) {
             RiskSignal("${check.id}:$value", check.highRisk)
         } else {
             null
         }
     }
-
-    /** Backward-compatible boolean: `true` if a high-risk property matched. */
 }

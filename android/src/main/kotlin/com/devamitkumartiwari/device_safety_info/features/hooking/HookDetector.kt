@@ -57,6 +57,9 @@ object HookDetector {
         xposedClasses.firstOrNull { classLoadable(it) }?.let {
             signals += RiskSignal("hooking.xposed_class:$it", highRisk = true)
         }
+        MemoryMapsScanner.scanSelf().forEach {
+            signals += RiskSignal("hooking.rwx_library:$it", highRisk = false)
+        }
         return RiskReport(signals)
     }
 

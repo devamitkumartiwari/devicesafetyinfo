@@ -39,7 +39,8 @@ a type-safe platform layer. **Breaking**: see [MIGRATION.md](MIGRATION.md).
 * `DeviceSafety.threats`: detection flips plus live events (screenshot, capture/recording
   started, tapjacking touch, VPN connected).
 * Results are cached (30 s default) with in-flight de-duplication and a per-check timeout.
-* New signals: Xposed/LSPosed classes in the process, iOS dyld injection scan (C), ADB enabled,
+* New signals: Xposed/LSPosed classes in the process, libraries mapped writable+executable
+  (low risk), iOS dyld injection scan (C), ADB enabled,
   HTTP proxy, external presentation display, debuggable build, accessibility services that can
   read window content.
 * Sealed `DeviceSafetyException` hierarchy for action APIs (`UnsupportedPlatformException`,

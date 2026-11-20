@@ -21,9 +21,9 @@ object RootedDeviceCheck {
     fun evaluate(): RiskReport {
         val signals = mutableListOf<RiskSignal>()
         for (checker in listOf<() -> List<RiskSignal>>(
-            RootFilesChecker::signals,
-            RootCommandsChecker::signals,
-            SystemPropsChecker::signals,
+            { RootFilesChecker.signals() },
+            { RootCommandsChecker.signals() },
+            { SystemPropsChecker.signals() },
         )) {
             try {
                 signals += checker()

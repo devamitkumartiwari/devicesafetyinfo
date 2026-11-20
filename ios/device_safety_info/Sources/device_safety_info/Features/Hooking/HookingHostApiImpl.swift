@@ -5,10 +5,15 @@ import IOSSecuritySuite
 enum HookingSignals {
     static func hookReport() -> RiskReport {
         let result = IOSSecuritySuite.amIReverseEngineeredWithFailedChecks()
-        guard result.reverseEngineered else { return .empty }
-        let signals = result.failedChecks.map {
-            RiskSignal(id: "hooking.\(String(describing: $0.check))", highRisk: true)
-        }
+        return hookReport(
+            reverseEngineered: result.reverseEngineered,
+            failedChecks: result.failedChecks.map { String(describing: $0.check) })
+    }
+
+    /// The mapping, independent of the device.
+    static func hookReport(reverseEngineered: Bool, failedChecks: [String]) -> RiskReport {
+        guard reverseEngineered else { return .empty }
+        let signals = failedChecks.map { RiskSignal(id: "hooking.\($0)", highRisk: true) }
         return RiskReport(
             signals: signals.isEmpty
                 ? [RiskSignal(id: "hooking.reverse_engineering", highRisk: true)] : signals)

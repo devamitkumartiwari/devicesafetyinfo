@@ -54,5 +54,4 @@ object RootCommandsChecker {
         return found
     }
 
-    /** Backward-compatible boolean: `true` if an executable root binary is in `PATH`. */
 }

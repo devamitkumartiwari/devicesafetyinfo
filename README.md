@@ -157,7 +157,7 @@ clears cached results. Signal overrides match the part of the id before `:`, so
 | `root` (Android) | `root.su_executable`, `root.binary_executable`, `root.manager_file` (Magisk, Superuser), `root.ro_secure_off`, `root.native_files` | `root.su_present`, `root.binary_present`, `root.busybox`, `root.test_keys`, `root.recovery_boot`, `root.verifiedboot_unlocked`, `root.native_su_present` |
 | `root` (iOS jailbreak) | `root.jailbreak_<check>` for each failed IOSSecuritySuite check | `root.jailbreak_urlSchemes` |
 | `emulator` | `emulator.hardware`, `emulator.qemu`, `emulator.build_name`, `emulator.generic_fingerprint`, `emulator.generic_brand_device`, `emulator.simulator` | `emulator.generic_build` |
-| `hooking` | `hooking.frida_maps`, `hooking.frida_port`, `hooking.frida_server`, `hooking.xposed`, `hooking.xposed_class`, `hooking.substrate`, `hooking.shadowhook`, `hooking.dyld_injection`, iOS `hooking.<check>` | |
+| `hooking` | `hooking.frida_maps`, `hooking.frida_port`, `hooking.frida_server`, `hooking.xposed`, `hooking.xposed_class`, `hooking.substrate`, `hooking.shadowhook`, `hooking.dyld_injection`, iOS `hooking.<check>` | `hooking.rwx_library:<lib>` (a library mapped writable and executable outside system/app paths) |
 | `debugger` | `debugger.attached`, `debugger.traced` | `debugger.debuggable_build` |
 | `developerMode` | | `developer_mode.enabled`, `developer_mode.adb_enabled` |
 | `screenLock` | `screen_lock.none` | |

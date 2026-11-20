@@ -7,6 +7,7 @@ import com.devamitkumartiwari.device_safety_info.features.accessibility.Accessib
 import com.devamitkumartiwari.device_safety_info.features.notification_listener.NotificationListenerAbuseDetector
 import com.devamitkumartiwari.device_safety_info.generated.AccessibilityServiceMsg
 import com.devamitkumartiwari.device_safety_info.generated.CheckReportMsg
+import com.devamitkumartiwari.device_safety_info.generated.NotificationListenerMsg
 import com.devamitkumartiwari.device_safety_info.generated.PostureHostApi
 
 class PostureHostApiImpl(
@@ -31,8 +32,8 @@ class PostureHostApiImpl(
         return bg.run { AccessibilityAbuseDetector.enabledServices(ctx) }
     }
 
-    override suspend fun enabledNotificationListeners(): List<String> {
+    override suspend fun enabledNotificationListeners(): List<NotificationListenerMsg> {
         val ctx = host.requireContext()
-        return bg.run { NotificationListenerAbuseDetector.getEnabledNotificationListeners(ctx) }
+        return bg.run { NotificationListenerAbuseDetector.enabledListeners(ctx) }
     }
 }

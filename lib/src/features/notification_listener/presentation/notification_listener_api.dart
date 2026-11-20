@@ -7,7 +7,8 @@ import '../../../core/utils/platform_guard.dart';
 import '../domain/notification_listener_signals.dart';
 
 /// Detects notification listeners that could read one-time passwords (Android). Allowlist
-/// trusted apps with `DeviceSafetyConfig.notificationListenerAllowlist`.
+/// trusted apps with `DeviceSafetyConfig.notificationListenerAllowlist`. Preinstalled system
+/// apps are trusted unless `DeviceSafetyConfig.trustSystemApps` is `false`.
 final class NotificationListenerApi extends DetectionApi {
   /// Created by `DeviceSafety`; apps use `DeviceSafety.notificationListeners`.
   NotificationListenerApi(
@@ -23,12 +24,14 @@ final class NotificationListenerApi extends DetectionApi {
                 notificationListenerSignals(
                   await _repository.enabledListeners(),
                   config().notificationListenerAllowlist,
+                  trustSystemApps: config().trustSystemApps,
                 ),
               ),
       );
 
   final NotificationListenerRepository _repository;
 
-  /// Every enabled listener, including allowlisted ones.
-  Future<List<String>> enabledListeners() => _repository.enabledListeners();
+  /// Every enabled listener, including allowlisted and system ones.
+  Future<List<NotificationListenerInfo>> enabledListeners() =>
+      _repository.enabledListeners();
 }

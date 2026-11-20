@@ -175,4 +175,28 @@ void main() {
     await DeviceSafety.integrity.isAppAttestSupported();
     await DeviceSafety.integrity.isDeviceCheckSupported();
   });
+
+  test(
+    'system notification listeners and accessibility services are not reported',
+    () async {
+      if (defaultTargetPlatform != TargetPlatform.android) return;
+      final listeners = await DeviceSafety.notificationListeners
+          .enabledListeners();
+      final flagged = (await DeviceSafety.notificationListeners.check(
+        refresh: true,
+      )).signals.map((s) => s.id.split(':').skip(1).join(':')).toSet();
+      for (final l in listeners.where((l) => l.isSystemApp)) {
+        expect(flagged, isNot(contains(l.id)), reason: '$l is a system app');
+      }
+      final services = await DeviceSafety.accessibility.enabledServices();
+      final flaggedServices = (await DeviceSafety.accessibility.check(
+        refresh: true,
+      )).signals.map((s) => s.id.split(':').skip(1).join(':')).toSet();
+      for (final s in services.where((s) => s.isSystemApp)) {
+        expect(flaggedServices, isNot(contains(s.id)));
+      }
+      // ignore: avoid_print
+      print('listeners: $listeners; flagged: $flagged');
+    },
+  );
 }

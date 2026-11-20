@@ -67,8 +67,8 @@ state (an emulator, no screen lock, not from a store).
 | `playProtectStatus` | `DeviceSafety.posture.playProtect.check()` (signals `play_protect.disabled` / `play_protect.unknown`) |
 | `enabledAccessibilityServices` | `DeviceSafety.accessibility.enabledServices()` |
 | `isAnyAccessibilityServiceEnabled` | `DeviceSafety.accessibility.check()` with `accessibilityAllowlist` |
-| `enabledNotificationListeners` | `DeviceSafety.notificationListeners.enabledListeners()` |
-| `isAnyNotificationListenerEnabled` | `DeviceSafety.notificationListeners.check()` with `notificationListenerAllowlist` |
+| `enabledNotificationListeners` | `DeviceSafety.notificationListeners.enabledListeners()` (`List<NotificationListenerInfo>`; `.id` is the old string) |
+| `isAnyNotificationListenerEnabled` | `DeviceSafety.notificationListeners.check()` with `notificationListenerAllowlist` (system apps are trusted unless `trustSystemApps: false`) |
 | `isVPNCheck` | `DeviceSafety.vpn.check()` (low risk by default; use `strict` or `signalOverrides: {'vpn.active': .high}`) |
 | `isScreenCaptured` | `DeviceSafety.screen.check()` |
 | `onScreenCapturedChanged` | `DeviceSafety.screen.captureChanges` |

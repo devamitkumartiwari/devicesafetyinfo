@@ -9,6 +9,13 @@ final class AppState {
 
   DeviceSafetyConfig config = DeviceSafetyConfig(
     accessibilityAllowlist: {'com.google.android.marvin.talkback'},
+    // Apps users commonly have that legitimately read notifications. They're installed from
+    // Play, so they aren't covered by trustSystemApps.
+    notificationListenerAllowlist: {
+      'com.google.android.projection.gearhead', // Android Auto
+      'com.google.android.wearable.app', // Wear OS
+      'com.samsung.android.app.watchmanager', // Galaxy Wearable
+    },
     malwarePackages: {'com.example.fakemalware', 'com.metasploit.stage'},
     iocBlocklist: {'malicious.example', '*.phishing.example'},
     // Pass your certificate to try the tampering check:

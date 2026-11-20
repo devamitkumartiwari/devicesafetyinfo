@@ -120,13 +120,18 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
         !listFailed(CheckType.accessibility)) {
       out[CheckType.accessibility] = android
           ? CheckReport(
-              accessibilitySignals([
-                for (final s in result.accessibilityServices)
-                  AccessibilityService(
-                    s.id,
-                    canRetrieveWindowContent: s.canRetrieveWindowContent,
-                  ),
-              ], config.accessibilityAllowlist),
+              accessibilitySignals(
+                [
+                  for (final s in result.accessibilityServices)
+                    AccessibilityService(
+                      s.id,
+                      canRetrieveWindowContent: s.canRetrieveWindowContent,
+                      isSystemApp: s.isSystemApp,
+                    ),
+                ],
+                config.accessibilityAllowlist,
+                trustSystemApps: config.trustSystemApps,
+              ),
             )
           : CheckReport.unsupported;
     }
@@ -135,8 +140,12 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
       out[CheckType.notificationListener] = android
           ? CheckReport(
               notificationListenerSignals(
-                result.notificationListeners,
+                [
+                  for (final l in result.notificationListeners)
+                    NotificationListenerInfo(l.id, isSystemApp: l.isSystemApp),
+                ],
                 config.notificationListenerAllowlist,
+                trustSystemApps: config.trustSystemApps,
               ),
             )
           : CheckReport.unsupported;

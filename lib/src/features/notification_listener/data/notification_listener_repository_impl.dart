@@ -10,6 +10,15 @@ final class NotificationListenerRepositoryImpl
   final PostureHostApi _platform;
 
   @override
-  Future<List<String>> enabledListeners() =>
-      _platform.enabledNotificationListeners();
+  Future<List<NotificationListenerInfo>> enabledListeners() async => [
+    for (final l in await _platform.enabledNotificationListeners())
+      l.toDomain(),
+  ];
+}
+
+/// Converts the platform message.
+extension NotificationListenerMsgMapping on NotificationListenerMsg {
+  /// The domain entity.
+  NotificationListenerInfo toDomain() =>
+      NotificationListenerInfo(id, isSystemApp: isSystemApp);
 }

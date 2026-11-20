@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import com.devamitkumartiwari.device_safety_info.core.SystemApps
 import com.devamitkumartiwari.device_safety_info.generated.AccessibilityServiceMsg
 
 /**
@@ -32,6 +33,12 @@ object AccessibilityAbuseDetector {
             addAll(canRead.keys)
             addAll(fromSettings)
         }
-        return ids.map { AccessibilityServiceMsg(it, canRead[it] ?: true) }
+        return ids.map {
+            AccessibilityServiceMsg(
+                it,
+                canRead[it] ?: true,
+                SystemApps.isSystemApp(context, SystemApps.packageOf(it)),
+            )
+        }
     }
 }

@@ -41,9 +41,17 @@ void main() {
           AccessibilityServiceMsg(
             id: 'com.x/.S',
             canRetrieveWindowContent: true,
+            isSystemApp: false,
+          ),
+          AccessibilityServiceMsg(
+            id: 'com.oem/.S',
+            canRetrieveWindowContent: true,
+            isSystemApp: true,
           ),
         ],
-        notificationListeners: [],
+        notificationListeners: [
+          NotificationListenerMsg(id: 'com.oem/.L', isSystemApp: true),
+        ],
         installedPackages: ['com.evil'],
         failedLists: [],
       );
@@ -77,6 +85,10 @@ void main() {
       );
       expect(a.results[CheckType.vpn]!.detected, isFalse);
       expect(a.results[CheckType.accessibility]!.detected, isTrue);
+      // The system app's service and listener are trusted by default.
+      expect(a.results[CheckType.accessibility]!.signals.map((s) => s.id), [
+        'accessibility.window_reader:com.x/.S',
+      ]);
       expect(a.results[CheckType.malware]!.detected, isTrue);
       expect(a.results[CheckType.notificationListener]!.detected, isFalse);
       expect(a.detected, isTrue);

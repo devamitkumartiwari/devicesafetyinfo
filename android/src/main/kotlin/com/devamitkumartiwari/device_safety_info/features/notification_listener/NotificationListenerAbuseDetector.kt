@@ -2,6 +2,8 @@ package com.devamitkumartiwari.device_safety_info.features.notification_listener
 
 import android.content.Context
 import android.provider.Settings
+import com.devamitkumartiwari.device_safety_info.core.SystemApps
+import com.devamitkumartiwari.device_safety_info.generated.NotificationListenerMsg
 
 // Reads the OS's own record of currently-enabled Notification Listener services. Malware that
 // abuses this API (to read/intercept OTP and SMS notifications) shows up here the same way a
@@ -19,4 +21,10 @@ object NotificationListenerAbuseDetector {
         if (raw.isNullOrEmpty()) return emptyList()
         return raw.split(':').filter { it.isNotBlank() }
     }
+
+    /** Enabled listeners, each tagged with whether it belongs to a system app. */
+    fun enabledListeners(context: Context): List<NotificationListenerMsg> =
+        getEnabledNotificationListeners(context).map {
+            NotificationListenerMsg(it, SystemApps.isSystemApp(context, SystemApps.packageOf(it)))
+        }
 }

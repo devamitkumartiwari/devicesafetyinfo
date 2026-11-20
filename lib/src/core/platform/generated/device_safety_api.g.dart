@@ -207,6 +207,7 @@ class AccessibilityServiceMsg {
   AccessibilityServiceMsg({
     required this.id,
     required this.canRetrieveWindowContent,
+    required this.isSystemApp,
   });
 
   /// Component name, e.g. `com.example/.MyService`.
@@ -214,8 +215,11 @@ class AccessibilityServiceMsg {
 
   bool canRetrieveWindowContent;
 
+  /// The service belongs to a preinstalled system app (or an update to one).
+  bool isSystemApp;
+
   List<Object?> _toList() {
-    return <Object?>[id, canRetrieveWindowContent];
+    return <Object?>[id, canRetrieveWindowContent, isSystemApp];
   }
 
   Object encode() {
@@ -227,6 +231,7 @@ class AccessibilityServiceMsg {
     return AccessibilityServiceMsg(
       id: result[0]! as String,
       canRetrieveWindowContent: result[1]! as bool,
+      isSystemApp: result[2]! as bool,
     );
   }
 
@@ -240,7 +245,8 @@ class AccessibilityServiceMsg {
       return true;
     }
     return _deepEquals(id, other.id) &&
-        _deepEquals(canRetrieveWindowContent, other.canRetrieveWindowContent);
+        _deepEquals(canRetrieveWindowContent, other.canRetrieveWindowContent) &&
+        _deepEquals(isSystemApp, other.isSystemApp);
   }
 
   @override
@@ -249,7 +255,55 @@ class AccessibilityServiceMsg {
 
   @override
   String toString() {
-    return 'AccessibilityServiceMsg(id: $id, canRetrieveWindowContent: $canRetrieveWindowContent)';
+    return 'AccessibilityServiceMsg(id: $id, canRetrieveWindowContent: $canRetrieveWindowContent, isSystemApp: $isSystemApp)';
+  }
+}
+
+class NotificationListenerMsg {
+  NotificationListenerMsg({required this.id, required this.isSystemApp});
+
+  /// Component name, e.g. `com.example/.MyListener`.
+  String id;
+
+  /// The listener belongs to a preinstalled system app (or an update to one).
+  bool isSystemApp;
+
+  List<Object?> _toList() {
+    return <Object?>[id, isSystemApp];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static NotificationListenerMsg decode(Object result) {
+    result as List<Object?>;
+    return NotificationListenerMsg(
+      id: result[0]! as String,
+      isSystemApp: result[1]! as bool,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! NotificationListenerMsg || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(id, other.id) &&
+        _deepEquals(isSystemApp, other.isSystemApp);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'NotificationListenerMsg(id: $id, isSystemApp: $isSystemApp)';
   }
 }
 
@@ -377,7 +431,7 @@ class BatchResultMsg {
   /// Raw lists for the checks whose allowlists live in Dart.
   List<AccessibilityServiceMsg> accessibilityServices;
 
-  List<String> notificationListeners;
+  List<NotificationListenerMsg> notificationListeners;
 
   List<String> installedPackages;
 
@@ -410,7 +464,8 @@ class BatchResultMsg {
           .cast<String, CheckReportMsg>(),
       accessibilityServices: (result[1]! as List<Object?>)
           .cast<AccessibilityServiceMsg>(),
-      notificationListeners: (result[2]! as List<Object?>).cast<String>(),
+      notificationListeners: (result[2]! as List<Object?>)
+          .cast<NotificationListenerMsg>(),
       installedPackages: (result[3]! as List<Object?>).cast<String>(),
       failedLists: (result[4]! as List<Object?>).cast<String>(),
       signing: result[5] as SigningInfoMsg?,
@@ -636,23 +691,26 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is AccessibilityServiceMsg) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    } else if (value is BatchRequestMsg) {
+    } else if (value is NotificationListenerMsg) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is SigningInfoMsg) {
+    } else if (value is BatchRequestMsg) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is BatchResultMsg) {
+    } else if (value is SigningInfoMsg) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is OverlayConfigMsg) {
+    } else if (value is BatchResultMsg) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is AppInfoMsg) {
+    } else if (value is OverlayConfigMsg) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    } else if (value is CallEventMsg) {
+    } else if (value is AppInfoMsg) {
       buffer.putUint8(140);
+      writeValue(buffer, value.encode());
+    } else if (value is CallEventMsg) {
+      buffer.putUint8(141);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -678,16 +736,18 @@ class _PigeonCodec extends StandardMessageCodec {
       case 134:
         return AccessibilityServiceMsg.decode(readValue(buffer)!);
       case 135:
-        return BatchRequestMsg.decode(readValue(buffer)!);
+        return NotificationListenerMsg.decode(readValue(buffer)!);
       case 136:
-        return SigningInfoMsg.decode(readValue(buffer)!);
+        return BatchRequestMsg.decode(readValue(buffer)!);
       case 137:
-        return BatchResultMsg.decode(readValue(buffer)!);
+        return SigningInfoMsg.decode(readValue(buffer)!);
       case 138:
-        return OverlayConfigMsg.decode(readValue(buffer)!);
+        return BatchResultMsg.decode(readValue(buffer)!);
       case 139:
-        return AppInfoMsg.decode(readValue(buffer)!);
+        return OverlayConfigMsg.decode(readValue(buffer)!);
       case 140:
+        return AppInfoMsg.decode(readValue(buffer)!);
+      case 141:
         return CallEventMsg.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -951,7 +1011,7 @@ class PostureHostApi {
         .cast<AccessibilityServiceMsg>();
   }
 
-  Future<List<String>> enabledNotificationListeners() async {
+  Future<List<NotificationListenerMsg>> enabledNotificationListeners() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.device_safety_info.PostureHostApi.enabledNotificationListeners$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
@@ -966,7 +1026,8 @@ class PostureHostApi {
       pigeonVar_channelName,
       isNullValid: false,
     );
-    return (pigeonVar_replyValue! as List<Object?>).cast<String>();
+    return (pigeonVar_replyValue! as List<Object?>)
+        .cast<NotificationListenerMsg>();
   }
 }
 

@@ -293,39 +293,87 @@ struct AccessibilityServiceMsg: Hashable, CustomStringConvertible {
   /// Component name, e.g. `com.example/.MyService`.
   var id: String
   var canRetrieveWindowContent: Bool
+  /// The service belongs to a preinstalled system app (or an update to one).
+  var isSystemApp: Bool
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> AccessibilityServiceMsg? {
     let id = pigeonVar_list[0] as! String
     let canRetrieveWindowContent = pigeonVar_list[1] as! Bool
+    let isSystemApp = pigeonVar_list[2] as! Bool
 
     return AccessibilityServiceMsg(
       id: id,
-      canRetrieveWindowContent: canRetrieveWindowContent
+      canRetrieveWindowContent: canRetrieveWindowContent,
+      isSystemApp: isSystemApp
     )
   }
   func toList() -> [Any?] {
     return [
       id,
       canRetrieveWindowContent,
+      isSystemApp,
     ]
   }
   static func == (lhs: AccessibilityServiceMsg, rhs: AccessibilityServiceMsg) -> Bool {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.id, rhs.id) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.canRetrieveWindowContent, rhs.canRetrieveWindowContent)
+    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.id, rhs.id) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.canRetrieveWindowContent, rhs.canRetrieveWindowContent) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.isSystemApp, rhs.isSystemApp)
   }
 
   func hash(into hasher: inout Hasher) {
     hasher.combine("AccessibilityServiceMsg")
     DeviceSafetyApiPigeonInternal.deepHash(value: id, hasher: &hasher)
     DeviceSafetyApiPigeonInternal.deepHash(value: canRetrieveWindowContent, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: isSystemApp, hasher: &hasher)
   }
 
   public var description: String {
-    return "AccessibilityServiceMsg(id: \(String(describing: id)), canRetrieveWindowContent: \(String(describing: canRetrieveWindowContent)))"
+    return "AccessibilityServiceMsg(id: \(String(describing: id)), canRetrieveWindowContent: \(String(describing: canRetrieveWindowContent)), isSystemApp: \(String(describing: isSystemApp)))"
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct NotificationListenerMsg: Hashable, CustomStringConvertible {
+  /// Component name, e.g. `com.example/.MyListener`.
+  var id: String
+  /// The listener belongs to a preinstalled system app (or an update to one).
+  var isSystemApp: Bool
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> NotificationListenerMsg? {
+    let id = pigeonVar_list[0] as! String
+    let isSystemApp = pigeonVar_list[1] as! Bool
+
+    return NotificationListenerMsg(
+      id: id,
+      isSystemApp: isSystemApp
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      id,
+      isSystemApp,
+    ]
+  }
+  static func == (lhs: NotificationListenerMsg, rhs: NotificationListenerMsg) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.id, rhs.id) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.isSystemApp, rhs.isSystemApp)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("NotificationListenerMsg")
+    DeviceSafetyApiPigeonInternal.deepHash(value: id, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: isSystemApp, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "NotificationListenerMsg(id: \(String(describing: id)), isSystemApp: \(String(describing: isSystemApp)))"
   }
 }
 
@@ -429,7 +477,7 @@ struct BatchResultMsg: Hashable, CustomStringConvertible {
   var reports: [String: CheckReportMsg]
   /// Raw lists for the checks whose allowlists live in Dart.
   var accessibilityServices: [AccessibilityServiceMsg]
-  var notificationListeners: [String]
+  var notificationListeners: [NotificationListenerMsg]
   var installedPackages: [String]
   /// Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
   /// whose list couldn't be read. Their empty lists above mean "unknown", not "clean".
@@ -442,7 +490,7 @@ struct BatchResultMsg: Hashable, CustomStringConvertible {
   static func fromList(_ pigeonVar_list: [Any?]) -> BatchResultMsg? {
     let reports = pigeonVar_list[0] as! [String: CheckReportMsg]
     let accessibilityServices = pigeonVar_list[1] as! [AccessibilityServiceMsg]
-    let notificationListeners = pigeonVar_list[2] as! [String]
+    let notificationListeners = pigeonVar_list[2] as! [NotificationListenerMsg]
     let installedPackages = pigeonVar_list[3] as! [String]
     let failedLists = pigeonVar_list[4] as! [String]
     let signing: SigningInfoMsg? = nilOrValue(pigeonVar_list[5])
@@ -656,16 +704,18 @@ private class DeviceSafetyApiPigeonCodecReader: FlutterStandardReader {
     case 134:
       return AccessibilityServiceMsg.fromList(self.readValue() as! [Any?])
     case 135:
-      return BatchRequestMsg.fromList(self.readValue() as! [Any?])
+      return NotificationListenerMsg.fromList(self.readValue() as! [Any?])
     case 136:
-      return SigningInfoMsg.fromList(self.readValue() as! [Any?])
+      return BatchRequestMsg.fromList(self.readValue() as! [Any?])
     case 137:
-      return BatchResultMsg.fromList(self.readValue() as! [Any?])
+      return SigningInfoMsg.fromList(self.readValue() as! [Any?])
     case 138:
-      return OverlayConfigMsg.fromList(self.readValue() as! [Any?])
+      return BatchResultMsg.fromList(self.readValue() as! [Any?])
     case 139:
-      return AppInfoMsg.fromList(self.readValue() as! [Any?])
+      return OverlayConfigMsg.fromList(self.readValue() as! [Any?])
     case 140:
+      return AppInfoMsg.fromList(self.readValue() as! [Any?])
+    case 141:
       return CallEventMsg.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -693,23 +743,26 @@ private class DeviceSafetyApiPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? AccessibilityServiceMsg {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? BatchRequestMsg {
+    } else if let value = value as? NotificationListenerMsg {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? SigningInfoMsg {
+    } else if let value = value as? BatchRequestMsg {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? BatchResultMsg {
+    } else if let value = value as? SigningInfoMsg {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? OverlayConfigMsg {
+    } else if let value = value as? BatchResultMsg {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? AppInfoMsg {
+    } else if let value = value as? OverlayConfigMsg {
       super.writeByte(139)
       super.writeValue(value.toList())
-    } else if let value = value as? CallEventMsg {
+    } else if let value = value as? AppInfoMsg {
       super.writeByte(140)
+      super.writeValue(value.toList())
+    } else if let value = value as? CallEventMsg {
+      super.writeByte(141)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -829,7 +882,7 @@ protocol PostureHostApi {
   func unknownSources() async throws -> CheckReportMsg
   func playProtect() async throws -> CheckReportMsg
   func enabledAccessibilityServices() async throws -> [AccessibilityServiceMsg]
-  func enabledNotificationListeners() async throws -> [String]
+  func enabledNotificationListeners() async throws -> [NotificationListenerMsg]
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.

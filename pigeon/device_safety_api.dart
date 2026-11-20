@@ -40,11 +40,28 @@ class CheckReportMsg {
 }
 
 class AccessibilityServiceMsg {
-  AccessibilityServiceMsg(this.id, this.canRetrieveWindowContent);
+  AccessibilityServiceMsg(
+    this.id,
+    this.canRetrieveWindowContent,
+    this.isSystemApp,
+  );
 
   /// Component name, e.g. `com.example/.MyService`.
   String id;
   bool canRetrieveWindowContent;
+
+  /// The service belongs to a preinstalled system app (or an update to one).
+  bool isSystemApp;
+}
+
+class NotificationListenerMsg {
+  NotificationListenerMsg(this.id, this.isSystemApp);
+
+  /// Component name, e.g. `com.example/.MyListener`.
+  String id;
+
+  /// The listener belongs to a preinstalled system app (or an update to one).
+  bool isSystemApp;
 }
 
 class BatchRequestMsg {
@@ -92,7 +109,7 @@ class BatchResultMsg {
 
   /// Raw lists for the checks whose allowlists live in Dart.
   List<AccessibilityServiceMsg> accessibilityServices;
-  List<String> notificationListeners;
+  List<NotificationListenerMsg> notificationListeners;
   List<String> installedPackages;
 
   /// Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
@@ -180,7 +197,7 @@ abstract class PostureHostApi {
   List<AccessibilityServiceMsg> enabledAccessibilityServices();
 
   @async
-  List<String> enabledNotificationListeners();
+  List<NotificationListenerMsg> enabledNotificationListeners();
 }
 
 /// Runs many checks in one round trip, in parallel on the platform side.

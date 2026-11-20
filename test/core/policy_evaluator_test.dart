@@ -192,6 +192,14 @@ void main() {
       expect(c.failModeFor(CheckType.vpn), FailMode.open);
     });
 
+    test('system apps are trusted by default and it can be turned off', () {
+      expect(DeviceSafetyConfig().trustSystemApps, isTrue);
+      expect(
+        DeviceSafetyConfig().copyWith(trustSystemApps: false).trustSystemApps,
+        isFalse,
+      );
+    });
+
     test('copyWith replaces only the given fields', () {
       final c = DeviceSafetyConfig(timeout: const Duration(seconds: 1));
       final d = c.copyWith(defaultPolicy: RiskPolicy.strict);

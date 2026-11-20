@@ -242,14 +242,22 @@ void main() {
         AccessibilityServiceMsg(
           id: 'com.google.android.marvin.talkback/.TalkBackService',
           canRetrieveWindowContent: true,
+          isSystemApp: false,
         ),
         AccessibilityServiceMsg(
           id: 'com.bad/.Reader',
           canRetrieveWindowContent: true,
+          isSystemApp: false,
         ),
         AccessibilityServiceMsg(
           id: 'com.meh/.Clicker',
           canRetrieveWindowContent: false,
+          isSystemApp: false,
+        ),
+        AccessibilityServiceMsg(
+          id: 'com.samsung.accessibility/.Assistant',
+          canRetrieveWindowContent: true,
+          isSystemApp: true,
         ),
       ];
     });
@@ -264,7 +272,25 @@ void main() {
       expect(r.high.single.id, 'accessibility.window_reader:com.bad/.Reader');
       expect(r.low.single.id, 'accessibility.service:com.meh/.Clicker');
       expect(r.detected, isTrue);
-      expect(await DeviceSafety.accessibility.enabledServices(), hasLength(3));
+      final services = await DeviceSafety.accessibility.enabledServices();
+      expect(services, hasLength(4));
+      expect(services.last.isSystemApp, isTrue);
+    });
+
+    test('system apps are reported when trustSystemApps is false', () async {
+      make(
+        DeviceSafetyConfig(
+          accessibilityAllowlist: {'com.google.android.marvin.talkback'},
+          trustSystemApps: false,
+        ),
+      );
+      final r = await DeviceSafety.accessibility.check();
+      expect(
+        r.high.map((s) => s.id),
+        contains(
+          'accessibility.window_reader:com.samsung.accessibility/.Assistant',
+        ),
+      );
     });
 
     test('unsupported on iOS', () async {
@@ -276,15 +302,49 @@ void main() {
     });
   });
 
-  test('notification listeners honor the allowlist', () async {
-    f.posture.listeners = ['com.good/.L', 'com.evil/.L'];
-    make(DeviceSafetyConfig(notificationListenerAllowlist: {'com.good'}));
-    final r = await DeviceSafety.notificationListeners.check();
-    expect(r.signals.single.id, 'notification_listener.untrusted:com.evil/.L');
-    expect(
-      await DeviceSafety.notificationListeners.enabledListeners(),
-      hasLength(2),
-    );
+  group('notification listeners', () {
+    setUp(() {
+      f.posture.listeners = [
+        NotificationListenerMsg(id: 'com.good/.L', isSystemApp: false),
+        NotificationListenerMsg(id: 'com.evil/.L', isSystemApp: false),
+        NotificationListenerMsg(
+          id: 'com.google.android.projection.gearhead/.Listener',
+          isSystemApp: true,
+        ),
+      ];
+    });
+
+    test('allowlist applies and system apps are trusted by default', () async {
+      make(DeviceSafetyConfig(notificationListenerAllowlist: {'com.good'}));
+      final r = await DeviceSafety.notificationListeners.check();
+      expect(
+        r.signals.single.id,
+        'notification_listener.untrusted:com.evil/.L',
+      );
+      final listeners = await DeviceSafety.notificationListeners
+          .enabledListeners();
+      expect(listeners, hasLength(3));
+      expect(listeners.last.isSystemApp, isTrue);
+      expect(
+        listeners.last.packageName,
+        'com.google.android.projection.gearhead',
+      );
+      expect(listeners.last.toString(), contains('(system)'));
+    });
+
+    test('trustSystemApps false reports system listeners too', () async {
+      make(
+        DeviceSafetyConfig(
+          notificationListenerAllowlist: {'com.good'},
+          trustSystemApps: false,
+        ),
+      );
+      final r = await DeviceSafety.notificationListeners.check();
+      expect(r.signals.map((s) => s.id), [
+        'notification_listener.untrusted:com.evil/.L',
+        'notification_listener.untrusted:com.google.android.projection.gearhead/.Listener',
+      ]);
+    });
   });
 
   group('malware', () {

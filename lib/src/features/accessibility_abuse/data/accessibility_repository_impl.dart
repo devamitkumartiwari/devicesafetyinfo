@@ -21,5 +21,6 @@ extension AccessibilityServiceMsgMapping on AccessibilityServiceMsg {
   AccessibilityService toDomain() => AccessibilityService(
     id,
     canRetrieveWindowContent: canRetrieveWindowContent,
+    isSystemApp: isSystemApp,
   );
 }

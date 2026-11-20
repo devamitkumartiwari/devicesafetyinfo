@@ -155,6 +155,7 @@ await DeviceSafety.initialize(DeviceSafetyConfig(
   timeout: Duration(seconds: 5),
   accessibilityAllowlist: {'com.google.android.marvin.talkback'},
   notificationListenerAllowlist: {'com.google.android.wearable.app'},
+  trustSystemApps: true,                        // default: preinstalled apps aren't reported
   malwarePackages: {'com.example.known.malware'},
   iocBlocklist: {'evil.example', '*.phishing.example'},
   expectedSigningCertificates: {'AB:CD:...'},  // tampering check (Android)
@@ -166,6 +167,16 @@ await DeviceSafety.initialize(DeviceSafetyConfig(
 `initialize` is optional (the defaults apply otherwise) and can be called again at any time; it
 clears cached results. Signal overrides match the part of the id before `:`, so
 `'malware.installed'` matches `malware.installed:com.example.app`.
+
+The accessibility and notification-listener checks ignore services and listeners from
+preinstalled system apps (and updates to them), such as Android Auto, because nearly every phone
+has some. Set `trustSystemApps: false` to report everything that isn't on the allowlists.
+
+Some legitimate apps are installed from Play rather than preinstalled, so they aren't system
+apps and need allowlisting, e.g. Android Auto (`com.google.android.projection.gearhead`), Wear OS
+(`com.google.android.wearable.app`) and Galaxy Wearable (`com.samsung.android.app.watchmanager`).
+The package doesn't allowlist them for you: a sideloaded app could reuse a package name, so only
+allowlist what fits your users.
 
 ## Signal catalogue
 

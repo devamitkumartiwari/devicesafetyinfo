@@ -41,7 +41,8 @@ Dart 3.14+; iOS builds with Swift Package Manager only.
   current one) and `expectedIosTeamId`. Without them it reports `unsupported`
   on Android.
 - Allowlist trusted accessibility services and notification listeners, or they
-  are reported.
+  are reported. Preinstalled system apps are trusted by default
+  (`trustSystemApps: true`); set it to `false` to report them too.
 
 ## Check
 

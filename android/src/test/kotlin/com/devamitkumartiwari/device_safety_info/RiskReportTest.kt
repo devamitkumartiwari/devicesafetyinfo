@@ -55,3 +55,16 @@ class RiskReportTest {
         ids.forEach { assertTrue(pattern.matches(it), it) }
     }
 }
+
+class SystemAppsTest {
+    @Test
+    fun packageIsThePartBeforeTheSlash() {
+        assertEquals(
+            "com.google.android.projection.gearhead",
+            com.devamitkumartiwari.device_safety_info.core.SystemApps.packageOf(
+                "com.google.android.projection.gearhead/com.google.Listener",
+            ),
+        )
+        assertEquals("com.example", com.devamitkumartiwari.device_safety_info.core.SystemApps.packageOf("com.example"))
+    }
+}

@@ -8,7 +8,8 @@ import '../domain/accessibility_signals.dart';
 
 /// Detects accessibility services that could be abused to read or control the screen
 /// (Android). Allowlist trusted services with `DeviceSafetyConfig.accessibilityAllowlist`,
-/// e.g. `com.google.android.marvin.talkback`.
+/// e.g. `com.google.android.marvin.talkback`. Preinstalled system apps are trusted unless
+/// `DeviceSafetyConfig.trustSystemApps` is `false`.
 final class AccessibilityApi extends DetectionApi {
   /// Created by `DeviceSafety`; apps use `DeviceSafety.accessibility`.
   AccessibilityApi(
@@ -24,6 +25,7 @@ final class AccessibilityApi extends DetectionApi {
                 accessibilitySignals(
                   await _repository.enabledServices(),
                   config().accessibilityAllowlist,
+                  trustSystemApps: config().trustSystemApps,
                 ),
               ),
       );

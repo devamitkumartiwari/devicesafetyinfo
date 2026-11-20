@@ -334,20 +334,24 @@ data class CheckReportMsg (
 data class AccessibilityServiceMsg (
   /** Component name, e.g. `com.example/.MyService`. */
   val id: String,
-  val canRetrieveWindowContent: Boolean
+  val canRetrieveWindowContent: Boolean,
+  /** The service belongs to a preinstalled system app (or an update to one). */
+  val isSystemApp: Boolean
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): AccessibilityServiceMsg {
       val id = pigeonVar_list[0] as String
       val canRetrieveWindowContent = pigeonVar_list[1] as Boolean
-      return AccessibilityServiceMsg(id, canRetrieveWindowContent)
+      val isSystemApp = pigeonVar_list[2] as Boolean
+      return AccessibilityServiceMsg(id, canRetrieveWindowContent, isSystemApp)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       id,
       canRetrieveWindowContent,
+      isSystemApp,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -358,17 +362,61 @@ data class AccessibilityServiceMsg (
       return true
     }
     val other = other as AccessibilityServiceMsg
-    return DeviceSafetyApiPigeonUtils.deepEquals(this.id, other.id) && DeviceSafetyApiPigeonUtils.deepEquals(this.canRetrieveWindowContent, other.canRetrieveWindowContent)
+    return DeviceSafetyApiPigeonUtils.deepEquals(this.id, other.id) && DeviceSafetyApiPigeonUtils.deepEquals(this.canRetrieveWindowContent, other.canRetrieveWindowContent) && DeviceSafetyApiPigeonUtils.deepEquals(this.isSystemApp, other.isSystemApp)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
     result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.id)
     result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.canRetrieveWindowContent)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.isSystemApp)
     return result
   }
   override fun toString(): String {
-    return "AccessibilityServiceMsg(id=$id, canRetrieveWindowContent=$canRetrieveWindowContent)"
+    return "AccessibilityServiceMsg(id=$id, canRetrieveWindowContent=$canRetrieveWindowContent, isSystemApp=$isSystemApp)"
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class NotificationListenerMsg (
+  /** Component name, e.g. `com.example/.MyListener`. */
+  val id: String,
+  /** The listener belongs to a preinstalled system app (or an update to one). */
+  val isSystemApp: Boolean
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): NotificationListenerMsg {
+      val id = pigeonVar_list[0] as String
+      val isSystemApp = pigeonVar_list[1] as Boolean
+      return NotificationListenerMsg(id, isSystemApp)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      id,
+      isSystemApp,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as NotificationListenerMsg
+    return DeviceSafetyApiPigeonUtils.deepEquals(this.id, other.id) && DeviceSafetyApiPigeonUtils.deepEquals(this.isSystemApp, other.isSystemApp)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.id)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.isSystemApp)
+    return result
+  }
+  override fun toString(): String {
+    return "NotificationListenerMsg(id=$id, isSystemApp=$isSystemApp)"
   }
 }
 
@@ -477,7 +525,7 @@ data class BatchResultMsg (
   val reports: Map<String, CheckReportMsg>,
   /** Raw lists for the checks whose allowlists live in Dart. */
   val accessibilityServices: List<AccessibilityServiceMsg>,
-  val notificationListeners: List<String>,
+  val notificationListeners: List<NotificationListenerMsg>,
   val installedPackages: List<String>,
   /**
    * Ids of requested list-based checks (`accessibility`, `notificationListener`, `malware`)
@@ -492,7 +540,7 @@ data class BatchResultMsg (
     fun fromList(pigeonVar_list: List<Any?>): BatchResultMsg {
       val reports = pigeonVar_list[0] as Map<String, CheckReportMsg>
       val accessibilityServices = pigeonVar_list[1] as List<AccessibilityServiceMsg>
-      val notificationListeners = pigeonVar_list[2] as List<String>
+      val notificationListeners = pigeonVar_list[2] as List<NotificationListenerMsg>
       val installedPackages = pigeonVar_list[3] as List<String>
       val failedLists = pigeonVar_list[4] as List<String>
       val signing = pigeonVar_list[5] as SigningInfoMsg?
@@ -708,30 +756,35 @@ private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BatchRequestMsg.fromList(it)
+          NotificationListenerMsg.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          SigningInfoMsg.fromList(it)
+          BatchRequestMsg.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BatchResultMsg.fromList(it)
+          SigningInfoMsg.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          OverlayConfigMsg.fromList(it)
+          BatchResultMsg.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppInfoMsg.fromList(it)
+          OverlayConfigMsg.fromList(it)
         }
       }
       140.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          AppInfoMsg.fromList(it)
+        }
+      }
+      141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           CallEventMsg.fromList(it)
         }
@@ -765,28 +818,32 @@ private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is BatchRequestMsg -> {
+      is NotificationListenerMsg -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is SigningInfoMsg -> {
+      is BatchRequestMsg -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is BatchResultMsg -> {
+      is SigningInfoMsg -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is OverlayConfigMsg -> {
+      is BatchResultMsg -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is AppInfoMsg -> {
+      is OverlayConfigMsg -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is CallEventMsg -> {
+      is AppInfoMsg -> {
         stream.write(140)
+        writeValue(stream, value.toList())
+      }
+      is CallEventMsg -> {
+        stream.write(141)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -906,7 +963,7 @@ interface PostureHostApi {
   suspend fun unknownSources(): CheckReportMsg
   suspend fun playProtect(): CheckReportMsg
   suspend fun enabledAccessibilityServices(): List<AccessibilityServiceMsg>
-  suspend fun enabledNotificationListeners(): List<String>
+  suspend fun enabledNotificationListeners(): List<NotificationListenerMsg>
 
   companion object {
     /** The codec used by PostureHostApi. */

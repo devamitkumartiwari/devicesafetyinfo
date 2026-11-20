@@ -50,7 +50,7 @@ class FakeHookingApi extends Fake implements HookingHostApi {
 class FakePostureApi extends Fake implements PostureHostApi {
   final Map<String, CheckReportMsg> reports = {};
   List<AccessibilityServiceMsg> accessibility = [];
-  List<String> listeners = [];
+  List<NotificationListenerMsg> listeners = [];
 
   Future<CheckReportMsg> _r(String id) async => reports[id] ?? report([]);
 
@@ -70,7 +70,8 @@ class FakePostureApi extends Fake implements PostureHostApi {
   Future<List<AccessibilityServiceMsg>> enabledAccessibilityServices() async =>
       accessibility;
   @override
-  Future<List<String>> enabledNotificationListeners() async => listeners;
+  Future<List<NotificationListenerMsg>> enabledNotificationListeners() async =>
+      listeners;
 }
 
 class FakeBatchApi extends Fake implements BatchHostApi {

@@ -26,6 +26,7 @@ final class DeviceSafetyConfig {
     Set<String> accessibilityAllowlist = const {},
     Set<String> notificationListenerAllowlist = const {},
     Set<String> malwarePackages = const {},
+    this.trustSystemApps = true,
     Set<String> iocBlocklist = const {},
     Set<String> expectedSigningCertificates = const {},
     this.expectedIosTeamId,
@@ -74,6 +75,12 @@ final class DeviceSafetyConfig {
   /// Notification listeners (package names) that are never reported.
   final Set<String> notificationListenerAllowlist;
 
+  /// Whether preinstalled system apps (and updates to them) are trusted by the accessibility
+  /// and notification-listener checks. Default `true`: OEM and Google components such as
+  /// Android Auto's notification listener aren't reported. Set `false` to report everything
+  /// not on the allowlists.
+  final bool trustSystemApps;
+
   /// Package names whose presence the malware check reports.
   final Set<String> malwarePackages;
 
@@ -112,6 +119,7 @@ final class DeviceSafetyConfig {
     Set<String>? accessibilityAllowlist,
     Set<String>? notificationListenerAllowlist,
     Set<String>? malwarePackages,
+    bool? trustSystemApps,
     Set<String>? iocBlocklist,
     Set<String>? expectedSigningCertificates,
     String? expectedIosTeamId,
@@ -129,6 +137,7 @@ final class DeviceSafetyConfig {
     notificationListenerAllowlist:
         notificationListenerAllowlist ?? this.notificationListenerAllowlist,
     malwarePackages: malwarePackages ?? this.malwarePackages,
+    trustSystemApps: trustSystemApps ?? this.trustSystemApps,
     iocBlocklist: iocBlocklist ?? this.iocBlocklist,
     expectedSigningCertificates:
         expectedSigningCertificates ?? this.expectedSigningCertificates,

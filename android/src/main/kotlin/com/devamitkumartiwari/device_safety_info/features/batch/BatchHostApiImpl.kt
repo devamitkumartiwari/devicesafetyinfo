@@ -83,7 +83,7 @@ class BatchHostApiImpl(
         val listeners = if ("notificationListener" in ids) {
             async {
                 list("notificationListener") {
-                    NotificationListenerAbuseDetector.getEnabledNotificationListeners(ctx)
+                    NotificationListenerAbuseDetector.enabledListeners(ctx)
                 }
             }
         } else {

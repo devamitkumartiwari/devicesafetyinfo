@@ -42,5 +42,5 @@ final class PostureHostApiImpl: PostureHostApi {
 
     func enabledAccessibilityServices() async throws -> [AccessibilityServiceMsg] { [] }
 
-    func enabledNotificationListeners() async throws -> [String] { [] }
+    func enabledNotificationListeners() async throws -> [NotificationListenerMsg] { [] }
 }

@@ -41,6 +41,8 @@ export 'src/features/hooking/presentation/hooking_api.dart';
 export 'src/features/idle_timeout/presentation/idle_timeout_guard.dart';
 export 'src/features/ioc_domain/presentation/ioc_domain_api.dart';
 export 'src/features/malware/presentation/malware_api.dart';
+export 'src/features/notification_listener/domain/notification_listener_signals.dart'
+    show NotificationListenerInfo;
 export 'src/features/notification_listener/presentation/notification_listener_api.dart';
 export 'src/features/overlay_attack/presentation/overlay_attack_api.dart';
 export 'src/features/risk_assessment/presentation/risk_assessment.dart';

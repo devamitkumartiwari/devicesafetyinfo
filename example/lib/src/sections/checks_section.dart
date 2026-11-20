@@ -1,7 +1,8 @@
 import 'package:device_safety_info/device_safety_info.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import '../app_state.dart';
+import '../ui/adaptive.dart';
 import '../widgets/check_result_tile.dart';
 
 /// Every detection API, called individually.
@@ -58,7 +59,9 @@ class _ChecksSectionState extends State<ChecksSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return AdaptiveSection(
+      header: 'Detection APIs',
+      footer: 'Each check runs on its own, bypassing the cache. Tap a row for its signals.',
       children: [
         for (final (title, _) in _apis)
           CheckResultTile(title: title, result: _results[title]),

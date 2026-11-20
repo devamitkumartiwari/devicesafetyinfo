@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import '../sections/app_integrity_section.dart';
 import '../sections/checks_section.dart';
@@ -7,80 +7,91 @@ import '../sections/overview_section.dart';
 import '../sections/policy_section.dart';
 import '../sections/protection_section.dart';
 import '../sections/tools_section.dart';
-import 'feature_page.dart';
+import '../ui/adaptive.dart';
 
-/// Landing page: one entry per demo page.
+/// Landing page: one entry per demo page, plus the Material / Cupertino switch.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  static final _pages = <(String, String, IconData, Widget Function())>[
-    (
-      'Overview',
-      'DeviceSafety.assess(): every check in one round trip',
-      Icons.dashboard,
-      OverviewSection.new,
-    ),
-    (
-      'All checks',
-      'Each detection API with its signals',
-      Icons.fact_check,
-      ChecksSection.new,
-    ),
-    (
-      'Policy',
-      'off / standard / strict and fail mode per check',
-      Icons.tune,
-      PolicySection.new,
-    ),
-    (
-      'Protection',
-      'Screenshots, overlay, app switcher, clipboard, tapjacking',
-      Icons.shield,
-      ProtectionSection.new,
-    ),
-    (
-      'Live events',
-      'Threat stream and platform events',
-      Icons.sensors,
-      LiveEventsSection.new,
-    ),
-    (
-      'Tools',
-      'IOC domains, malware list, calls, version check',
-      Icons.build,
-      ToolsSection.new,
-    ),
-    (
-      'App integrity',
-      'Play Integrity, App Attest, DeviceCheck',
-      Icons.verified,
-      AppIntegritySection.new,
-    ),
-  ];
+  static final _pages =
+      <(String, String, IconData, IconData, Widget Function())>[
+        (
+          'Overview',
+          'DeviceSafety.assess(): every check in one round trip',
+          Icons.dashboard,
+          CupertinoIcons.square_grid_2x2,
+          OverviewSection.new,
+        ),
+        (
+          'All checks',
+          'Each detection API with its signals',
+          Icons.fact_check,
+          CupertinoIcons.checkmark_rectangle,
+          ChecksSection.new,
+        ),
+        (
+          'Policy',
+          'off / standard / strict and fail mode per check',
+          Icons.tune,
+          CupertinoIcons.slider_horizontal_3,
+          PolicySection.new,
+        ),
+        (
+          'Protection',
+          'Screenshots, overlay, app switcher, clipboard, tapjacking',
+          Icons.shield,
+          CupertinoIcons.shield,
+          ProtectionSection.new,
+        ),
+        (
+          'Live events',
+          'Threat stream and platform events',
+          Icons.sensors,
+          CupertinoIcons.dot_radiowaves_left_right,
+          LiveEventsSection.new,
+        ),
+        (
+          'Tools',
+          'IOC domains, malware list, calls, version check',
+          Icons.build,
+          CupertinoIcons.wrench,
+          ToolsSection.new,
+        ),
+        (
+          'App integrity',
+          'Play Integrity, App Attest, DeviceCheck',
+          Icons.verified,
+          CupertinoIcons.checkmark_seal,
+          AppIntegritySection.new,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Device Safety Info 2.0')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+    return AdaptivePage(
+      title: 'Device Safety Info 2.0',
+      actions: const [StyleToggleButton()],
+      child: AdaptiveSection(
+        header: 'Demos',
+        footer: isCupertino
+            ? 'Cupertino style. Tap the brush to switch to Material.'
+            : 'Material style. Tap the phone icon to switch to Cupertino.',
         children: [
-          for (final (title, subtitle, icon, build) in _pages)
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-              child: ListTile(
-                key: ValueKey('menu_${title.replaceAll(' ', '_')}'),
-                leading: Icon(icon),
-                title: Text(title),
-                subtitle: Text(subtitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => FeaturePage(title: title, child: build()),
-                  ),
+          for (final (title, subtitle, material, cupertino, build) in _pages)
+            AdaptiveTile(
+              key: ValueKey('menu_${title.replaceAll(' ', '_')}'),
+              leading: Icon(adaptiveIcon(material, cupertino)),
+              title: title,
+              subtitle: subtitle,
+              trailing: Icon(
+                adaptiveIcon(
+                  Icons.chevron_right,
+                  CupertinoIcons.chevron_forward,
                 ),
+                size: isCupertino ? 18 : 24,
               ),
+              onTap: () =>
+                  pushPage(context, AdaptivePage(title: title, child: build())),
             ),
         ],
       ),

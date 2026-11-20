@@ -1,11 +1,10 @@
 import 'dart:async';
 
 import 'package:device_safety_info/device_safety_info.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import '../app_state.dart';
-import '../widgets/section_header.dart';
-import '../widgets/stream_tile.dart';
+import '../ui/adaptive.dart';
 
 /// The threat stream and the raw platform event streams.
 class LiveEventsSection extends StatefulWidget {
@@ -61,6 +60,20 @@ class _LiveEventsSectionState extends State<LiveEventsSection> {
     super.dispose();
   }
 
+  Widget _row(
+    String title,
+    String value,
+    IconData material,
+    IconData cupertino,
+    Color color, {
+    String? subtitle,
+  }) => AdaptiveTile(
+    leading: Icon(adaptiveIcon(material, cupertino), color: color),
+    title: title,
+    subtitle: subtitle,
+    trailing: AdaptiveChip(label: value, color: color),
+  );
+
   String _bool(bool? v) => v == null ? '-' : (v ? 'yes' : 'no');
 
   @override
@@ -68,60 +81,78 @@ class _LiveEventsSectionState extends State<LiveEventsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        StreamTile(
-          title: 'Screen captured',
-          value: _bool(_captured),
-          icon: Icons.cast,
-          color: Colors.red,
+        AdaptiveSection(
+          header: 'Platform events',
+          children: [
+            _row(
+              'Screen captured',
+              _bool(_captured),
+              Icons.cast,
+              CupertinoIcons.tv,
+              StatusColors.danger,
+            ),
+            _row(
+              'Screen recording',
+              _bool(_recording),
+              Icons.videocam,
+              CupertinoIcons.videocam,
+              StatusColors.warning,
+            ),
+            _row(
+              'VPN active',
+              _bool(_vpn),
+              Icons.vpn_lock,
+              CupertinoIcons.lock_shield,
+              const Color(0xFF1565C0),
+            ),
+            _row(
+              'Clipboard changes',
+              '$_clipboardChanges',
+              Icons.paste,
+              CupertinoIcons.doc_on_clipboard,
+              const Color(0xFF00838F),
+            ),
+            _row(
+              'Last call event',
+              _lastCall == null
+                  ? '-'
+                  : (_lastCall!.started ? 'started' : 'ended'),
+              Icons.call,
+              CupertinoIcons.phone,
+              StatusColors.ok,
+              subtitle: _lastCall?.source.name,
+            ),
+            ValueListenableBuilder(
+              valueListenable: AppState.instance.idleTimeouts,
+              builder: (context, n, _) => _row(
+                'Idle timeouts (30 s)',
+                '$n',
+                Icons.timer,
+                CupertinoIcons.timer,
+                const Color(0xFF6A1B9A),
+              ),
+            ),
+          ],
         ),
-        StreamTile(
-          title: 'Screen recording',
-          value: _bool(_recording),
-          icon: Icons.videocam,
-          color: Colors.deepOrange,
+        AdaptiveSection(
+          header: 'Threat stream',
+          footer: 'Take a screenshot to try it.',
+          children: [
+            if (_threats.isEmpty) const AdaptiveTile(title: 'No threats yet'),
+            for (final t in _threats.take(30))
+              AdaptiveTile(
+                leading: Icon(
+                  adaptiveIcon(
+                    Icons.warning_amber,
+                    CupertinoIcons.exclamationmark_triangle,
+                  ),
+                  color: StatusColors.danger,
+                ),
+                title: t.detail ?? '${t.type.name} detected',
+                subtitle: '${t.type.name} · ${t.at.toIso8601String()}',
+              ),
+          ],
         ),
-        StreamTile(
-          title: 'VPN active',
-          value: _bool(_vpn),
-          icon: Icons.vpn_lock,
-          color: Colors.blue,
-        ),
-        StreamTile(
-          title: 'Clipboard changes',
-          value: '$_clipboardChanges',
-          icon: Icons.paste,
-          color: Colors.teal,
-        ),
-        StreamTile(
-          title: 'Last call event',
-          value: _lastCall == null
-              ? '-'
-              : (_lastCall!.started ? 'started' : 'ended'),
-          subtitle: _lastCall?.source.name,
-          icon: Icons.call,
-          color: Colors.green,
-        ),
-        ValueListenableBuilder(
-          valueListenable: AppState.instance.idleTimeouts,
-          builder: (context, n, _) => StreamTile(
-            title: 'Idle timeouts (30 s)',
-            value: '$n',
-            icon: Icons.timer,
-            color: Colors.purple,
-          ),
-        ),
-        sectionHeader(context, 'Threat stream (take a screenshot to try it)'),
-        if (_threats.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('No threats yet'),
-          ),
-        for (final t in _threats)
-          ListTile(
-            leading: const Icon(Icons.warning_amber),
-            title: Text(t.detail ?? '${t.type.name} detected'),
-            subtitle: Text('${t.type.name} · ${t.at.toIso8601String()}'),
-          ),
       ],
     );
   }

@@ -1,6 +1,7 @@
 // Patrol tests for the action APIs against the real platform.
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:device_safety_info_example/main.dart';
+import 'package:device_safety_info_example/src/app_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
@@ -70,5 +71,18 @@ void main() {
     await $(#ioc_check).tap();
     await $.pumpAndSettle();
     expect($(#ioc_result).text, 'BLOCKED');
+  });
+
+  patrolTest('switching UI style keeps every page usable', ($) async {
+    await $.pumpWidgetAndSettle(const DemoApp());
+    final start = AppState.instance.uiStyle.value;
+    await $(#style_toggle).tap();
+    await $.pumpAndSettle();
+    expect(AppState.instance.uiStyle.value, isNot(start));
+    await $(#menu_Protection).tap();
+    await $.pumpAndSettle();
+    expect($(#block_screenshots), findsOneWidget);
+    AppState.instance.uiStyle.value = start;
+    await $.pumpAndSettle();
   });
 }

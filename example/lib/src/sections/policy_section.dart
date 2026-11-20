@@ -1,7 +1,8 @@
 import 'package:device_safety_info/device_safety_info.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import '../app_state.dart';
+import '../ui/adaptive.dart';
 import '../widgets/check_result_tile.dart';
 
 /// Edits the policy and fail mode per check and shows the effect immediately.
@@ -14,6 +15,12 @@ class PolicySection extends StatefulWidget {
 
 class _PolicySectionState extends State<PolicySection> {
   RiskAssessment? _assessment;
+
+  static const _policies = {
+    RiskPolicy.off: 'off',
+    RiskPolicy.standard: 'standard',
+    RiskPolicy.strict: 'strict',
+  };
 
   DeviceSafetyConfig get _config => AppState.instance.config;
 
@@ -28,31 +35,25 @@ class _PolicySectionState extends State<PolicySection> {
     if (mounted) setState(() => _assessment = a);
   }
 
-  Future<void> _setPolicy(CheckType type, RiskPolicy policy) async {
-    await AppState.instance.apply(
-      _config.copyWith(policies: {..._config.policies, type: policy}),
-    );
+  Future<void> _apply(DeviceSafetyConfig next) async {
+    await AppState.instance.apply(next);
     await _refresh();
   }
 
-  Future<void> _setFailMode(CheckType type, bool closed) async {
-    await AppState.instance.apply(
-      _config.copyWith(
-        failModes: {
-          ..._config.failModes,
-          type: closed ? FailMode.closed : FailMode.open,
-        },
-      ),
-    );
-    await _refresh();
-  }
+  Future<void> _setPolicy(CheckType type, RiskPolicy policy) =>
+      _apply(_config.copyWith(policies: {..._config.policies, type: policy}));
 
-  Future<void> _setDefault(RiskPolicy policy) async {
-    await AppState.instance.apply(
-      _config.copyWith(defaultPolicy: policy, policies: const {}),
-    );
-    await _refresh();
-  }
+  Future<void> _setFailMode(CheckType type, bool closed) => _apply(
+    _config.copyWith(
+      failModes: {
+        ..._config.failModes,
+        type: closed ? FailMode.closed : FailMode.open,
+      },
+    ),
+  );
+
+  Future<void> _setDefault(RiskPolicy policy) =>
+      _apply(_config.copyWith(defaultPolicy: policy, policies: const {}));
 
   @override
   Widget build(BuildContext context) {
@@ -63,63 +64,41 @@ class _PolicySectionState extends State<PolicySection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Default policy (resets per-check policies)'),
-              const SizedBox(height: 8),
-              SegmentedButton<RiskPolicy>(
-                segments: [
-                  for (final p in RiskPolicy.values)
-                    ButtonSegment(value: p, label: Text(p.name)),
-                ],
-                selected: {_config.defaultPolicy},
-                onSelectionChanged: (s) => _setDefault(s.single),
-              ),
-            ],
-          ),
-        ),
-        for (final t in types)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          t.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const Text('fail closed'),
-                      Switch(
-                        value: _config.failModeFor(t) == FailMode.closed,
-                        onChanged: (v) => _setFailMode(t, v),
-                      ),
-                    ],
-                  ),
-                  SegmentedButton<RiskPolicy>(
-                    key: ValueKey('policy_${t.name}'),
-                    segments: [
-                      for (final p in RiskPolicy.values)
-                        ButtonSegment(value: p, label: Text(p.name)),
-                    ],
-                    selected: {_config.policyFor(t)},
-                    onSelectionChanged: (s) => _setPolicy(t, s.single),
-                  ),
-                  CheckResultTile(
-                    title: 'Result',
-                    result: _assessment?.results[t],
-                  ),
-                ],
+        AdaptiveSection(
+          header: 'Default policy',
+          footer: 'Changing the default resets the per-check policies below.',
+          children: [
+            SectionContent(
+              child: AdaptiveSegmented<RiskPolicy>(
+                key: const ValueKey('policy_default'),
+                segments: _policies,
+                selected: _config.defaultPolicy,
+                onChanged: _setDefault,
               ),
             ),
+          ],
+        ),
+        for (final t in types)
+          AdaptiveSection(
+            header: t.name,
+            children: [
+              SectionContent(
+                child: AdaptiveSegmented<RiskPolicy>(
+                  key: ValueKey('policy_${t.name}'),
+                  segments: _policies,
+                  selected: _config.policyFor(t),
+                  onChanged: (p) => _setPolicy(t, p),
+                ),
+              ),
+              AdaptiveSwitchTile(
+                key: ValueKey('failclosed_${t.name}'),
+                title: 'Fail closed',
+                subtitle: 'Errors and timeouts count as detected',
+                value: _config.failModeFor(t) == FailMode.closed,
+                onChanged: (v) => _setFailMode(t, v),
+              ),
+              CheckResultTile(title: 'Result', result: _assessment?.results[t]),
+            ],
           ),
       ],
     );

@@ -2,14 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
-
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../refreshable.dart';
-import '../widgets/demo_card.dart';
-import '../widgets/section_header.dart';
+import '../ui/adaptive.dart';
 
 /// Google Cloud project number linked to the app in Play Console.
 /// `flutter run --dart-define=PLAY_CLOUD_PROJECT_NUMBER=123456789012`
@@ -203,70 +201,95 @@ class AppIntegritySectionState extends State<AppIntegritySection>
 
   @override
   Widget build(BuildContext context) {
-    final hint = TextStyle(fontSize: 12, color: Theme.of(context).hintColor);
     String yesNo(bool? v) => v == null ? '…' : (v ? 'Yes' : 'No');
+    final android = defaultTargetPlatform == TargetPlatform.android;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        sectionHeader(context, 'App Integrity'),
-        DemoCard(
-          children: [
-            Text(
-              'Tokens prove nothing on their own — your server must verify them. '
+        AdaptiveSection(
+          header: 'App Integrity',
+          footer:
+              'Tokens prove nothing on their own; your server must verify them. '
               '${_serverUrl.isEmpty ? 'No INTEGRITY_SERVER_URL set: showing raw tokens only.' : 'Verifying against $_serverUrl.'}',
-              style: hint,
-            ),
-            const SizedBox(height: 8),
-            if (defaultTargetPlatform == TargetPlatform.android) ...[
-              Text(
-                'Play Integrity library present: ${yesNo(_playIntegrityAvailable)}',
+          children: [
+            if (android) ...[
+              AdaptiveTile(
+                title: 'Play Integrity library present',
+                trailing: Text(yesNo(_playIntegrityAvailable)),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: _busy ? null : _playIntegrity,
-                icon: const Icon(Icons.verified_user_outlined),
-                label: const Text('Request Play Integrity token'),
+              SectionContent(
+                child: AdaptiveButton(
+                  key: const ValueKey('play_integrity'),
+                  icon: adaptiveIcon(
+                    Icons.verified_user_outlined,
+                    CupertinoIcons.checkmark_shield,
+                  ),
+                  label: 'Request Play Integrity token',
+                  onPressed: _busy ? null : _playIntegrity,
+                ),
               ),
             ] else ...[
-              Text('App Attest supported: ${yesNo(_appAttestSupported)}'),
-              Text('DeviceCheck supported: ${yesNo(_deviceCheckSupported)}'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _busy ? null : _appAttest,
-                    icon: const Icon(Icons.verified_user_outlined),
-                    label: Text(
-                      _keyId == null ? 'Attest key + assert' : 'Assert',
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _deviceCheck,
-                    icon: const Icon(Icons.phonelink_lock_outlined),
-                    label: const Text('DeviceCheck token'),
-                  ),
-                ],
+              AdaptiveTile(
+                title: 'App Attest supported',
+                trailing: Text(yesNo(_appAttestSupported)),
               ),
-            ],
-            if (_log.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              for (final line in _log.take(12))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: SelectableText(
-                    line,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
+              AdaptiveTile(
+                title: 'DeviceCheck supported',
+                trailing: Text(yesNo(_deviceCheckSupported)),
+              ),
+              SectionContent(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AdaptiveButton(
+                      icon: adaptiveIcon(
+                        Icons.verified_user_outlined,
+                        CupertinoIcons.checkmark_shield,
+                      ),
+                      label: _keyId == null ? 'Attest key + assert' : 'Assert',
+                      onPressed: _busy ? null : _appAttest,
                     ),
-                  ),
+                    AdaptiveButton(
+                      filled: false,
+                      icon: adaptiveIcon(
+                        Icons.phonelink_lock_outlined,
+                        CupertinoIcons.device_phone_portrait,
+                      ),
+                      label: 'DeviceCheck token',
+                      onPressed: _busy ? null : _deviceCheck,
+                    ),
+                  ],
                 ),
+              ),
             ],
           ],
         ),
+        if (_log.isNotEmpty)
+          AdaptiveSection(
+            header: 'Log',
+            children: [
+              SectionContent(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final line in _log.take(12))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          line,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }

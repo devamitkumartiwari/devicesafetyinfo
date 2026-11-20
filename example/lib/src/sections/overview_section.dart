@@ -1,9 +1,9 @@
 import 'package:device_safety_info/device_safety_info.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import '../app_state.dart';
+import '../ui/adaptive.dart';
 import '../widgets/check_result_tile.dart';
-import '../widgets/demo_card.dart';
 
 /// Runs DeviceSafety.assess() and shows the flags and every result.
 class OverviewSection extends StatefulWidget {
@@ -46,41 +46,65 @@ class _OverviewSectionState extends State<OverviewSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DemoCard(
+        AdaptiveSection(
+          header: 'Summary',
+          footer: _took == null
+              ? null
+              : 'Took ${_took!.inMilliseconds} ms (cached results are reused).',
           children: [
-            Text(
-              a == null
+            AdaptiveTile(
+              key: const ValueKey('assessment_summary'),
+              leading: Icon(
+                a?.detected ?? false
+                    ? adaptiveIcon(
+                        Icons.warning_amber,
+                        CupertinoIcons.exclamationmark_triangle_fill,
+                      )
+                    : adaptiveIcon(
+                        Icons.verified_user,
+                        CupertinoIcons.checkmark_shield_fill,
+                      ),
+                color: a?.detected ?? false
+                    ? StatusColors.danger
+                    : StatusColors.ok,
+              ),
+              title: a == null
                   ? 'Assessing...'
                   : a.detected
                   ? '${a.flags.length} risk(s) detected'
                   : 'No risks detected',
-              key: const ValueKey('assessment_summary'),
-              style: Theme.of(context).textTheme.titleLarge,
             ),
-            if (_took != null)
-              Text(
-                'Took ${_took!.inMilliseconds} ms (cached results are reused).',
-              ),
             if (a != null)
               for (final f in a.flags)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.warning_amber),
-                  title: Text(f.title),
-                  subtitle: Text(f.description),
+                AdaptiveTile(
+                  leading: Icon(
+                    adaptiveIcon(
+                      Icons.report,
+                      CupertinoIcons.exclamationmark_circle,
+                    ),
+                    color: StatusColors.danger,
+                  ),
+                  title: f.title,
+                  subtitle: f.description,
                 ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              key: const ValueKey('assess_refresh'),
-              onPressed: () => _run(refresh: true),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Re-run without cache'),
+            SectionContent(
+              child: AdaptiveButton(
+                key: const ValueKey('assess_refresh'),
+                icon: adaptiveIcon(Icons.refresh, CupertinoIcons.refresh),
+                label: 'Re-run without cache',
+                onPressed: () => _run(refresh: true),
+              ),
             ),
           ],
         ),
         if (a != null)
-          for (final MapEntry(:key, :value) in a.results.entries)
-            CheckResultTile(title: key.name, result: value),
+          AdaptiveSection(
+            header: 'Results',
+            children: [
+              for (final MapEntry(:key, :value) in a.results.entries)
+                CheckResultTile(title: key.name, result: value),
+            ],
+          ),
       ],
     );
   }

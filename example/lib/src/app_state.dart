@@ -1,7 +1,10 @@
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:flutter/foundation.dart';
 
-/// Demo-wide state: the configuration edited on the Policy page, and counters.
+/// Which widget set the example renders with.
+enum UiStyle { material, cupertino }
+
+/// Demo-wide state: the UI style, the configuration edited on the Policy page, and counters.
 final class AppState {
   AppState._();
 
@@ -26,6 +29,18 @@ final class AppState {
   );
 
   static const _expectedCert = String.fromEnvironment('EXPECTED_SIGNING_CERT');
+
+  /// Cupertino on Apple platforms, Material elsewhere; switchable at runtime.
+  final ValueNotifier<UiStyle> uiStyle = ValueNotifier(
+    switch (defaultTargetPlatform) {
+      TargetPlatform.iOS || TargetPlatform.macOS => UiStyle.cupertino,
+      _ => UiStyle.material,
+    },
+  );
+
+  void toggleStyle() => uiStyle.value = uiStyle.value == UiStyle.material
+      ? UiStyle.cupertino
+      : UiStyle.material;
 
   /// Bumped whenever [config] changes, so pages can re-run their checks.
   final ValueNotifier<int> configVersion = ValueNotifier(0);

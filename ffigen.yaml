@@ -1,5 +1,4 @@
-# Regenerate with `dart run ffigen --config ffigen.yaml` (needs libclang). CI checks the
-# committed output is up to date.
+# Regenerate with `dart run ffigen --config ffigen.yaml` (needs libclang).
 name: DsiBindings
 description: Bindings for src/dsi.h. Do not edit; regenerate with ffigen.
 output: 'lib/src/core/platform/generated/dsi_bindings.g.dart'

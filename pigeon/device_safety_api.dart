@@ -1,6 +1,6 @@
 // Platform interface for device_safety_info. After editing, regenerate with:
 //   dart run pigeon --input pigeon/device_safety_api.dart
-// and commit the generated files (CI fails if they're out of date).
+// and commit the generated files.
 //
 // One input file because Pigeon can't share data classes across files; one @HostApi per feature.
 import 'package:pigeon/pigeon.dart';

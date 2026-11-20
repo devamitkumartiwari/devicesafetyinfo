@@ -18,7 +18,7 @@ Flutter links a path dependency into the Xcode build under the name of its folde
 is named `devicesafetyinfo`, SwiftPM sees a package identity that doesn't match the package name
 `device_safety_info` and rejects the local override, so the example fails to build for iOS. This
 affects only local development of this repository; apps that depend on the published package
-aren't affected. CI checks the repo out under the right name.
+aren't affected.
 
 ## Windows: Kotlin "different roots" build error
 
@@ -35,7 +35,21 @@ flutter test
 cd example && flutter build apk --debug
 ```
 
-CI also runs the iOS build on macOS and fails if `lib/` imports `material.dart` or `cupertino.dart`.
+Also check before a release:
+
+```sh
+# iOS (on a Mac), Swift Package Manager only
+cd example && flutter build ios --no-codesign
+# lib/ must not depend on material or cupertino
+grep -rnE "package:flutter/(material|cupertino)\.dart" lib && echo "fix these imports"
+# generated code is up to date
+dart run pigeon --input pigeon/device_safety_api.dart && git diff --exit-code
+dart run ffigen --config ffigen.yaml && git diff --exit-code   # needs libclang
+# Kotlin unit tests (after building the example once)
+cd example/android && ./gradlew :device_safety_info:testDebugUnitTest
+# package skill
+dart run skills_lint --skills-directory skills --published-skill-name
+```
 
 ## Performance benchmark
 

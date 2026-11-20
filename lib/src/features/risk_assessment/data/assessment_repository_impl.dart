@@ -2,6 +2,7 @@ import '../../../core/config/device_safety_config.dart';
 import '../../../core/platform/generated/device_safety_api.g.dart';
 import '../../../core/platform/mappers.dart';
 import '../../../core/platform/native_checks_ffi.dart';
+import '../../../core/platform/native_merge.dart';
 import '../../../core/result/check_type.dart';
 import '../../../core/result/risk_signal.dart';
 import '../../../core/utils/platform_guard.dart';
@@ -40,12 +41,42 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
           ? config.malwarePackages.toList()
           : const [],
     );
-    final (result, native) = await (
-      _batch.runChecks(request),
-      types.any(_ffiChecks.contains)
-          ? _ffi.collect()
-          : Future.value(NativeChecks.unavailable),
-    ).wait;
+    // Listen to the native future right away so it can't fail unhandled while the platform
+    // call is pending; a native failure is an unavailable library.
+    final nativeFuture =
+        (types.any(_ffiChecks.contains)
+                ? _ffi.collect()
+                : Future.value(NativeChecks.unavailable))
+            .catchError((Object _) => NativeChecks.unavailable);
+    BatchResultMsg? batch;
+    Object? error;
+    StackTrace? stack;
+    try {
+      batch = await _batch.runChecks(request);
+    } catch (e, st) {
+      error = e;
+      stack = st;
+    }
+    final native = await nativeFuture;
+
+    if (batch == null) {
+      // The whole platform call failed. Keep any high-risk native evidence (the other checks
+      // are reported as errors by the runner); with none, surface the failure as before.
+      final salvaged = <CheckType, CheckReport>{
+        for (final type in types.where(_ffiChecks.contains))
+          if (nativeReport(native, _nativeSignals(type, native)) case final r
+              when hasHighRisk(r))
+            type: CheckReport([...r.signals, platformCheckFailedSignal]),
+      };
+      if (salvaged.isEmpty) Error.throwWithStackTrace(error!, stack!);
+      config.logger?.call(
+        'Batch platform call failed; keeping native evidence',
+        error: error,
+        stackTrace: stack,
+      );
+      return salvaged;
+    }
+    final result = batch;
 
     final out = <CheckType, CheckReport>{
       for (final MapEntry(:key, :value) in result.reports.entries)
@@ -53,20 +84,22 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
           t: value.toDomain(),
     };
 
-    void mergeNative(CheckType type, List<RiskSignal> signals) {
-      if (!types.contains(type)) return;
+    for (final type in _ffiChecks) {
+      if (!types.contains(type)) continue;
+      final fromNative = nativeReport(native, _nativeSignals(type, native));
       final platform = out[type];
-      // A platform check that failed (missing) stays missing: Dart reports it as an error
-      // rather than hiding the failure behind the native result.
-      if (platform == null) return;
-      out[type] = platform.merge(
-        CheckReport(signals, supported: native.supported),
-      );
+      if (platform != null) {
+        out[type] = platform.merge(fromNative);
+      } else if (hasHighRisk(fromNative)) {
+        // The platform half failed, but native evidence stands on its own.
+        out[type] = CheckReport([
+          ...fromNative.signals,
+          platformCheckFailedSignal,
+        ]);
+      }
+      // Otherwise a failed platform check stays missing, so the runner reports an error
+      // instead of hiding the failure behind an empty native result.
     }
-
-    mergeNative(CheckType.root, native.rootSignals);
-    mergeNative(CheckType.hooking, native.hookingSignals);
-    mergeNative(CheckType.debugger, native.debuggerSignals);
 
     final android = PlatformGuard.isAndroid;
     if (types.contains(CheckType.accessibility)) {
@@ -103,4 +136,12 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
     }
     return out;
   }
+
+  static List<RiskSignal> _nativeSignals(CheckType type, NativeChecks n) =>
+      switch (type) {
+        CheckType.root => n.rootSignals,
+        CheckType.hooking => n.hookingSignals,
+        CheckType.debugger => n.debuggerSignals,
+        _ => const [],
+      };
 }

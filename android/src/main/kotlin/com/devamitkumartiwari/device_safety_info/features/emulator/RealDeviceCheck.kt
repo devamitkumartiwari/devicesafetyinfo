@@ -3,6 +3,7 @@ package com.devamitkumartiwari.device_safety_info.features.emulator
 import android.os.Build
 import com.devamitkumartiwari.device_safety_info.core.RiskReport
 import com.devamitkumartiwari.device_safety_info.core.RiskSignal
+import com.devamitkumartiwari.device_safety_info.core.SystemProps
 
 /**
  * A utility to check if the app is running on a real device or an emulator.
@@ -42,7 +43,7 @@ object RealDeviceCheck {
             "device" to Build.DEVICE.orEmpty(),
             "product" to Build.PRODUCT.orEmpty(),
         ),
-        property = ::systemProperty,
+        property = SystemProps::get,
     )
 
     /**
@@ -96,15 +97,5 @@ object RealDeviceCheck {
         }
 
         return RiskReport(signals.distinctBy { it.id })
-    }
-
-    // Reflection-only read of android.os.SystemProperties: cheap and safe on the main thread
-    // (no getprop subprocess). Returns null if reflection is unavailable.
-    private fun systemProperty(name: String): String? = try {
-        Class.forName("android.os.SystemProperties")
-            .getMethod("get", String::class.java, String::class.java)
-            .invoke(null, name, "") as? String
-    } catch (_: Exception) {
-        null
     }
 }

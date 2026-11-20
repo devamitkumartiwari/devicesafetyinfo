@@ -4,9 +4,11 @@ import com.devamitkumartiwari.device_safety_info.core.RiskSignal
 import com.devamitkumartiwari.device_safety_info.features.emulator.RealDeviceCheck
 import com.devamitkumartiwari.device_safety_info.features.hooking.MemoryMapsScanner
 import com.devamitkumartiwari.device_safety_info.features.root.RootFilesChecker
+import com.devamitkumartiwari.device_safety_info.features.root.RootedDeviceCheck
 import com.devamitkumartiwari.device_safety_info.features.root.SystemPropsChecker
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SystemPropsCheckerTest {
@@ -147,5 +149,33 @@ class MemoryMapsScannerTest {
     @Test
     fun cleanMapsReportNothing() {
         assertEquals(emptySet(), MemoryMapsScanner.rwxLibraries(emptySequence()))
+    }
+}
+
+class RootedDeviceCheckTest {
+
+    private val su = RiskSignal("root.su_executable:/sbin/su", highRisk = true)
+    private val boom: () -> List<RiskSignal> = { throw SecurityException("hooked") }
+
+    @Test
+    fun failingCheckerIsReportedNotHidden() {
+        val report = RootedDeviceCheck.evaluate(listOf("files" to boom, "props" to { listOf(su) }))
+        assertEquals(
+            listOf("root.checker_error:files" to false, su.id to true),
+            report.signals.map { it.id to it.highRisk },
+        )
+    }
+
+    @Test
+    fun everyCheckerFailingThrows() {
+        assertFailsWith<RootedDeviceCheck.AllCheckersFailed> {
+            RootedDeviceCheck.evaluate(listOf("files" to boom, "props" to boom))
+        }
+    }
+
+    @Test
+    fun duplicateSignalsAreMerged() {
+        val report = RootedDeviceCheck.evaluate(listOf("a" to { listOf(su) }, "b" to { listOf(su) }))
+        assertEquals(1, report.signals.size)
     }
 }

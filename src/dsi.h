@@ -22,7 +22,7 @@ extern "C" {
 // library whose version it doesn't know.
 #define DSI_ABI_VERSION 1u
 
-// Frida library or thread names in /proc/self/maps (Android).
+// Frida library names in /proc/self/maps (Android).
 #define DSI_FRIDA_MAPS (1u << 0)
 // Something accepts connections on 127.0.0.1:27042/27043, Frida's default ports (Android).
 #define DSI_FRIDA_PORT (1u << 1)

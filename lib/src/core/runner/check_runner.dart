@@ -37,8 +37,18 @@ final class CheckRunner {
   final PolicyEvaluator _evaluator;
   final TtlCache<CheckType, CheckResult> _cache;
 
+  /// Checks for threats that can appear at any moment (Frida attaching, a debugger connecting).
+  /// Their results are never cached: a clean answer from a few seconds ago says nothing about
+  /// now. Concurrent calls still share one in-flight run.
+  static const Set<CheckType> dynamicChecks = {
+    CheckType.hooking,
+    CheckType.debugger,
+  };
+
   static bool _cacheable(CheckResult r) =>
-      r.status == CheckStatus.completed || r.status == CheckStatus.unsupported;
+      !dynamicChecks.contains(r.type) &&
+      (r.status == CheckStatus.completed ||
+          r.status == CheckStatus.unsupported);
 
   /// Runs [type] with [load], or returns a cached result. [refresh] bypasses the cache.
   Future<CheckResult> run(

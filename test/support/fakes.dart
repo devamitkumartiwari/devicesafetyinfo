@@ -33,9 +33,15 @@ class FakeRootApi extends Fake implements RootHostApi {
 class FakeHookingApi extends Fake implements HookingHostApi {
   CheckReportMsg hook = report([]);
   CheckReportMsg debugger = report([]);
+  Object? error;
+  int hookCalls = 0;
 
   @override
-  Future<CheckReportMsg> hookCheck() async => hook;
+  Future<CheckReportMsg> hookCheck() async {
+    hookCalls++;
+    if (error != null) throw error!;
+    return hook;
+  }
 
   @override
   Future<CheckReportMsg> debuggerCheck() async => debugger;

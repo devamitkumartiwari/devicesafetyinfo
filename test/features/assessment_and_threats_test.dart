@@ -118,6 +118,42 @@ void main() {
       expect(a.detected, isFalse);
     });
 
+    test('a failed platform root check keeps high native evidence', () async {
+      f.batch.result = BatchResultMsg(
+        reports: {'emulator': report([])},
+        accessibilityServices: [],
+        notificationListeners: [],
+        installedPackages: [],
+      );
+      f.ffi = const FakeNativeChecks(dsi.DSI_ROOT_FILES_HIGH);
+      make();
+      final a = await DeviceSafety.assess(
+        checks: [CheckType.root, CheckType.emulator],
+      );
+      final root = a.results[CheckType.root]!;
+      expect(root.status, CheckStatus.completed);
+      expect(root.detected, isTrue);
+      expect(
+        root.signals.map((s) => s.id),
+        contains('integrity.platform_check_failed'),
+      );
+    });
+
+    test(
+      'batch failure keeps high native evidence, others are errors',
+      () async {
+        f.batch.error = StateError('channel down');
+        f.ffi = const FakeNativeChecks(dsi.DSI_FRIDA_PORT);
+        make();
+        final a = await DeviceSafety.assess(
+          checks: [CheckType.hooking, CheckType.vpn],
+        );
+        expect(a.results[CheckType.hooking]!.detected, isTrue);
+        expect(a.results[CheckType.hooking]!.status, CheckStatus.completed);
+        expect(a.results[CheckType.vpn]!.status, CheckStatus.error);
+      },
+    );
+
     test('policy off and cached checks are not requested', () async {
       make(DeviceSafetyConfig(policies: {CheckType.vpn: RiskPolicy.off}));
       await DeviceSafety.root.check();

@@ -32,6 +32,7 @@ detection means; the package never closes or uninstalls the app.
 - [Other tools](#other-tools)
 - [Testing your app](#testing-your-app)
 - [Android permissions](#android-permissions)
+- [iOS setup](#ios-setup)
 - [Platform support](#platform-support)
 
 ## Installation
@@ -96,7 +97,8 @@ A `CheckResult` has:
 | `detected` | the decision, with your policy already applied |
 | `policy`, `error`, `elapsed` | what was applied, why it failed, how long it took |
 
-Detection APIs **never throw**. Results are cached (30 s by default), concurrent calls share one
+Detection APIs **never throw**. Results are cached (30 s by default; `hooking` and `debugger` are
+never cached, because Frida or a debugger can attach at any moment), concurrent calls share one
 native call, and every check has a timeout (5 s by default).
 
 `DeviceSafety.assess()` runs many checks in **one platform round trip**, in parallel on the
@@ -123,6 +125,19 @@ What a check reports when it errors or times out:
 |---|---|
 | `FailMode.open` (default) | not detected |
 | `FailMode.closed` | detected. Use for security-critical checks an attacker might deliberately break. |
+
+`open` is the default so a flaky platform call never locks honest users out. Under `open`, an
+attacker who makes a check *fail* (for example by hooking the Kotlin/Swift call so it throws)
+gets "not detected". For banking-grade apps, set
+`failModes: {CheckType.root: .closed, CheckType.hooking: .closed, CheckType.debugger: .closed}`.
+
+Two defences apply under either mode:
+
+* `root`, `hooking` and `debugger` each combine a Kotlin/Swift half with a C half. If the
+  platform half fails but the C half found **high** evidence, the check still completes as
+  detected and adds `integrity.platform_check_failed`.
+* On Android, a root checker that throws adds `root.checker_error:<checker>` (low) rather than
+  silently counting as clean. If all of them throw, the check reports an error.
 
 ## Configuration
 
@@ -170,6 +185,7 @@ clears cached results. Signal overrides match the part of the id before `:`, so
 | `vpn` | | `vpn.active`, `vpn.http_proxy` |
 | `screenCapture` | `screen_capture.recording`, `screen_capture.mirroring` | `screen_capture.external_display` |
 | `malware` | `malware.installed:<package>` | |
+| `root`, `hooking`, `debugger` (cross-cutting) | | `integrity.native_unavailable` (the bundled C library didn't load on Android/iOS), `integrity.platform_check_failed` (the platform half failed; reported next to high C evidence), `root.checker_error:<checker>` (Android) |
 
 Signals whose `source` is `SignalSource.ffi` come from C code (`src/dsi.c`) called through FFI on a
 background isolate. It's harder to hook than Java/Kotlin or Swift.
@@ -295,6 +311,26 @@ The plugin declares only `ACCESS_NETWORK_STATE`, `DETECT_SCREEN_CAPTURE` and
 - **Unknown sources check**: `REQUEST_INSTALL_PACKAGES` (Google Play asks you to justify it).
   Without it the check reports nothing on Android 8+.
 - **Version check / IOC feeds**: `INTERNET`.
+
+## iOS setup
+
+### Jailbreak URL schemes
+
+The jailbreak check includes IOSSecuritySuite's URL-scheme test (`root.jailbreak_urlSchemes`).
+iOS only answers `canOpenURL` for schemes your app declares, so without this the test never
+fires. Add to `Info.plist`:
+
+```xml
+<key>LSApplicationQueriesSchemes</key>
+<array>
+  <string>cydia</string>
+  <string>sileo</string>
+  <string>zbra</string>
+  <string>filza</string>
+  <string>undecimus</string>
+  <string>activator</string>
+</array>
+```
 
 ## Platform support
 

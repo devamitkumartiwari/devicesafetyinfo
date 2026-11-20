@@ -56,7 +56,41 @@ void main() {
     test('native library unavailable keeps platform support', () async {
       f.ffi = const FakeNativeChecks(0, false);
       make();
-      expect((await DeviceSafety.root.check()).status, CheckStatus.completed);
+      final r = await DeviceSafety.root.check();
+      expect(r.status, CheckStatus.completed);
+      // On Android the library always ships, so its absence is a (low) signal.
+      expect(r.signals.single.id, 'integrity.native_unavailable');
+      expect(r.signals.single.level, RiskLevel.low);
+      expect(r.detected, isFalse);
+    });
+
+    test('native library unavailable is not a signal off mobile', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      f.ffi = const FakeNativeChecks(0, false);
+      make();
+      expect((await DeviceSafety.root.check()).signals, isEmpty);
+    });
+
+    test('platform error keeps high native evidence (fail-open)', () async {
+      f.root.error = StateError('hooked');
+      f.ffi = const FakeNativeChecks(dsi.DSI_ROOT_FILES_HIGH);
+      make();
+      final r = await DeviceSafety.root.check();
+      expect(r.status, CheckStatus.completed);
+      expect(r.detected, isTrue);
+      expect(r.signals.map((s) => s.id), [
+        'root.native_files',
+        'integrity.platform_check_failed',
+      ]);
+    });
+
+    test('platform error with only low native evidence is an error', () async {
+      f.root.error = StateError('hooked');
+      f.ffi = const FakeNativeChecks(dsi.DSI_ROOT_FILES_LOW);
+      make();
+      final r = await DeviceSafety.root.check();
+      expect(r.status, CheckStatus.error);
+      expect(r.detected, isFalse);
     });
 
     test(
@@ -93,6 +127,24 @@ void main() {
     f.root.emulator = report([high('emulator.hardware:ranchu')]);
     expect(await DeviceSafety.emulator.isDetected(), isTrue);
   });
+
+  test('hooking results are never cached', () async {
+    await DeviceSafety.hooking.check();
+    await DeviceSafety.hooking.check();
+    expect(f.hooking.hookCalls, 2);
+  });
+
+  test(
+    'hooking keeps native Frida evidence when the platform call fails',
+    () async {
+      f.hooking.error = StateError('hooked');
+      f.ffi = const FakeNativeChecks(dsi.DSI_FRIDA_MAPS);
+      make();
+      final r = await DeviceSafety.hooking.check();
+      expect(r.detected, isTrue);
+      expect(r.signals.first.id, 'hooking.frida_maps');
+    },
+  );
 
   test('hooking merges Frida from C', () async {
     f.ffi = const FakeNativeChecks(dsi.DSI_FRIDA_PORT);

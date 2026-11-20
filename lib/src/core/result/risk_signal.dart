@@ -30,10 +30,11 @@ enum SignalSource {
 
 /// One indicator found by a check.
 ///
-/// [id] is a stable, dotted identifier such as `root.su_executable` or `vpn.active`. Use it in
-/// `DeviceSafetyConfig.signalOverrides` to change the level of a specific indicator. Ids are
-/// static strings; the only variable part ever appended is an Android package name, for the
-/// accessibility, notification-listener and malware checks (`malware.installed:com.example`).
+/// [id] is a stable, dotted identifier such as `root.su_executable` or `vpn.active`, optionally
+/// followed by `:` and a detail: a path (`root.su_executable:/sbin/su`), a property value
+/// (`emulator.hardware:ranchu`), a library or an Android package name
+/// (`malware.installed:com.example`). `DeviceSafetyConfig.signalOverrides` matches the part
+/// before the `:` ([key]), so one override covers every detail.
 final class RiskSignal {
   /// Creates a signal.
   const RiskSignal(this.id, this.level, {this.source = SignalSource.platform});

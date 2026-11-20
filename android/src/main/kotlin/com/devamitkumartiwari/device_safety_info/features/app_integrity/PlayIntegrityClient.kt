@@ -11,7 +11,7 @@ import com.google.android.play.core.integrity.model.StandardIntegrityErrorCode
 /**
  * The ONLY class in the plugin that references Play Integrity types. The library is a
  * `compileOnly` dependency (opt-in for consuming apps), so this class must never be loaded unless
- * [PlayIntegrityFeature] has confirmed the library is on the classpath — otherwise the JVM would
+ * [IntegrityHostApiImpl] has confirmed the library is on the classpath — otherwise the JVM would
  * throw `NoClassDefFoundError` while resolving these imports.
  *
  * Produces opaque tokens only. Decoding/verification must happen on the app's server via Google's

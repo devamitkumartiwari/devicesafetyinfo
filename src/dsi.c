@@ -1,7 +1,7 @@
 // Native anti-tamper checks for device_safety_info. See dsi.h.
 //
-// These run as plain syscalls from C, which is harder to intercept with Java/Swift-level hooks
-// (Frida's Java/ObjC bridges, Xposed) than equivalent platform code.
+// They call libc directly from C, which Java/Swift-level hooks (Frida's Java/ObjC bridges,
+// Xposed) don't see. A native hook on libc itself can still intercept them.
 #include "dsi.h"
 
 #include <string.h>
@@ -17,14 +17,17 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+// Frida library paths in this process's memory map. Thread names such as "gum-js-loop" and
+// "gmain" never appear in maps, so they aren't searched here.
 static int frida_in_maps(void) {
   static const char* const patterns[] = {
-      "frida", "gum-js-loop", "gmain", "linjector",
-      "frida-agent", "re.frida", "frida-gadget", "frida-server",
+      "frida", "linjector", "re.frida",
   };
   FILE* f = fopen("/proc/self/maps", "re");
   if (!f) return 0;
-  char line[512];
+  // Large enough for a full maps line (header plus a PATH_MAX path), so a name is never split
+  // across two reads.
+  char line[4096 + 128];
   int found = 0;
   while (!found && fgets(line, sizeof(line), f)) {
     for (size_t i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {
@@ -93,13 +96,24 @@ static int tracer_attached(void) {
 
 // Returns DSI_ROOT_FILES_HIGH, DSI_ROOT_FILES_LOW or 0.
 static uint32_t root_files(void) {
+  // Keep in sync with RootFilesChecker.kt (rootManagerPaths and suPaths).
   static const char* const high_paths[] = {
-      "/system/bin/magisk", "/sbin/magisk",           "/data/adb/magisk",
-      "/sbin/.magisk",      "/system/app/Superuser.apk",
+      "/system/app/Superuser.apk",
+      "/system/etc/init.d/99SuperSUDaemon",
+      "/system/xbin/daemonsu",
+      "/system/bin/magisk",
+      "/sbin/.magisk",
+      "/sbin/magisk",
+      "/data/adb/magisk",
+      "/data/local/tmp/magisk",
+      "/system/bin/magiskhide",
+      "/sbin/magiskhide",
+      "/data/local/tmp/magiskhide",
   };
   static const char* const su_paths[] = {
-      "/system/xbin/su",     "/system/bin/su",     "/sbin/su",
-      "/data/local/xbin/su", "/data/local/bin/su", "/system/sd/xbin/su",
+      "/system/xbin/su",     "/system/bin/su",       "/sbin/su",
+      "/system/su",          "/data/local/xbin/su",  "/data/local/bin/su",
+      "/system/bin/.ext/.su", "/system/sd/xbin/su",
   };
   struct stat st;
   for (size_t i = 0; i < sizeof(high_paths) / sizeof(high_paths[0]); i++) {

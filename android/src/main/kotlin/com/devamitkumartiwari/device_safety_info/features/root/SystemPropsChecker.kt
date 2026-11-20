@@ -1,6 +1,7 @@
 package com.devamitkumartiwari.device_safety_info.features.root
 
 import com.devamitkumartiwari.device_safety_info.core.RiskSignal
+import com.devamitkumartiwari.device_safety_info.core.SystemProps
 
 /**
  * A utility to check for system properties that may indicate a rooted device.
@@ -32,7 +33,7 @@ object SystemPropsChecker {
 
     /** [property] reads a system property; injectable for tests. */
     fun signals(
-        property: (String) -> String? = ShellExecutor::getSystemProperty,
+        property: (String) -> String? = SystemProps::get,
     ): List<RiskSignal> = propChecks.mapNotNull { check ->
         val value = property(check.prop)
         if (value != null && check.matches(value)) {

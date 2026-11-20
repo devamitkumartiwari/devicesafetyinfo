@@ -25,6 +25,22 @@ a type-safe platform layer. **Breaking**: see [MIGRATION.md](MIGRATION.md).
 * Signal ids are now stable `check.signal[:detail]` strings (`root.su_executable:/sbin/su`), not
   1.x's `su:/sbin/su` style.
 
+### Hardening
+
+* `root`, `hooking` and `debugger`: if the Kotlin/Swift half of a check fails but the C half
+  found high-risk evidence, the check still completes as detected (with
+  `integrity.platform_check_failed`) instead of discarding the evidence with the error. Also
+  applies to `assess()`.
+* Android root: a checker that throws now adds `root.checker_error:<checker>` instead of silently
+  counting as clean; if every checker throws, the check reports `CheckStatus.error`.
+* New low signal `integrity.native_unavailable` when the bundled C library can't run on Android
+  or iOS.
+* `hooking` and `debugger` results are no longer cached.
+* Android: system properties no longer spawn a `getprop` process when a property is simply unset,
+  and a `getprop` that times out is no longer read.
+* Native Frida maps scan: removed thread-name patterns that can't appear in `/proc/self/maps`,
+  read whole lines, and aligned the C root paths with the Kotlin ones.
+
 ### New
 
 * `DeviceSafetyConfig`: per-check policy (`off` / `standard` / `strict`), per-signal level

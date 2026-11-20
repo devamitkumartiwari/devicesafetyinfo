@@ -22,6 +22,8 @@ class _StrongAuthSectionState extends State<StrongAuthSection> {
 
   final _pin = TextEditingController();
   final _host = TextEditingController(text: 'www.google.com');
+  final _password = TextEditingController();
+  bool _blockKeyboards = false;
 
   String? _deviceKey;
   String? _biometric;
@@ -38,6 +40,7 @@ class _StrongAuthSectionState extends State<StrongAuthSection> {
   void dispose() {
     _pin.dispose();
     _host.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -194,6 +197,49 @@ class _StrongAuthSectionState extends State<StrongAuthSection> {
                 label: 'PIN',
                 secure: const SecureInputConfig.pin(),
               ),
+            ),
+          ],
+        ),
+        AdaptiveSection(
+          header: 'SecureEditableText',
+          footer:
+              'The undecorated widget with SecureInputConfig.password() built in. Wrap it '
+              'in your own decoration.',
+          children: [
+            SectionContent(
+              child: SecureEditableText(
+                key: const ValueKey('secure_editable'),
+                controller: _password,
+                config: const SecureInputConfig.password(),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isCupertino
+                      ? const Color(0xFF000000)
+                      : const Color(0xFF1C1B1F),
+                ),
+                cursorColor: const Color(0xFF007AFF),
+              ),
+            ),
+          ],
+        ),
+        AdaptiveSection(
+          header: 'Third-party keyboards (iOS)',
+          footer: defaultTargetPlatform == TargetPlatform.iOS
+              ? 'Refuses custom keyboards in this app (see the AppDelegate override). '
+                    'Applies to the next keyboard shown.'
+              : 'iOS only. On Android, the Fraud signals page reports a third-party '
+                    'default keyboard instead.',
+          children: [
+            AdaptiveSwitchTile(
+              key: const ValueKey('block_keyboards'),
+              title: 'Block third-party keyboards',
+              value: _blockKeyboards,
+              onChanged: defaultTargetPlatform == TargetPlatform.iOS
+                  ? (v) async {
+                      await DeviceSafety.keyboard.blockCustomKeyboards(v);
+                      if (mounted) setState(() => _blockKeyboards = v);
+                    }
+                  : (_) {},
             ),
           ],
         ),

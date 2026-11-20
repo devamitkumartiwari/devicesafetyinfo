@@ -101,6 +101,11 @@ on iOS. The plugin gets the tokens; your server verifies them.
 Measured with `example/integration_test/perf_test.dart` (profile mode); see
 `example/integration_test/PERF_BASELINE.md` for the full numbers and method.
 
+On a Galaxy S21 FE (Android 16): a cold 6-check assessment takes about the same as 1.x
+(~108 ms); repeat calls within the cache TTL take ~0.01 ms; all 15 checks uncached take ~45 ms in
+one round trip. A single uncached check is slower than 1.x (~5 ms vs ~1.5 ms) because checks now
+run on a background pool instead of the Android main thread.
+
 ## 1.6.0
 
 Root and emulator detection are now **tiered**: every signal is high or low risk, and the app

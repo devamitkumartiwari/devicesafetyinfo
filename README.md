@@ -3,449 +3,374 @@
 [![pub package](https://img.shields.io/pub/v/device_safety_info.svg)](https://pub.dev/packages/device_safety_info)
 [![pub points](https://img.shields.io/pub/points/device_safety_info)](https://pub.dev/packages/device_safety_info/score)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![platform](https://img.shields.io/badge/platform-android%20%7C%20ios-lightgrey.svg)](#platform-support)
+[![platform](https://img.shields.io/badge/platform-android%20%7C%20ios-lightgrey.svg)](docs/advanced.md#platform-support)
 
-Device and app security for Flutter apps that handle money, health or identity.
+Security checks and protections for Flutter apps that handle money, health or identity.
+Find rooted phones, hacking tools and scam setups, protect sensitive screens, and prove the
+device to your server.
 
-- **Detect** a risky environment: root and jailbreak, emulators, hooking frameworks (Frida,
-  Xposed, Zygisk), debuggers, a repackaged app, weak device posture, accessibility and
-  notification-listener abuse, VPNs and proxies, screen capture and known malware.
-- **Spot fraud setups**: remote-control apps used in "support call" scams, GPS spoofing, cloned
-  or dual-app spaces, user-installed CA certificates that allow HTTPS interception, and
-  third-party keyboards.
-- **Protect** sensitive screens and input: block screenshots and recording, cover the app while
-  the screen is captured or in the app switcher, secure PIN and password fields, copy one-time
-  codes safely, block tapjacking, lock idle sessions, pin your API's TLS certificates.
-- **Prove** the device and the user to your server: hardware-bound signing keys with key
-  attestation, biometric-approved actions that can't be faked by hooking a callback, and Google
-  Play Integrity, Apple App Attest and DeviceCheck.
+Every check tells you **what it found**. **Your app decides** what to do about it. The package
+never closes or uninstalls your app.
 
-Every check returns a typed result listing what it found, and **your app decides** what that
-means: the package never closes or uninstalls the app.
+> **Upgrading from 1.x?** 2.0 is a breaking release. See [MIGRATION.md](MIGRATION.md).
 
-> **Upgrading from 1.x?** 2.0.0 is a breaking release. [MIGRATION.md](MIGRATION.md) lists every
-> 1.x API and its replacement.
-
-## Contents
-
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [How checks work](#how-checks-work)
-- [Configuration](#configuration)
-- [Detection checks](#detection-checks)
-- [Signal catalogue](#signal-catalogue)
-- [Threat stream](#threat-stream)
-- [Protection](#protection)
-- [Strong authentication](#strong-authentication)
-- [Attestation](#attestation)
-- [Other tools](#other-tools)
-- [Limits of on-device checks](#limits-of-on-device-checks)
-- [Android setup](#android-setup)
-- [iOS setup](#ios-setup)
-- [Testing your app](#testing-your-app)
-- [Example app](#example-app)
-- [Platform support](#platform-support)
-- [Performance](#performance)
-
-## Installation
+## Install
 
 ```yaml
 dependencies:
   device_safety_info: ^2.0.0
 ```
 
-Requirements:
+```dart
+import 'package:device_safety_info/device_safety_info.dart';
+```
 
-- **Flutter 3.50+ / Dart 3.14+**
-- **Android** `minSdk` 24. The plugin uses built-in Kotlin (AGP 9+) and applies no Kotlin Gradle
-  plugin.
-- **iOS** 16, with **Swift Package Manager**. CocoaPods isn't supported; Flutter uses SwiftPM by
-  default since 3.50.
-
-The native C checks are compiled by a Dart build hook for Android and iOS. There's nothing to
-configure.
+Needs **Flutter 3.50+**, **Android** minSdk 24, and **iOS** 16 with Swift Package Manager.
 
 ## Quick start
 
+**1. Check everything before a sensitive action** (a login or a payment):
+
 ```dart
-import 'package:device_safety_info/device_safety_info.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await DeviceSafety.initialize(DeviceSafetyConfig(
-    accessibilityAllowlist: {'com.google.android.marvin.talkback'},
-  ));
-  runApp(const MyApp());
-}
-
-// Before a sensitive action, run every check in one call:
 final report = await DeviceSafety.assess();
 if (report.detected) {
   for (final flag in report.flags) {
-    showWarning(flag.title, flag.description);
+    showWarning(flag.title, flag.description); // plain-language text for the user
   }
 }
-
-// Or run one check:
-final root = await DeviceSafety.root.check();
-if (root.detected) blockPayments();
-print(root.signals); // [root.su_executable:/system/xbin/su(high)]
 ```
 
-## How checks work
-
-### One shape for every check
-
-Every detection API has the same two methods:
+**2. Or check one thing:**
 
 ```dart
-Future<CheckResult> check({bool refresh = false});
-Future<bool> isDetected({bool refresh = false});
+if (await DeviceSafety.root.isDetected()) {
+  blockPayments();
+}
 ```
 
-A `CheckResult` tells you what happened and why:
+**3. (Optional) Change settings at startup.** You can skip this. Without it, safe defaults are
+used.
 
-| Field | Meaning |
+```dart
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DeviceSafety.initialize(DeviceSafetyConfig(
+    accessibilityAllowlist: {'com.google.android.marvin.talkback'}, // trust TalkBack
+  ));
+  runApp(const MyApp());
+}
+```
+
+### Reading a result
+
+Every check has `isDetected()` (a simple yes/no) and `check()` (the full result):
+
+```dart
+final result = await DeviceSafety.root.check();
+result.detected; // true = risky. This is the answer to use.
+result.signals;  // what was found, e.g. [root.su_executable:/system/xbin/su(high)]
+result.level;    // none, low (weak sign) or high (strong sign)
+result.status;   // completed, unsupported (not on this platform), error or timedOut
+```
+
+Checks **never throw**. By default only strong (high) signs count as detected. To change that,
+see [Settings](#settings-how-strict-checks-are).
+
+## Features
+
+Each feature below has one sentence, one example, and a page in the
+[example app](#example-app).
+
+| Group | Features |
 |---|---|
-| `status` | `completed`, `unsupported` (not on this platform), `error`, `timedOut`, or `skipped` (policy `off`) |
-| `signals` | every indicator found, each with an `id`, a `RiskLevel` (`low` / `high`) and a `source` |
-| `level` | the highest signal level |
-| `detected` | the decision, with your policy already applied |
-| `policy`, `error`, `elapsed` | what was applied, why it failed, how long it took |
+| [Device checks](#device-checks) | [Root / jailbreak](#root--jailbreak) · [Emulator](#emulator--simulator) · [Hooking](#hooking-frida-xposed) · [Debugger](#debugger) · [Tampering](#tampering) · [Device posture](#device-posture) · [Accessibility](#accessibility-services) · [Notification listeners](#notification-listeners) · [VPN](#vpn--proxy) · [Malware](#malware-apps) |
+| [Fraud signals](#fraud-signals) | [Remote access](#remote-access-apps) · [GPS spoofing](#gps-spoofing) · [App cloning](#app-cloning) · [HTTPS interception](#https-interception) · [Keyboard](#third-party-keyboard) |
+| [Protect your screens](#protect-your-screens) | [Screenshots](#screenshots--recording) · [App switcher](#app-switcher) · [Clipboard](#secure-clipboard) · [Tapjacking](#tapjacking) · [Idle timeout](#idle-timeout) · [Secure text fields](#secure-text-fields) |
+| [Prove device & user](#prove-device--user) | [Certificate pinning](#certificate-pinning) · [Device-bound key](#device-bound-key) · [Biometric approval](#biometric-approval) · [App integrity](#app-integrity) |
+| [Live events & tools](#live-events--tools) | [Live threats](#live-threats) · [Blocked domains](#blocked-domains) · [Phone calls](#phone-calls) · [Version check](#version-check) |
+| [Settings](#settings-how-strict-checks-are) | Policies, allowlists |
 
-Detection APIs **never throw**. A check that fails reports `CheckStatus.error` or `timedOut`
-instead of pretending the device is clean.
+---
 
-### Signals, levels and policies
+## Device checks
 
-Each signal is **high** (clear evidence that a normal device doesn't produce, such as an
-executable `su` or Frida in memory) or **low** (weak evidence that normal devices also show, such
-as a stock `busybox`, an unlocked bootloader or a VPN). The policy decides which count:
+All device checks work the same way: `check()` or `isDetected()`.
 
-| Policy | Detected when |
-|---|---|
-| `RiskPolicy.standard` (default) | any **high** signal |
-| `RiskPolicy.strict` | any signal |
-| `RiskPolicy.off` | never; the check doesn't run |
+### Root / jailbreak
 
-### Fail modes
-
-What a check reports when it errors or times out:
-
-| Fail mode | An error or timeout counts as |
-|---|---|
-| `FailMode.open` (default) | not detected |
-| `FailMode.closed` | detected |
-
-`open` is the default so a flaky platform call never locks honest users out. Under `open`, an
-attacker who makes a check *fail* (for example by hooking the platform call so it throws) gets
-"not detected". For banking-grade apps, close the security-critical checks:
+Finds a rooted Android phone or a jailbroken iPhone. Root lets other apps read your app's data.
 
 ```dart
-failModes: {CheckType.root: .closed, CheckType.hooking: .closed, CheckType.debugger: .closed},
+if (await DeviceSafety.root.isDetected()) blockPayments();
 ```
 
-Two defences apply in either mode:
+Android ✅ iOS ✅ · [example](example/lib/features/root_page.dart)
 
-- `root`, `hooking` and `debugger` each combine a Kotlin/Swift half with a C half. If the platform
-  half fails but the C half found **high** evidence, the check still completes as detected and
-  adds `integrity.platform_check_failed`.
-- On Android, a root checker that throws adds `root.checker_error:<checker>` (low) instead of
-  counting as clean. If every checker throws, the check reports an error.
+### Emulator / simulator
 
-### Caching and speed
-
-- Results are cached for 30 s by default (`cacheTtl`); pass `refresh: true` to bypass the cache.
-  `hooking` and `debugger` are never cached, because Frida or a debugger can attach at any moment.
-- Concurrent calls for the same check share one native call.
-- Every check has a timeout (5 s by default).
-- `DeviceSafety.assess()` runs many checks in **one platform round trip**, in parallel on the
-  native side and alongside the C checks.
-- Nothing blocking runs on the Flutter UI isolate or the Android main thread.
-
-## Configuration
-
-`initialize` is optional: without it, the defaults below apply. It can be called again at any
-time, which clears cached results.
+Finds an emulator or simulator. Fraud farms run many fake devices on them.
 
 ```dart
-await DeviceSafety.initialize(DeviceSafetyConfig(
-  defaultPolicy: .standard,
-  policies: {CheckType.vpn: .strict, CheckType.developerMode: .off},
-  signalOverrides: {
-    'vpn.active': .high,             // count VPNs under the standard policy
-    'emulator.generic_build': .none, // ignore this signal entirely
-  },
-  failMode: .open,
-  failModes: {CheckType.root: .closed, CheckType.hooking: .closed},
-  cacheTtl: Duration(seconds: 30),
-  timeout: Duration(seconds: 5),
-  accessibilityAllowlist: {'com.google.android.marvin.talkback'},
-  notificationListenerAllowlist: {'com.google.android.projection.gearhead'},
-  trustSystemApps: true,
-  malwarePackages: {'com.example.known.malware'},
-  iocBlocklist: {'evil.example', '*.phishing.example'},
-  expectedSigningCertificates: {'AB:CD:...'}, // tampering check (Android)
-  expectedIosTeamId: 'ABCDE12345',            // tampering check (iOS)
-  remoteAccessAllowlist: {'com.teamviewer.host.market'}, // your own support tool
-  keyboardAllowlist: {'com.corp.securekeyboard'},
-  logger: (message, {error, stackTrace}) => log(message, error: error),
-));
+if (await DeviceSafety.emulator.isDetected()) blockSignUp();
 ```
 
-| Option | Default | Purpose |
-|---|---|---|
-| `defaultPolicy` | `standard` | Policy for checks not listed in `policies` |
-| `policies` | empty | Per-check policy |
-| `signalOverrides` | empty | Change one signal's level by id; `.none` ignores it |
-| `failMode` / `failModes` | `open` | What errors and timeouts count as |
-| `cacheTtl` | 30 s | How long results are reused; `Duration.zero` disables caching |
-| `timeout` | 5 s | When a check is reported as `timedOut` |
-| `accessibilityAllowlist` | empty | Trusted accessibility services (component or package name) |
-| `notificationListenerAllowlist` | empty | Trusted notification listeners (component or package name) |
-| `trustSystemApps` | `true` | Don't report services and listeners from preinstalled system apps |
-| `malwarePackages` | empty | Packages the malware check looks for |
-| `iocBlocklist` | empty | Initial IOC domain blocklist |
-| `expectedSigningCertificates` | empty | SHA-256 of your Android signing certificates |
-| `expectedIosTeamId` | none | Your Apple team id, for re-signed iOS builds |
-| `remoteAccessAllowlist` | empty | Remote-control apps (package names) not to report, e.g. your MDM or support tool |
-| `keyboardAllowlist` | empty | Keyboards (package names) not to report; system keyboards, Gboard and SwiftKey are already trusted |
-| `logger` | none | Receives diagnostic messages |
+Android ✅ iOS ✅ · [example](example/lib/features/emulator_page.dart)
 
-Signal overrides match the part of the id before `:`, so `'malware.installed'` matches
-`malware.installed:com.example.app`.
+### Hooking (Frida, Xposed)
 
-### Allowlists and system apps
-
-The accessibility and notification-listener checks report every enabled service or listener that
-isn't allowlisted. Preinstalled system apps (and updates to them) are trusted by default, because
-nearly every phone has some; set `trustSystemApps: false` to report them too.
-
-Some legitimate apps are installed from Play rather than preinstalled, so they aren't system apps
-and need allowlisting. Common ones are Android Auto (`com.google.android.projection.gearhead`),
-Wear OS (`com.google.android.wearable.app`), Galaxy Wearable
-(`com.samsung.android.app.watchmanager`) and TalkBack (`com.google.android.marvin.talkback`). The
-package doesn't allowlist them for you: a sideloaded app could reuse a package name, so allowlist
-only what fits your users.
-
-## Detection checks
-
-| API | `CheckType` | Finds |
-|---|---|---|
-| `DeviceSafety.root` | `root` | Root (Android) or jailbreak (iOS) |
-| `DeviceSafety.emulator` | `emulator` | Emulator or simulator |
-| `DeviceSafety.hooking` | `hooking` | Frida, Xposed/LSPosed, Zygisk, Substrate, injected libraries |
-| `DeviceSafety.debugger` | `debugger` | An attached debugger |
-| `DeviceSafety.tampering` | `tampering` | A repackaged or re-signed app |
-| `DeviceSafety.posture.developerMode` | `developerMode` | Developer options or USB debugging on |
-| `DeviceSafety.posture.screenLock` | `screenLock` | No secure screen lock |
-| `DeviceSafety.posture.storeInstall` | `storeInstall` | Not installed from an official store |
-| `DeviceSafety.posture.externalStorage` | `externalStorage` | App installed on external storage |
-| `DeviceSafety.posture.unknownSources` | `unknownSources` | The app may install other apps |
-| `DeviceSafety.posture.playProtect` | `playProtect` | Google Play Protect off or unknown |
-| `DeviceSafety.accessibility` | `accessibility` | Untrusted accessibility services |
-| `DeviceSafety.notificationListeners` | `notificationListener` | Untrusted notification listeners |
-| `DeviceSafety.vpn` | `vpn` | An active VPN or HTTP proxy |
-| `DeviceSafety.screen` | `screenCapture` | Screen recording, mirroring or an external display |
-| `DeviceSafety.malware` | `malware` | Installed apps from your malware list |
-| `DeviceSafety.remoteAccess` | `remoteAccess` | Remote-control apps (AnyDesk, TeamViewer QuickSupport, RustDesk, AirDroid...), and whether one can control the screen |
-| `DeviceSafety.locationSpoofing` | `locationSpoofing` | A mock-location app selected in developer options, or a mock location fix |
-| `DeviceSafety.appCloning` | `appCloning` | The app running inside a cloner (Parallel Space, VirtualXposed), a second user or dual-app space, or a work profile |
-| `DeviceSafety.mitm` | `mitm` | User-installed CA certificates, high risk while a VPN or proxy routes traffic |
-| `DeviceSafety.keyboard` | `keyboard` | A third-party default keyboard, high risk if it also runs an accessibility service |
-
-`CheckType.overlayAttack` exists only for [threat events](#threat-stream); tapjacking is an
-event, not a state to poll.
-
-### Assessing everything at once
+Finds tools that change your app's code while it runs (Frida, Xposed, Zygisk).
 
 ```dart
-final report = await DeviceSafety.assess();            // every detection check
-final login = await DeviceSafety.assess(checks: [
-  CheckType.root, CheckType.hooking, CheckType.tampering,
-]);
-
-report.detected;  // any check detected?
-report.flags;     // plain-language title and description per detected check
-report.results;   // Map<CheckType, CheckResult>
-report.level;     // highest signal level overall
-report.failed;    // checks that errored or timed out
+if (await DeviceSafety.hooking.isDetected()) blockPayments();
 ```
 
-### Tampering (repackaged apps)
+Android ✅ iOS ✅ · [example](example/lib/features/hooking_page.dart)
 
-A repackaged app is signed with someone else's key. Configure the certificates you sign with:
+### Debugger
+
+Finds a debugger attached to your app. It is expected while you run from your IDE.
 
 ```dart
-// Find your certificate's SHA-256 once (or copy it from Play Console > App integrity):
+if (await DeviceSafety.debugger.isDetected()) blockPayments();
+```
+
+Android ✅ iOS ✅ · [example](example/lib/features/debugger_page.dart)
+
+### Tampering
+
+Finds a copy of your app that someone changed and signed again. Tell the package your real
+certificate first:
+
+```dart
+// 1. Once: print your certificate (Android) and put it in the config.
 print((await DeviceSafety.tampering.signingInfo()).certificateSha256);
 
 await DeviceSafety.initialize(DeviceSafetyConfig(
-  expectedSigningCertificates: {'AB:CD:...'}, // Play app signing key (+ upload key for sideloads)
-  expectedIosTeamId: 'ABCDE12345',
+  expectedSigningCertificates: {'ab12...'}, // Android
+  expectedIosTeamId: 'ABCDE12345',           // iOS
 ));
+
+// 2. Check.
+if (await DeviceSafety.tampering.isDetected()) blockApp();
 ```
 
-Without `expectedSigningCertificates`, the Android check reports `unsupported`.
+Android ✅ iOS ✅ · [example](example/lib/features/tampering_page.dart)
 
-### Fraud signals
+### Device posture
 
-`remoteAccess`, `locationSpoofing`, `appCloning`, `mitm` and `keyboard` target account-takeover
-and fraud-farm setups rather than a compromised OS. They are Android checks; on iOS they report
-`unsupported`, because apps can't see other apps, the trust store or the active keyboard there.
-
-- A remote-control app that is merely installed is low risk (IT staff use them). Its
-  accessibility service being enabled is high risk: that's what lets the other side tap and type.
-- `location.mock_fix` reads the last known location only if your app already holds a location
-  permission; the package never asks for one.
-- Cloned spaces from phone makers (Samsung Dual Messenger, Xiaomi Second Space, Secure Folder)
-  are low risk; running inside another app's container is high risk.
-- Pair `mitm` with [certificate pinning](#certificate-pinning), which protects your own traffic
-  whatever CA is installed.
-
-## Signal catalogue
-
-Every signal id has the form `check.signal`, optionally followed by `:detail` (a path, a
-property value, a library or a package name).
-
-| Check | High (standard and strict) | Low (strict only) |
-|---|---|---|
-| `root` (Android) | `root.su_executable`, `root.binary_executable` (`su`, `magisk`, `ksud`, `apd`, `resetprop` in `PATH`), `root.manager_file` (Magisk, KernelSU, APatch, SuperSU files), `root.manager_app` (root managers and LSPosed installed), `root.mount_marker`, `root.system_rw`, `root.system_overlay` (systemless-root mounts, read-write system partitions), `root.ro_secure_off`, `root.adb_root`, `root.selinux_permissive`, `root.selinux_disabled`, `root.lineage_root_access`, `root.debuggable_user_build`, `root.native_files`, `root.native_mounts` | `root.su_present`, `root.binary_present`, `root.busybox`, `root.cloak_app` (RootCloak, Hide My Applist, Lucky Patcher...), `root.test_keys`, `root.debug_build`, `root.recovery_boot`, `root.verifiedboot_unlocked`, `root.bootloader_unlocked`, `root.mock_location_allowed`, `root.native_su_present`, `root.checker_error` |
-| `root` (iOS) | `root.jailbreak_<check>` for each failed IOSSecuritySuite check, `root.native_jailbreak_files` (`/var/jb`, Sileo, Substrate... checked from C) | `root.jailbreak_urlSchemes` |
-| `emulator` | `emulator.hardware`, `emulator.qemu`, `emulator.qemu_prop`, `emulator.file` (QEMU pipes; Genymotion, BlueStacks, Nox, MEmu, LDPlayer files), `emulator.build_name`, `emulator.generic_fingerprint`, `emulator.generic_brand_device`, `emulator.simulator` | `emulator.generic_build`, `emulator.x86_only`, `emulator.no_motion_sensors`, `emulator.network_operator` |
-| `hooking` | `hooking.frida_maps`, `hooking.frida_threads`, `hooking.frida_fds`, `hooking.frida_port`, `hooking.frida_server`, `hooking.text_patched` (libc code differs from disk: an inline hook), `hooking.framework_mapped` (LSPosed, EdXposed, Riru, Zygisk modules, Shamiko in memory), `hooking.xposed_class`, `hooking.stack_frame`, `hooking.system_library`, `hooking.dyld_injection`, iOS `hooking.<check>` | `hooking.rwx_library` (a library mapped writable and executable outside system and app paths) |
-| `debugger` | `debugger.attached`, `debugger.traced` | `debugger.debuggable_build` |
-| `tampering` | `tampering.signature_mismatch`, `tampering.signature_unreadable` (Android), `tampering.team_id_mismatch` (iOS) | `tampering.provisioning_profile` (iOS) |
-| `developerMode` | | `developer_mode.enabled`, `developer_mode.adb_enabled` |
-| `screenLock` | `screen_lock.none` | |
-| `storeInstall` | | `store_install.unknown_installer` |
-| `externalStorage` | | `external_storage.installed` |
-| `unknownSources` | | `unknown_sources.allowed` |
-| `playProtect` | `play_protect.disabled` | `play_protect.unknown` |
-| `accessibility` | `accessibility.window_reader` (can read other apps' screens) | `accessibility.service` |
-| `notificationListener` | `notification_listener.untrusted` | |
-| `vpn` | | `vpn.active`, `vpn.http_proxy` |
-| `screenCapture` | `screen_capture.recording`, `screen_capture.mirroring` | `screen_capture.external_display` |
-| `malware` | `malware.installed` | |
-| `remoteAccess` | `remote_access.control_service:<package>` | `remote_access.app_installed:<package>` |
-| `locationSpoofing` | `location.mock_app_selected:<package>`, `location.mock_fix` | `location.mock_app_installed:<package>` |
-| `appCloning` | `clone.virtual_container:<host>` | `clone.secondary_user`, `clone.work_profile`, `clone.cloner_installed:<package>` |
-| `mitm` | `mitm.user_ca_with_proxy` | `mitm.user_ca:<certificate name>` |
-| `keyboard` | `keyboard.third_party:<package>` (with an accessibility service) | `keyboard.third_party:<package>` |
-| `root`, `hooking`, `debugger` | | `integrity.native_unavailable` (the C library didn't load), `integrity.platform_check_failed` (reported next to high C evidence), `integrity.layer_mismatch:root_files` (Kotlin and C disagree: one layer is being hooked) |
-
-Signals whose `source` is `SignalSource.ffi` come from C code (`src/dsi.c`) that runs on a
-background isolate. On arm64 and x86_64 Android it reads files with direct system calls, so
-hooking libc (what most Frida root-bypass scripts do) doesn't hide anything from it, and its
-detection strings are stored encoded.
-
-## Threat stream
+Weak phone settings. Each check is "detected" when the phone is in the risky state.
 
 ```dart
-DeviceSafety.threats.listen((ThreatEvent e) {
-  // e.type: the CheckType
-  // e.detail: 'screenshot', 'capture_started', 'recording_started', 'obscured_touch',
-  //           'vpn_connected', 'pin_mismatch:<host>', or null when a check became detected
-  // e.result: the CheckResult that triggered it, for detections
-  analytics.log('threat', e.type.name);
-});
+await DeviceSafety.posture.screenLock.isDetected();     // no screen lock
+await DeviceSafety.posture.developerMode.isDetected();  // developer options on
+await DeviceSafety.posture.storeInstall.isDetected();   // not installed from a store
+await DeviceSafety.posture.unknownSources.isDetected(); // can install unknown apps
+await DeviceSafety.posture.playProtect.isDetected();    // Play Protect off
+await DeviceSafety.posture.externalStorage.isDetected(); // app on an SD card
 ```
 
-Events fire when a check **becomes** detected, and, while the stream is listened to, for live
-events: screenshots, capture or recording starting, tapjacking touches and a VPN connecting. A
-failed [pin check](#certificate-pinning) always emits `CheckType.mitm` with
-`pin_mismatch:<host>`.
+Screen lock and store install: Android ✅ iOS ✅. The rest: Android only ·
+[example](example/lib/features/posture_page.dart)
 
-The package never terminates the app. If you decide to, call `DeviceSafety.terminateApp()`.
+### Accessibility services
 
-## Protection
-
-Action APIs throw typed exceptions: `UnsupportedPlatformException`, `PermissionMissingException`,
-`NativeFailureException`, and for the features below `BiometricException` and
-`PinningException` (all `DeviceSafetyException`).
-
-### Screenshots and screen recording
+Finds apps that can read and tap the screen. Banking malware uses them. Trust the ones your users
+need:
 
 ```dart
-await DeviceSafety.screen.blockScreenshots();              // FLAG_SECURE / iOS secure layer
-await DeviceSafety.screen.blockScreenshots(block: false);
-
-const SecureScreen(child: PaymentPage());                  // blocks only while mounted
-
-await DeviceSafety.screen.setOverlayMode(.blur);           // cover the app while captured
-await DeviceSafety.screen.clearOverlayMode();
-
-DeviceSafety.screen.onScreenshot.listen((at) => warnUser());
-DeviceSafety.screen.captureChanges.listen((captured) => hideBalance(captured));
+await DeviceSafety.initialize(DeviceSafetyConfig(
+  accessibilityAllowlist: {'com.google.android.marvin.talkback'},
+));
+if (await DeviceSafety.accessibility.isDetected()) warnUser();
 ```
+
+Android only · [example](example/lib/features/accessibility_page.dart)
+
+### Notification listeners
+
+Finds apps that can read every notification, including SMS codes.
+
+```dart
+if (await DeviceSafety.notificationListeners.isDetected()) warnUser();
+```
+
+Trusted apps go in `notificationListenerAllowlist`. Android only ·
+[example](example/lib/features/notification_listeners_page.dart)
+
+### VPN / proxy
+
+Finds an active VPN or HTTP proxy. It's a weak sign by default, because many honest users run a
+VPN.
+
+```dart
+final result = await DeviceSafety.vpn.check();
+if (result.signals.isNotEmpty) showVpnNotice();
+```
+
+Android ✅ iOS ✅ · [example](example/lib/features/vpn_page.dart)
+
+### Malware apps
+
+Finds installed apps from your own list of known malware.
+
+```dart
+await DeviceSafety.initialize(DeviceSafetyConfig(
+  malwarePackages: {'com.example.known.malware'},
+));
+if (await DeviceSafety.malware.isDetected()) blockPayments();
+```
+
+Each package must also be listed under `<queries>` in your manifest
+([Android setup](docs/advanced.md#android-setup)). Android only ·
+[example](example/lib/features/malware_page.dart)
+
+---
+
+## Fraud signals
+
+These checks find scam setups rather than a hacked phone. They are Android only. On iOS they
+report `unsupported`.
+
+### Remote access apps
+
+Finds remote-control apps (AnyDesk, TeamViewer QuickSupport...) used in fake support-call scams.
+
+```dart
+if (await DeviceSafety.remoteAccess.isDetected()) warnUser();
+```
+
+[example](example/lib/features/remote_access_page.dart)
+
+### GPS spoofing
+
+Finds a fake-location app or a fake location fix.
+
+```dart
+if (await DeviceSafety.locationSpoofing.isDetected()) rejectLocation();
+```
+
+[example](example/lib/features/gps_spoofing_page.dart)
+
+### App cloning
+
+Finds your app running in a cloner (Parallel Space, dual apps) or another user profile.
+
+```dart
+if (await DeviceSafety.appCloning.isDetected()) warnUser();
+```
+
+[example](example/lib/features/app_cloning_page.dart)
+
+### HTTPS interception
+
+Finds user-installed certificates that let a proxy read HTTPS traffic. Pair it with
+[certificate pinning](#certificate-pinning).
+
+```dart
+if (await DeviceSafety.mitm.isDetected()) warnUser();
+```
+
+[example](example/lib/features/mitm_page.dart)
+
+### Third-party keyboard
+
+Finds a third-party keyboard that could log typing. Gboard, SwiftKey and system keyboards are
+trusted.
+
+```dart
+if (await DeviceSafety.keyboard.isDetected()) useSecureField();
+```
+
+[example](example/lib/features/keyboard_page.dart)
+
+---
+
+## Protect your screens
+
+Actions throw a `DeviceSafetyException` when they can't run (for example
+`UnsupportedPlatformException`).
+
+### Screenshots & recording
+
+Stop screenshots and screen recording, or blur the app while it is recorded.
+
+```dart
+await DeviceSafety.screen.blockScreenshots();     // whole app
+const SecureScreen(child: PaymentPage());          // only while this page is open
+await DeviceSafety.screen.setOverlayMode(.blur);  // blur while recorded
+DeviceSafety.screen.onScreenshot.listen((_) => warnUser());
+```
+
+Android ✅ iOS ✅ · [example](example/lib/features/screenshot_page.dart)
 
 ### App switcher
 
-```dart
-await DeviceSafety.appSwitcher.setOverlay(argbColor: 0xFF000000); // cover in recents
-await DeviceSafety.appSwitcher.hideFromRecents();                  // Android only
-```
-
-### Clipboard
+Hide your app's content in the recent-apps screen.
 
 ```dart
-await DeviceSafety.clipboard.copySecure('123456', clearAfter: Duration(seconds: 30));
+await DeviceSafety.appSwitcher.setOverlay(argbColor: 0xFF000000);
+await DeviceSafety.appSwitcher.hideFromRecents(); // Android only
 ```
 
-The item is marked sensitive (hidden from the Android 13+ clipboard preview, kept off Universal
-Clipboard on iOS) and cleared after `clearAfter`.
+Android ✅ iOS ✅ · [example](example/lib/features/app_switcher_page.dart)
 
-### Tapjacking (Android)
+### Secure clipboard
+
+Copy a code that is hidden from clipboard previews and cleared after a delay.
+
+```dart
+await DeviceSafety.clipboard.copySecure('123456', clearAfter: const Duration(seconds: 30));
+```
+
+Android ✅ iOS ✅ · [example](example/lib/features/clipboard_page.dart)
+
+### Tapjacking
+
+Ignore taps while another app draws over yours to trick the user.
 
 ```dart
 await DeviceSafety.overlayAttack.blockTouchesWhenObscured();
-DeviceSafety.overlayAttack.obscuredTouches.listen((at) => warnUser());
 ```
 
-### Idle session timeout
+Android only · [example](example/lib/features/tapjacking_page.dart)
+
+### Idle timeout
+
+Log out when nobody touches the app for a while.
 
 ```dart
 IdleTimeoutGuard(
-  timeout: Duration(minutes: 5),
-  onTimeout: () => auth.lock(),
+  timeout: const Duration(minutes: 5),
+  onTimeout: () => logOut(),
   child: const HomePage(),
 );
 ```
 
+Android ✅ iOS ✅ · [example](example/lib/features/idle_timeout_page.dart)
+
 ### Secure text fields
 
-Keyboards remember words, suggest them back and sync them; the clipboard can be read by other
-apps; a field on screen can be recorded. `SecureInputConfig` turns all of that off for PINs,
-passwords and one-time codes: no autocorrect, suggestions, IME personalized learning, autofill or
-selection and clipboard menu, and screenshots blocked while the field has focus.
+For PINs and passwords: no keyboard suggestions or learning, no autofill or copy, and no
+screenshots while the field is focused.
 
 ```dart
-const pin = SecureInputConfig.pin();      // also .password() and .otp()
+const pin = SecureInputConfig.pin(); // or .password(), .otp()
 
-SecureFieldGuard(                         // blocks screenshots while focused
+SecureFieldGuard(
   config: pin,
-  child: TextField(                       // or CupertinoTextField
+  child: TextField(
     obscureText: pin.obscureText,
     keyboardType: pin.keyboardType,
     autocorrect: pin.autocorrect,
     enableSuggestions: pin.enableSuggestions,
     enableIMEPersonalizedLearning: pin.enableIMEPersonalizedLearning,
     enableInteractiveSelection: pin.enableInteractiveSelection,
-    smartDashesType: pin.smartDashesType,
-    smartQuotesType: pin.smartQuotesType,
     autofillHints: pin.autofillHints,
   ),
 );
-
-// Or the undecorated widget that applies everything:
-SecureEditableText(controller: c, config: pin, style: style, cursorColor: color);
 ```
 
-The screenshot block is shared with `SecureScreen`, so unfocusing a field never unblocks a
-screen that is protected anyway.
-
-On iOS you can also refuse third-party keyboards in your app. Flutter doesn't forward this
-callback to plugins, so add it to your `AppDelegate`:
+On iOS you can also block third-party keyboards in your app. Add this to your `AppDelegate`:
 
 ```swift
 import device_safety_info
@@ -459,330 +384,217 @@ override func application(
 ```
 
 ```dart
-await DeviceSafety.keyboard.blockCustomKeyboards(true); // stored; applies to the next keyboard
+await DeviceSafety.keyboard.blockCustomKeyboards(true);
 ```
+
+Android ✅ iOS ✅ · [example](example/lib/features/secure_text_field_page.dart)
+
+---
+
+## Prove device & user
 
 ### Certificate pinning
 
-`DeviceSafety.pinning` creates a `dart:io` `HttpClient` that checks the server's public key
-during the TLS handshake, before any request bytes are sent. A proxy with a trusted CA can then
-no longer read your API traffic.
+Only talk to your real server, even if a proxy certificate is installed on the phone.
 
 ```dart
-final pins = PinningConfig({
-  // base64 SHA-256 of the leaf certificate's SubjectPublicKeyInfo: current key + backup key
-  'api.example.com': {'fk9XHhHbogE9XGaAfesn/HnyYWU7bGalXhRCxlOPYMI=', 'BACKUP...='},
-});
+// Once: get your server's pin.
+print(await DeviceSafety.pinning.spkiPinOf(Uri.https('api.example.com')));
 
-final http = IOClient(DeviceSafety.pinning.createHttpClient(pins));   // package:http
-dio.httpClientAdapter = IOHttpClientAdapter(                           // dio
-  createHttpClient: () => DeviceSafety.pinning.createHttpClient(pins),
+// Then make requests with a pinned client (current pin + backup pin).
+final client = DeviceSafety.pinning.createHttpClient(PinningConfig({
+  'api.example.com': {'<pin>', '<backup pin>'},
+}));
+```
+
+It works with `package:http` and dio too ([details](docs/advanced.md#certificate-pinning)).
+Android ✅ iOS ✅ · [example](example/lib/features/pinning_page.dart)
+
+### Device-bound key
+
+A signing key that never leaves the phone's secure chip, so your server knows a request came
+from this phone.
+
+```dart
+// Once: create the key and send key.publicKey to your server.
+final key = await DeviceSafety.deviceKey.create('session', challenge: serverChallenge);
+
+// Each request: sign it. Your server verifies the signature.
+final signature = await DeviceSafety.deviceKey.sign('session', requestBytes);
+```
+
+Android ✅ iOS ✅ · [example](example/lib/features/device_key_page.dart)
+
+### Biometric approval
+
+Approve an action with a fingerprint or face. The result is a signature your server verifies, so
+it can't be faked by hacking the app.
+
+```dart
+// Once: create the key and send key.publicKey to your server.
+final key = await DeviceSafety.biometric.enroll('payments');
+
+// For each payment:
+final signature = await DeviceSafety.biometric.approve(
+  'payments',
+  utf8.encode('pay 500 to Alice'),
+  title: 'Confirm payment',
+  reason: 'Pay 500 to Alice',
 );
 ```
 
-- A mismatch throws `PinningException` and emits a `pin_mismatch:<host>` threat event.
-- Plain HTTP to a pinned host is refused. Hosts that aren't listed get normal TLS validation.
-- Each host needs at least two pins, so you can change keys without locking users out. Renew
-  certificates with the same key (for example certbot `--reuse-key`), or ship the new pin in an
-  app update before you switch.
-- Only the leaf key can be pinned (Dart exposes only the peer certificate), and the client
-  never uses a proxy.
+iOS needs `NSFaceIDUsageDescription` in `Info.plist`. Android 10+ ✅ iOS ✅ ·
+[example](example/lib/features/biometric_page.dart)
 
-Get a server's pin:
+### App integrity
 
-```sh
-openssl s_client -connect api.example.com:443 </dev/null 2>/dev/null \
-  | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der \
-  | openssl dgst -sha256 -binary | base64
-```
-
-or in a debug build, `await DeviceSafety.pinning.spkiPinOf(Uri.https('api.example.com'))`.
-
-## Strong authentication
-
-### Device-bound keys
-
-A session token can be copied to another device; a key in secure hardware can't.
-`DeviceSafety.deviceKey` creates an EC P-256 key in StrongBox or the TEE (Android) or the Secure
-Enclave (iOS), and signs with it.
+Ask Google or Apple to vouch for your app and device. **Your server must verify the token.**
+The app can't check it itself.
 
 ```dart
-// At login: create the key and register it with your server.
-final key = await DeviceSafety.deviceKey.create('session', challenge: serverChallenge);
-key.publicKey;          // DER SubjectPublicKeyInfo
-key.securityLevel;      // strongBox, tee, secureEnclave or software
-key.attestationChain;   // Android: X.509 chain proving the key lives in secure hardware
-
-// For each sensitive request: sign a server nonce plus the request.
-final signature = await DeviceSafety.deviceKey.sign('session', utf8.encode(nonce + body));
-```
-
-Signatures are DER-encoded ECDSA with SHA-256 (`SHA256withECDSA` in Java/Kotlin,
-`ECDsa.VerifyData(..., DSASignatureFormat.Rfc3279DerSequence)` in .NET). On Android, verify the
-attestation chain on your server up to Google's root and read the key description extension: it
-states the security level, the challenge, and the device's verified-boot state.
-
-### Biometric-approved actions
-
-A plain "authenticate" call returns `true`, which a hooking tool can fake. Here the approval is a
-**signature** made by a key the OS releases only after a strong fingerprint or face match, which
-your server verifies.
-
-```dart
-final key = await DeviceSafety.biometric.enroll('payments');   // register key.publicKey
-
-try {
-  final signature = await DeviceSafety.biometric.approve(
-    'payments',
-    utf8.encode('$serverNonce|$paymentJson'),
-    title: 'Confirm payment',
-    reason: 'Pay 500 to Alice',
-  );
-  await api.confirmPayment(paymentJson, signature);
-} on BiometricException catch (e) {
-  switch (e.code) {
-    case .enrollmentChanged: // a fingerprint or face was added: re-verify, then enroll again
-    case .cancelled:
-    case .lockedOut:
-    case .notEnrolled:
-    case .unavailable:
-    case .keyMissing:
-    case .failed:
-  }
-}
-```
-
-Adding a fingerprint or face permanently invalidates the key, so someone who adds their own
-finger to an unlocked phone can't approve anything. `keyState('payments')` reports `valid`,
-`invalidated` or `missing`. Android 10+ (strong biometrics), and iOS with Face ID or Touch ID.
-
-## Attestation
-
-Tokens prove nothing on the device. **Always verify them on your server.**
-[`example/server_dotnet`](example/server_dotnet) is a reference ASP.NET Core verifier.
-
-```dart
-// Android: Play Integrity (your app adds com.google.android.play:integrity)
+// Android: Play Integrity
 await DeviceSafety.integrity.preparePlayIntegrity(cloudProjectNumber: 123456789012);
-final token = await DeviceSafety.integrity.requestPlayIntegrityToken(requestHash: hash);
+final token = await DeviceSafety.integrity.requestPlayIntegrityToken(requestHash: challenge);
 
-// iOS: App Attest (needs the appattest-environment entitlement)
-final keyId = await DeviceSafety.integrity.generateAppAttestKey();
-final attestation = await DeviceSafety.integrity.attestAppAttestKey(
-  keyId: keyId, challenge: serverChallenge);
-final assertion = await DeviceSafety.integrity.generateAppAttestAssertion(
-  keyId: keyId, clientData: requestJson);
-
-// iOS: DeviceCheck
-final dcToken = await DeviceSafety.integrity.generateDeviceCheckToken();
+// iOS: DeviceCheck (App Attest is also available)
+final token = await DeviceSafety.integrity.generateDeviceCheckToken();
 ```
 
-Failures throw `AttestationException` with an `AttestationErrorCode` (`unsupported`,
-`notPrepared`, `providerInvalid`, `playServicesUnavailable`, `network`, `tooManyRequests`,
-`invalidKey`, `invalidInput`, `serverUnavailable`, `unknown`). After `providerInvalid`, call
-`preparePlayIntegrity` again; after `invalidKey`, generate and attest a new key.
+A sample server is in [`example/server_dotnet`](example/server_dotnet). See also the
+[full guide](docs/advanced.md#attestation). Android ✅ iOS ✅ ·
+[example](example/lib/features/app_integrity_page.dart)
 
-### Binding a token to a request
+---
 
-1. Your server issues a random, single-use challenge for the action (login, payment).
-2. The app computes `requestHash = base64url(SHA-256(challenge + canonical request body))`,
-   requests the token with it, and sends the token with the request.
-3. The server decodes the token and checks the request hash, package name, signing certificate
-   and timestamp before applying its verdict policy.
+## Live events & tools
 
-A typical policy requires `MEETS_DEVICE_INTEGRITY` for normal use and `MEETS_STRONG_INTEGRITY`
-for high-risk actions. Root-hiding modules can spoof the former but not the latter, which is
-backed by hardware key attestation. Also consider rejecting an `appRecognitionVerdict` other
-than `PLAY_RECOGNIZED`, and the optional environment verdicts (Play Protect, app access risk,
-recent device activity). The example server implements all of these.
+### Live threats
 
-Play Integrity needs a network connection, so decide what an offline client may do; the
-on-device checks still apply there.
-
-## Other tools
+One stream for what happens while the app runs: screenshots, screen recording, a VPN connecting,
+covered taps, and checks that become detected.
 
 ```dart
-// IOC domain blocklist: exact hosts and *.suffix wildcards
-if (DeviceSafety.ioc.isBlocked(uri.host)) return;
-await DeviceSafety.ioc.loadRemoteBlocklist(Uri.parse('https://example.com/ioc.txt'));
+DeviceSafety.threats.listen((event) {
+  print('${event.type.name}: ${event.detail}');
+});
+```
 
-// Calls: pause OTP entry or payments while a (possibly scam) call is live
-if (await DeviceSafety.calls.isCallActive()) pauseSensitiveFlow();
+Android ✅ iOS ✅ · [example](example/lib/features/threats_page.dart)
+
+### Blocked domains
+
+Refuse to open known phishing or malware domains.
+
+```dart
+await DeviceSafety.initialize(DeviceSafetyConfig(
+  iocBlocklist: {'evil.example', '*.phishing.example'},
+));
+if (DeviceSafety.ioc.isBlocked(uri.host)) return; // don't open it
+```
+
+Android ✅ iOS ✅ · [example](example/lib/features/ioc_domains_page.dart)
+
+### Phone calls
+
+Many scams happen while the victim is on a call. Warn the user during a call.
+
+```dart
+if (await DeviceSafety.calls.isCallActive()) showWarning('Never share codes with callers.');
 DeviceSafety.calls.changes.listen((e) => e.started ? pause() : resume());
+```
 
-// Android call screening role
-await DeviceSafety.callScreening.requestRole();
+Android ✅ iOS ✅ · [example](example/lib/features/calls_page.dart)
 
-// App info and store update check
-final info = await DeviceSafety.versionCheck.appInfo();
+### Version check
+
+Compare your app's version with the store and ask users on old versions to update.
+
+```dart
 final status = await DeviceSafety.versionCheck.status(minAppVersion: '2.0.0');
 if (status?.urgency == UpdateUrgency.required) forceUpdate(status!.storeLink);
 ```
 
-The store lookups use public endpoints that Apple and Google don't document, so `status()`
-returns `null` when they can't be reached or parsed. A `null` result never proves that no update
-exists.
+`status` is `null` when the store can't be reached. Android ✅ iOS ✅ ·
+[example](example/lib/features/version_check_page.dart)
 
-## Limits of on-device checks
+---
 
-Every on-device check, this package's included, can eventually be bypassed by someone who
-controls the device:
+## Settings: how strict checks are
 
-- Magisk's DenyList and Shamiko unmount root from the processes they hide it from.
-- Magisk can reinstall itself under a random package name.
-- A determined attacker can patch this package's code inside your app.
+Each check finds **high** (strong) and **low** (weak) signs. The policy decides what counts:
 
-A clean result is not proof of a clean device. Treat the on-device checks as fast, offline
-signals, and a server-verified Play Integrity or App Attest verdict as the authority for
-anything valuable.
+| Policy | Detected when |
+|---|---|
+| `standard` (default) | a high sign is found |
+| `strict` | any sign is found |
+| `off` | never (the check doesn't run) |
 
-## Android setup
+```dart
+await DeviceSafety.initialize(DeviceSafetyConfig(
+  policies: {CheckType.vpn: .strict, CheckType.developerMode: .off},
+  failModes: {CheckType.root: .closed}, // if the root check errors, treat it as detected
+));
+```
 
-The plugin declares `ACCESS_NETWORK_STATE`, `DETECT_SCREEN_CAPTURE`, `DETECT_SCREEN_RECORDING`
-and `USE_BIOMETRIC`, all normal permissions granted at install, and `<queries>` entries for the
-root, remote-access, mock-location and cloner apps it looks for. Add these to your app's manifest
-only for the features you use:
+For every option (allowlists, cache, timeouts, signal overrides), see the
+[advanced guide](docs/advanced.md#configuration). [Example](example/lib/features/settings_page.dart).
 
-- **SIM call detection** (`DeviceSafety.calls`): `READ_PHONE_STATE`, a dangerous permission your
-  app must also request at runtime. Without it, VoIP and audio-based detection still work.
-  ```xml
-  <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-  ```
-- **Screenshot events on Android 10 to 13** (Android 14+ needs nothing):
-  ```xml
-  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-  ```
-- **Malware package detection**: declare each package you check (Android 11+ package
-  visibility):
-  ```xml
-  <queries>
-    <package android:name="com.example.known.malware" />
-  </queries>
-  ```
-- **Unknown sources check**: `REQUEST_INSTALL_PACKAGES`. Google Play asks you to justify it.
-  Without it the check reports nothing on Android 8+.
-- **Version check, IOC feeds and pinned requests**: `INTERNET`.
-- **Mock location fix** (`location.mock_fix`): only checked when your app already holds
-  `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION`.
-- **Play Integrity**: add `implementation("com.google.android.play:integrity:1.6.0")` to your app.
-  The plugin compiles against it but doesn't ship it.
+## Platform setup
 
-## iOS setup
+Most features need no setup. Some need a line in your app:
 
-- **Swift Package Manager** is required.
-- **App Attest** needs the `com.apple.developer.devicecheck.appattest-environment` entitlement.
-- **Biometric approval** needs `NSFaceIDUsageDescription` in `Info.plist`:
-  ```xml
-  <key>NSFaceIDUsageDescription</key>
-  <string>Face ID confirms payments.</string>
-  ```
-- **Blocking third-party keyboards** needs the `AppDelegate` override shown in
-  [Secure text fields](#secure-text-fields).
-- **Jailbreak URL schemes**: iOS only answers `canOpenURL` for schemes your app declares, so add
-  them to `Info.plist` or the URL-scheme test (`root.jailbreak_urlSchemes`) never fires:
-  ```xml
-  <key>LSApplicationQueriesSchemes</key>
-  <array>
-    <string>sileo</string>
-    <string>zbra</string>
-    <string>filza</string>
-    <string>undecimus</string>
-  </array>
-  ```
-- IOSSecuritySuite runs its jailbreak checks in one call that includes `canOpenURL`, so the `root`
-  check briefly runs on the main thread on iOS. The C jailbreak-file check runs on a background
-  isolate.
+| Feature | What to add |
+|---|---|
+| Malware apps (Android) | each package under `<queries>` in `AndroidManifest.xml` |
+| SIM call detection (Android) | `READ_PHONE_STATE` permission (request it at runtime) |
+| Play Integrity (Android) | `implementation("com.google.android.play:integrity:1.6.0")` |
+| Biometric approval (iOS) | `NSFaceIDUsageDescription` in `Info.plist` |
+| App Attest (iOS) | the `appattest-environment` entitlement |
+| Blocking keyboards (iOS) | the `AppDelegate` override in [Secure text fields](#secure-text-fields) |
+
+The full list is in the advanced guide: [Android setup](docs/advanced.md#android-setup) and
+[iOS setup](docs/advanced.md#ios-setup).
 
 ## Testing your app
 
-`package:device_safety_info/testing.dart` exports the platform interfaces, so your tests can fake
-the native side:
+Fake the platform side in your widget and unit tests:
 
 ```dart
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:device_safety_info/testing.dart';
-import 'package:flutter_test/flutter_test.dart';
 
-class RootedDevice extends Fake implements RootHostApi {
-  @override
-  Future<CheckReportMsg> rootCheck() async => CheckReportMsg(
-    signals: [SignalMsg(id: 'root.su_executable', level: SignalLevelMsg.high)],
-    supported: true,
-  );
-}
-
-void main() {
-  setUp(() => DeviceSafety.forTesting(
-    platform: DeviceSafetyPlatform(root: RootedDevice(), ffi: const FakeNativeChecks()),
-  ));
-  tearDown(DeviceSafety.resetForTesting);
-
-  test('blocks payments on a rooted device', () async {
-    expect(await DeviceSafety.root.isDetected(), isTrue);
-  });
-}
+setUp(() => DeviceSafety.forTesting(
+  platform: DeviceSafetyPlatform(ffi: const FakeNativeChecks()),
+));
+tearDown(DeviceSafety.resetForTesting);
 ```
+
+To fake a rooted device, see [Testing your app](docs/advanced.md#testing-your-app).
 
 ## Example app
 
-[`example/`](example) shows every API on nine pages: Overview (`assess()`), All checks, Policy
-(change the policy and fail mode per check and see the effect immediately), Fraud signals, Strong
-auth (device key, biometric approval, a secure PIN field and a pinned request), Protection, Live
-events, Tools and App integrity.
-
-It renders in **Material or Cupertino** and starts in your platform's style. Tap the button on
-the home page to switch live. Every page is written once against a small adaptive widget layer in
-`example/lib/src/ui/adaptive.dart`, which is a reasonable starting point if your app supports
-both styles.
-
-To run the App integrity round trip, start the [example server](example/server_dotnet) and pass
-its address:
+[`example/`](example) has one small page per feature. Each page starts with the code to copy.
 
 ```sh
 cd example
-flutter run --dart-define=INTEGRITY_SERVER_URL=http://192.168.1.10:5080 \
-            --dart-define=PLAY_CLOUD_PROJECT_NUMBER=123456789012
+flutter run
 ```
 
-## Platform support
+## Good to know
 
-| Feature | Android | iOS |
-|---|---|---|
-| Root / jailbreak, emulator, hooking, debugger | ✅ | ✅ |
-| Tampering (re-signed app) | ✅ (needs `expectedSigningCertificates`) | ✅ |
-| Screen lock, store install | ✅ | ✅ |
-| Developer mode, external storage, unknown sources, Play Protect | ✅ | unsupported |
-| Accessibility and notification-listener abuse, malware packages | ✅ | unsupported |
-| Remote access, GPS spoofing, app cloning, MITM certificates, keyboard check | ✅ | unsupported |
-| Blocking third-party keyboards | — | ✅ (`AppDelegate` line) |
-| Device-bound keys | ✅ (StrongBox / TEE, attestation) | ✅ (Secure Enclave) |
-| Biometric-approved actions | Android 10+ | ✅ |
-| Secure text fields, certificate pinning | ✅ | ✅ |
-| VPN / proxy, screen capture | ✅ | ✅ |
-| Recording state | Android 15+ | ✅ (same as capture) |
-| Screenshot blocking, capture overlay, app-switcher overlay | ✅ | ✅ |
-| Hide from recents, tapjacking protection, call screening role | ✅ | unsupported |
-| Secure clipboard, call activity, version check, IOC blocklist | ✅ | ✅ |
-| Play Integrity | ✅ | — |
-| App Attest, DeviceCheck | — | ✅ |
+- On-device checks can be bypassed by a skilled attacker who controls the phone. For anything
+  valuable, also verify [App integrity](#app-integrity) on your server
+  ([why](docs/advanced.md#limits-of-on-device-checks)).
+- Results are cached for 30 seconds. Pass `refresh: true` to run a check again.
+- Checks that don't exist on a platform return `unsupported` instead of a wrong answer.
 
-Unsupported checks return `CheckStatus.unsupported`; unsupported actions throw
-`UnsupportedPlatformException`.
+## Learn more
 
-## Performance
-
-Measured in profile mode on a Galaxy S21 FE (Android 16):
-
-| Scenario | Time |
-|---|---|
-| Assessment of 6 checks, first call | about 108 ms |
-| The same, served from the cache | about 0.01 ms |
-| All 15 detection checks, uncached, one round trip (before the five fraud checks were added) | about 45 ms |
-| One uncached check | about 5 ms |
-
-Method and full numbers, including the 1.x comparison:
-[`example/integration_test/PERF_BASELINE.md`](example/integration_test/PERF_BASELINE.md).
+- [Advanced guide](docs/advanced.md): how checks work, every option, every signal, platform
+  setup, limits, performance
+- [MIGRATION.md](MIGRATION.md): upgrading from 1.x
+- [CHANGELOG.md](CHANGELOG.md)
+- [Device test matrix](docs/testing.md)
 
 ## Contributing
 

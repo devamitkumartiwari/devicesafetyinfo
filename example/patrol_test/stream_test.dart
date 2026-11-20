@@ -8,7 +8,7 @@ import 'package:patrol/patrol.dart';
 
 void main() {
   patrolTest('capture stream sends the current state first', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     final first = await DeviceSafety.screen.captureChanges.first.timeout(
       const Duration(seconds: 5),
     );
@@ -16,7 +16,7 @@ void main() {
   });
 
   patrolTest('streams can be listened to and cancelled', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     void ignore(Object _) {}
     final subs = <StreamSubscription<Object?>>[
       DeviceSafety.screen.onScreenshot.listen(null, onError: ignore),
@@ -34,7 +34,7 @@ void main() {
   });
 
   patrolTest('clipboard change reaches the stream', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     final changed = DeviceSafety.clipboard.changes.first.timeout(
       const Duration(seconds: 5),
     );
@@ -43,9 +43,9 @@ void main() {
     await DeviceSafety.clipboard.clear();
   });
 
-  patrolTest('the Live events page renders', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
-    await $(#menu_Live_events).tap();
+  patrolTest('the Live threats page renders', ($) async {
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    await $(#menu_threats).scrollTo().tap();
     await $.pumpAndSettle();
     expect($('Screen captured'), findsOneWidget);
   });

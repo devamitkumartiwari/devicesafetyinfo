@@ -175,18 +175,17 @@ tokens; your server verifies them.
 * Android system properties no longer spawn a `getprop` process when a property is simply unset,
   and a `getprop` that times out is no longer read.
 
-### Example app
+### Example app and docs
 
-* Rebuilt on `DeviceSafety.*` with nine pages: Overview (`assess()`), All checks, Policy (off /
-  standard / strict and fail mode per check, with live results), Fraud signals, Strong auth
-  (device key, biometric approval, a secure PIN field and pinned requests), Protection, Live
-  events, Tools and App integrity.
-* **Material or Cupertino, switchable live.** It starts in the platform's style (Cupertino on
-  iOS, Material on Android), and a button on the home page switches between them. Every page is
-  written once against a small adaptive widget layer (`example/lib/src/ui/adaptive.dart`).
-* Action results appear as a floating message, so controls never move after an action.
+* **One small page per feature** (31 pages in `example/lib/features/`), grouped like the
+  README: device checks, fraud signals, screen protection, proving the device and user, live
+  events and tools, and policy settings. Each page shows what the feature does, the code to copy,
+  and a live demo. The app is plain Material.
 * App integrity runs the full server round trip with
   `--dart-define=INTEGRITY_SERVER_URL=...` (plus `PLAY_CLOUD_PROJECT_NUMBER` on Android).
+* **Simpler README:** install, a three-step quick start, then one short example per feature.
+  Reference material (every option, every signal, fail modes, platform setup, limits,
+  performance) moved to [docs/advanced.md](docs/advanced.md).
 
 ### Internals
 

@@ -29,32 +29,32 @@ void main() {
 
   for (final MapEntry(:key, :value) in checks.entries) {
     patrolTest('$key answers without error', ($) async {
-      await $.pumpWidgetAndSettle(const DemoApp());
+      await $.pumpWidgetAndSettle(const ExampleApp());
       final r = await value().check(refresh: true);
       expect(_ok, contains(r.status), reason: '$r');
     });
   }
 
   patrolTest('clean device: not rooted or hooked', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     expect(await DeviceSafety.root.isDetected(), isFalse);
     expect(await DeviceSafety.hooking.isDetected(), isFalse);
   });
 
-  patrolTest('assess() answers every check and the Overview page shows it', (
+  patrolTest('assess() answers every check and the Quick check page shows it', (
     $,
   ) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     final a = await DeviceSafety.assess(refresh: true);
     expect(a.failed, isEmpty);
-    await $(#menu_Overview).tap();
+    await $(#menu_quick_check).tap();
     await $.pumpAndSettle();
     expect($(#assessment_summary), findsOneWidget);
   });
 
   patrolTest('strict policy is applied from the Policy page', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
-    await $(#menu_Policy).tap();
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    await $(#menu_settings).scrollTo().tap();
     await $.pumpAndSettle();
     expect($(#policy_root), findsOneWidget);
     await DeviceSafety.initialize(

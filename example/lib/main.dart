@@ -1,56 +1,68 @@
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'src/app_state.dart';
-import 'src/pages/home_page.dart';
+import 'home_page.dart';
+
+/// Optional: your signing certificate, to try the tampering check.
+/// `flutter run --dart-define=EXPECTED_SIGNING_CERT=<sha-256>`
+const _expectedCert = String.fromEnvironment('EXPECTED_SIGNING_CERT');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DeviceSafety.initialize(AppState.instance.config);
-  runApp(const DemoApp());
+
+  // Optional. Without it, every check uses safe defaults.
+  await DeviceSafety.initialize(
+    DeviceSafetyConfig(
+      // Trusted apps that should never be reported:
+      accessibilityAllowlist: {'com.google.android.marvin.talkback'},
+      // Your list of known malware and bad domains:
+      malwarePackages: {'com.example.fakemalware'},
+      iocBlocklist: {'malicious.example', '*.phishing.example'},
+      // Your real signing certificate, for the tampering check:
+      expectedSigningCertificates: {
+        if (_expectedCert.isNotEmpty) _expectedCert,
+      },
+    ),
+  );
+
+  runApp(const ExampleApp());
 }
 
-/// Renders the demo as a MaterialApp or a CupertinoApp, following AppState.uiStyle. Switching
-/// rebuilds the app from the home page.
-class DemoApp extends StatelessWidget {
-  const DemoApp({super.key});
-
-  static const _seed = Color(0xFF3F51B5); // indigo
-
-  // Locks the session after 30 s without interaction (counted on the Live events page).
-  static Widget _idleGuard(BuildContext context, Widget? child) =>
-      IdleTimeoutGuard(
-        timeout: const Duration(seconds: 30),
-        onTimeout: () => AppState.instance.idleTimeouts.value++,
-        child: child ?? const SizedBox.shrink(),
-      );
+class ExampleApp extends StatelessWidget {
+  const ExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<UiStyle>(
-      valueListenable: AppState.instance.uiStyle,
-      builder: (context, style, _) => switch (style) {
-        UiStyle.cupertino => const CupertinoApp(
-          key: ValueKey(UiStyle.cupertino),
-          title: 'Device Safety Info',
-          debugShowCheckedModeBanner: false,
-          theme: CupertinoThemeData(primaryColor: _seed),
-          builder: _idleGuard,
-          home: HomePage(),
-        ),
-        UiStyle.material => MaterialApp(
-          key: const ValueKey(UiStyle.material),
-          title: 'Device Safety Info',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(seedColor: _seed),
-          ),
-          builder: _idleGuard,
-          home: const HomePage(),
-        ),
-      },
+    return MaterialApp(
+      title: 'Device Safety Info',
+      debugShowCheckedModeBanner: false,
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
+      home: const HomePage(),
     );
   }
+}
+
+/// Teal from the app icon. Problems and errors use the scheme's red `error` color.
+const _iconTeal = Color(0xFF00796B);
+
+ThemeData _theme(Brightness brightness) {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: _iconTeal,
+    brightness: brightness,
+    // Keep teal vivid like the icon instead of Material's muted tone.
+    dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+  );
+  return ThemeData(
+    colorScheme: scheme,
+    // Teal app bar, like the icon background.
+    appBarTheme: AppBarTheme(
+      backgroundColor: brightness == Brightness.light
+          ? _iconTeal
+          : scheme.surfaceContainer,
+      foregroundColor: brightness == Brightness.light
+          ? Colors.white
+          : scheme.onSurface,
+    ),
+  );
 }

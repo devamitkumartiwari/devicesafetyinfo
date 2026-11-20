@@ -7,7 +7,7 @@
          here. Apps that don't use the feature can simply omit this line. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
-        android:label="device_safety_info_example"
+        android:label="Device Safety Info"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,17 +1,16 @@
 // Patrol tests for the action APIs against the real platform.
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:device_safety_info_example/main.dart';
-import 'package:device_safety_info_example/src/app_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
 void main() {
-  patrolTest('block and unblock screenshots from the Protection page', (
+  patrolTest('block and unblock screenshots from the Screenshots page', (
     $,
   ) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
-    await $(#menu_Protection).tap();
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    await $(#menu_screenshot).scrollTo().tap();
     await $.pumpAndSettle();
     await $(#block_screenshots).tap();
     await $.pumpAndSettle();
@@ -22,7 +21,7 @@ void main() {
   });
 
   patrolTest('capture overlay can be set and cleared', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     await DeviceSafety.screen.setOverlayMode(
       ScreenshotOverlayMode.color,
       argbColor: 0xFF000000,
@@ -31,25 +30,25 @@ void main() {
   });
 
   patrolTest('SecureScreen blocks while mounted', ($) async {
-    await $.pumpWidgetAndSettle(const SecureScreen(child: DemoApp()));
+    await $.pumpWidgetAndSettle(const SecureScreen(child: ExampleApp()));
     expect(await DeviceSafety.screen.isScreenshotBlocked(), isTrue);
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     await $.pump(const Duration(milliseconds: 200));
     expect(await DeviceSafety.screen.isScreenshotBlocked(), isFalse);
   });
 
   patrolTest('secure copy shows a confirmation', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
-    await $(#menu_Protection).tap();
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    await $(#menu_clipboard).scrollTo().tap();
     await $.pumpAndSettle();
     await $(#copy_secure).scrollTo().tap();
     await $.pumpAndSettle();
-    expect($(#protection_message), findsOneWidget);
+    expect($(#status_message), findsOneWidget);
     await DeviceSafety.clipboard.clear();
   });
 
   patrolTest('app switcher overlay and tapjacking protection', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
+    await $.pumpWidgetAndSettle(const ExampleApp());
     await DeviceSafety.appSwitcher.setOverlay();
     await DeviceSafety.appSwitcher.clearOverlay();
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -64,25 +63,12 @@ void main() {
     }
   });
 
-  patrolTest('IOC host check from the Tools page', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
-    await $(#menu_Tools).tap();
+  patrolTest('IOC host check from the Blocked domains page', ($) async {
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    await $(#menu_ioc_domains).scrollTo().tap();
     await $.pumpAndSettle();
     await $(#ioc_check).tap();
     await $.pumpAndSettle();
     expect($(#ioc_result).text, 'BLOCKED');
-  });
-
-  patrolTest('switching UI style keeps every page usable', ($) async {
-    await $.pumpWidgetAndSettle(const DemoApp());
-    final start = AppState.instance.uiStyle.value;
-    await $(#style_toggle).tap();
-    await $.pumpAndSettle();
-    expect(AppState.instance.uiStyle.value, isNot(start));
-    await $(#menu_Protection).tap();
-    await $.pumpAndSettle();
-    expect($(#block_screenshots), findsOneWidget);
-    AppState.instance.uiStyle.value = start;
-    await $.pumpAndSettle();
   });
 }

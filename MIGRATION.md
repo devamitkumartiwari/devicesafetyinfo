@@ -135,7 +135,9 @@ import 'package:device_safety_info/device_safety_info.dart';
 - Detection: `CheckResult.status` is `error` or `timedOut`; `detected` follows the fail mode
   (`open` = not detected, as in 1.x; `closed` = detected).
 - Actions: throw `UnsupportedPlatformException`, `PermissionMissingException` or
-  `NativeFailureException` (all `DeviceSafetyException`).
+  `NativeFailureException` (all `DeviceSafetyException`). The new attestation, biometric and
+  pinning APIs throw `AttestationException`, `BiometricException` and `PinningException`.
+  `DeviceSafetyException` is sealed, so a `switch` over it must cover all of them.
 
 ## 6. Tests
 

@@ -11,6 +11,8 @@ const _titles = [
   'Overview',
   'All checks',
   'Policy',
+  'Fraud signals',
+  'Strong auth',
   'Protection',
   'Live events',
   'Tools',
@@ -156,9 +158,10 @@ void openEveryPage(UiStyle s) {
     await tester.binding.setSurfaceSize(const Size(400, 900));
     await tester.pumpWidget(const DemoApp());
     for (final title in _titles) {
-      await tester.tap(
-        find.byKey(ValueKey('menu_${title.replaceAll(' ', '_')}')),
-      );
+      final entry = find.byKey(ValueKey('menu_${title.replaceAll(' ', '_')}'));
+      await tester.ensureVisible(entry);
+      await tester.pumpAndSettle();
+      await tester.tap(entry);
       await tester.pumpAndSettle();
       final error = tester.takeException();
       expect(error, isNull, reason: "$title: $error");

@@ -10,11 +10,15 @@ Device and app security for Flutter apps that handle money, health or identity.
 - **Detect** a risky environment: root and jailbreak, emulators, hooking frameworks (Frida,
   Xposed, Zygisk), debuggers, a repackaged app, weak device posture, accessibility and
   notification-listener abuse, VPNs and proxies, screen capture and known malware.
-- **Protect** sensitive screens: block screenshots and recording, cover the app while the screen
-  is captured or in the app switcher, copy one-time codes safely, block tapjacking, lock idle
-  sessions.
-- **Attest** the app and device to your server with Google Play Integrity, Apple App Attest and
-  DeviceCheck.
+- **Spot fraud setups**: remote-control apps used in "support call" scams, GPS spoofing, cloned
+  or dual-app spaces, user-installed CA certificates that allow HTTPS interception, and
+  third-party keyboards.
+- **Protect** sensitive screens and input: block screenshots and recording, cover the app while
+  the screen is captured or in the app switcher, secure PIN and password fields, copy one-time
+  codes safely, block tapjacking, lock idle sessions, pin your API's TLS certificates.
+- **Prove** the device and the user to your server: hardware-bound signing keys with key
+  attestation, biometric-approved actions that can't be faked by hooking a callback, and Google
+  Play Integrity, Apple App Attest and DeviceCheck.
 
 Every check returns a typed result listing what it found, and **your app decides** what that
 means: the package never closes or uninstalls the app.
@@ -32,6 +36,7 @@ means: the package never closes or uninstalls the app.
 - [Signal catalogue](#signal-catalogue)
 - [Threat stream](#threat-stream)
 - [Protection](#protection)
+- [Strong authentication](#strong-authentication)
 - [Attestation](#attestation)
 - [Other tools](#other-tools)
 - [Limits of on-device checks](#limits-of-on-device-checks)
@@ -182,6 +187,8 @@ await DeviceSafety.initialize(DeviceSafetyConfig(
   iocBlocklist: {'evil.example', '*.phishing.example'},
   expectedSigningCertificates: {'AB:CD:...'}, // tampering check (Android)
   expectedIosTeamId: 'ABCDE12345',            // tampering check (iOS)
+  remoteAccessAllowlist: {'com.teamviewer.host.market'}, // your own support tool
+  keyboardAllowlist: {'com.corp.securekeyboard'},
   logger: (message, {error, stackTrace}) => log(message, error: error),
 ));
 ```
@@ -201,6 +208,8 @@ await DeviceSafety.initialize(DeviceSafetyConfig(
 | `iocBlocklist` | empty | Initial IOC domain blocklist |
 | `expectedSigningCertificates` | empty | SHA-256 of your Android signing certificates |
 | `expectedIosTeamId` | none | Your Apple team id, for re-signed iOS builds |
+| `remoteAccessAllowlist` | empty | Remote-control apps (package names) not to report, e.g. your MDM or support tool |
+| `keyboardAllowlist` | empty | Keyboards (package names) not to report; system keyboards, Gboard and SwiftKey are already trusted |
 | `logger` | none | Receives diagnostic messages |
 
 Signal overrides match the part of the id before `:`, so `'malware.installed'` matches
@@ -239,6 +248,11 @@ only what fits your users.
 | `DeviceSafety.vpn` | `vpn` | An active VPN or HTTP proxy |
 | `DeviceSafety.screen` | `screenCapture` | Screen recording, mirroring or an external display |
 | `DeviceSafety.malware` | `malware` | Installed apps from your malware list |
+| `DeviceSafety.remoteAccess` | `remoteAccess` | Remote-control apps (AnyDesk, TeamViewer QuickSupport, RustDesk, AirDroid...), and whether one can control the screen |
+| `DeviceSafety.locationSpoofing` | `locationSpoofing` | A mock-location app selected in developer options, or a mock location fix |
+| `DeviceSafety.appCloning` | `appCloning` | The app running inside a cloner (Parallel Space, VirtualXposed), a second user or dual-app space, or a work profile |
+| `DeviceSafety.mitm` | `mitm` | User-installed CA certificates, high risk while a VPN or proxy routes traffic |
+| `DeviceSafety.keyboard` | `keyboard` | A third-party default keyboard, high risk if it also runs an accessibility service |
 
 `CheckType.overlayAttack` exists only for [threat events](#threat-stream); tapjacking is an
 event, not a state to poll.
@@ -274,6 +288,21 @@ await DeviceSafety.initialize(DeviceSafetyConfig(
 
 Without `expectedSigningCertificates`, the Android check reports `unsupported`.
 
+### Fraud signals
+
+`remoteAccess`, `locationSpoofing`, `appCloning`, `mitm` and `keyboard` target account-takeover
+and fraud-farm setups rather than a compromised OS. They are Android checks; on iOS they report
+`unsupported`, because apps can't see other apps, the trust store or the active keyboard there.
+
+- A remote-control app that is merely installed is low risk (IT staff use them). Its
+  accessibility service being enabled is high risk: that's what lets the other side tap and type.
+- `location.mock_fix` reads the last known location only if your app already holds a location
+  permission; the package never asks for one.
+- Cloned spaces from phone makers (Samsung Dual Messenger, Xiaomi Second Space, Secure Folder)
+  are low risk; running inside another app's container is high risk.
+- Pair `mitm` with [certificate pinning](#certificate-pinning), which protects your own traffic
+  whatever CA is installed.
+
 ## Signal catalogue
 
 Every signal id has the form `check.signal`, optionally followed by `:detail` (a path, a
@@ -298,6 +327,11 @@ property value, a library or a package name).
 | `vpn` | | `vpn.active`, `vpn.http_proxy` |
 | `screenCapture` | `screen_capture.recording`, `screen_capture.mirroring` | `screen_capture.external_display` |
 | `malware` | `malware.installed` | |
+| `remoteAccess` | `remote_access.control_service:<package>` | `remote_access.app_installed:<package>` |
+| `locationSpoofing` | `location.mock_app_selected:<package>`, `location.mock_fix` | `location.mock_app_installed:<package>` |
+| `appCloning` | `clone.virtual_container:<host>` | `clone.secondary_user`, `clone.work_profile`, `clone.cloner_installed:<package>` |
+| `mitm` | `mitm.user_ca_with_proxy` | `mitm.user_ca:<certificate name>` |
+| `keyboard` | `keyboard.third_party:<package>` (with an accessibility service) | `keyboard.third_party:<package>` |
 | `root`, `hooking`, `debugger` | | `integrity.native_unavailable` (the C library didn't load), `integrity.platform_check_failed` (reported next to high C evidence), `integrity.layer_mismatch:root_files` (Kotlin and C disagree: one layer is being hooked) |
 
 Signals whose `source` is `SignalSource.ffi` come from C code (`src/dsi.c`) that runs on a
@@ -311,21 +345,24 @@ detection strings are stored encoded.
 DeviceSafety.threats.listen((ThreatEvent e) {
   // e.type: the CheckType
   // e.detail: 'screenshot', 'capture_started', 'recording_started', 'obscured_touch',
-  //           'vpn_connected', or null when a check became detected
+  //           'vpn_connected', 'pin_mismatch:<host>', or null when a check became detected
   // e.result: the CheckResult that triggered it, for detections
   analytics.log('threat', e.type.name);
 });
 ```
 
 Events fire when a check **becomes** detected, and, while the stream is listened to, for live
-events: screenshots, capture or recording starting, tapjacking touches and a VPN connecting.
+events: screenshots, capture or recording starting, tapjacking touches and a VPN connecting. A
+failed [pin check](#certificate-pinning) always emits `CheckType.mitm` with
+`pin_mismatch:<host>`.
 
 The package never terminates the app. If you decide to, call `DeviceSafety.terminateApp()`.
 
 ## Protection
 
-Action APIs throw typed exceptions: `UnsupportedPlatformException`, `PermissionMissingException`
-or `NativeFailureException` (all `DeviceSafetyException`).
+Action APIs throw typed exceptions: `UnsupportedPlatformException`, `PermissionMissingException`,
+`NativeFailureException`, and for the features below `BiometricException` and
+`PinningException` (all `DeviceSafetyException`).
 
 ### Screenshots and screen recording
 
@@ -374,6 +411,150 @@ IdleTimeoutGuard(
   child: const HomePage(),
 );
 ```
+
+### Secure text fields
+
+Keyboards remember words, suggest them back and sync them; the clipboard can be read by other
+apps; a field on screen can be recorded. `SecureInputConfig` turns all of that off for PINs,
+passwords and one-time codes: no autocorrect, suggestions, IME personalized learning, autofill or
+selection and clipboard menu, and screenshots blocked while the field has focus.
+
+```dart
+const pin = SecureInputConfig.pin();      // also .password() and .otp()
+
+SecureFieldGuard(                         // blocks screenshots while focused
+  config: pin,
+  child: TextField(                       // or CupertinoTextField
+    obscureText: pin.obscureText,
+    keyboardType: pin.keyboardType,
+    autocorrect: pin.autocorrect,
+    enableSuggestions: pin.enableSuggestions,
+    enableIMEPersonalizedLearning: pin.enableIMEPersonalizedLearning,
+    enableInteractiveSelection: pin.enableInteractiveSelection,
+    smartDashesType: pin.smartDashesType,
+    smartQuotesType: pin.smartQuotesType,
+    autofillHints: pin.autofillHints,
+  ),
+);
+
+// Or the undecorated widget that applies everything:
+SecureEditableText(controller: c, config: pin, style: style, cursorColor: color);
+```
+
+The screenshot block is shared with `SecureScreen`, so unfocusing a field never unblocks a
+screen that is protected anyway.
+
+On iOS you can also refuse third-party keyboards in your app. Flutter doesn't forward this
+callback to plugins, so add it to your `AppDelegate`:
+
+```swift
+import device_safety_info
+
+override func application(
+  _ application: UIApplication,
+  shouldAllowExtensionPointIdentifier id: UIApplication.ExtensionPointIdentifier
+) -> Bool {
+  DeviceSafetyInfoPlugin.shouldAllowExtension(id)
+}
+```
+
+```dart
+await DeviceSafety.keyboard.blockCustomKeyboards(true); // stored; applies to the next keyboard
+```
+
+### Certificate pinning
+
+`DeviceSafety.pinning` creates a `dart:io` `HttpClient` that checks the server's public key
+during the TLS handshake, before any request bytes are sent. A proxy with a trusted CA can then
+no longer read your API traffic.
+
+```dart
+final pins = PinningConfig({
+  // base64 SHA-256 of the leaf certificate's SubjectPublicKeyInfo: current key + backup key
+  'api.example.com': {'fk9XHhHbogE9XGaAfesn/HnyYWU7bGalXhRCxlOPYMI=', 'BACKUP...='},
+});
+
+final http = IOClient(DeviceSafety.pinning.createHttpClient(pins));   // package:http
+dio.httpClientAdapter = IOHttpClientAdapter(                           // dio
+  createHttpClient: () => DeviceSafety.pinning.createHttpClient(pins),
+);
+```
+
+- A mismatch throws `PinningException` and emits a `pin_mismatch:<host>` threat event.
+- Plain HTTP to a pinned host is refused. Hosts that aren't listed get normal TLS validation.
+- Each host needs at least two pins, so you can change keys without locking users out. Renew
+  certificates with the same key (for example certbot `--reuse-key`), or ship the new pin in an
+  app update before you switch.
+- Only the leaf key can be pinned (Dart exposes only the peer certificate), and the client
+  never uses a proxy.
+
+Get a server's pin:
+
+```sh
+openssl s_client -connect api.example.com:443 </dev/null 2>/dev/null \
+  | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der \
+  | openssl dgst -sha256 -binary | base64
+```
+
+or in a debug build, `await DeviceSafety.pinning.spkiPinOf(Uri.https('api.example.com'))`.
+
+## Strong authentication
+
+### Device-bound keys
+
+A session token can be copied to another device; a key in secure hardware can't.
+`DeviceSafety.deviceKey` creates an EC P-256 key in StrongBox or the TEE (Android) or the Secure
+Enclave (iOS), and signs with it.
+
+```dart
+// At login: create the key and register it with your server.
+final key = await DeviceSafety.deviceKey.create('session', challenge: serverChallenge);
+key.publicKey;          // DER SubjectPublicKeyInfo
+key.securityLevel;      // strongBox, tee, secureEnclave or software
+key.attestationChain;   // Android: X.509 chain proving the key lives in secure hardware
+
+// For each sensitive request: sign a server nonce plus the request.
+final signature = await DeviceSafety.deviceKey.sign('session', utf8.encode(nonce + body));
+```
+
+Signatures are DER-encoded ECDSA with SHA-256 (`SHA256withECDSA` in Java/Kotlin,
+`ECDsa.VerifyData(..., DSASignatureFormat.Rfc3279DerSequence)` in .NET). On Android, verify the
+attestation chain on your server up to Google's root and read the key description extension: it
+states the security level, the challenge, and the device's verified-boot state.
+
+### Biometric-approved actions
+
+A plain "authenticate" call returns `true`, which a hooking tool can fake. Here the approval is a
+**signature** made by a key the OS releases only after a strong fingerprint or face match, which
+your server verifies.
+
+```dart
+final key = await DeviceSafety.biometric.enroll('payments');   // register key.publicKey
+
+try {
+  final signature = await DeviceSafety.biometric.approve(
+    'payments',
+    utf8.encode('$serverNonce|$paymentJson'),
+    title: 'Confirm payment',
+    reason: 'Pay 500 to Alice',
+  );
+  await api.confirmPayment(paymentJson, signature);
+} on BiometricException catch (e) {
+  switch (e.code) {
+    case .enrollmentChanged: // a fingerprint or face was added: re-verify, then enroll again
+    case .cancelled:
+    case .lockedOut:
+    case .notEnrolled:
+    case .unavailable:
+    case .keyMissing:
+    case .failed:
+  }
+}
+```
+
+Adding a fingerprint or face permanently invalidates the key, so someone who adds their own
+finger to an unlocked phone can't approve anything. `keyState('payments')` reports `valid`,
+`invalidated` or `missing`. Android 10+ (strong biometrics), and iOS with Face ID or Touch ID.
 
 ## Attestation
 
@@ -457,9 +638,10 @@ anything valuable.
 
 ## Android setup
 
-The plugin declares only `ACCESS_NETWORK_STATE`, `DETECT_SCREEN_CAPTURE` and
-`DETECT_SCREEN_RECORDING`, all normal permissions granted at install. Add these to your app's
-manifest only for the features you use:
+The plugin declares `ACCESS_NETWORK_STATE`, `DETECT_SCREEN_CAPTURE`, `DETECT_SCREEN_RECORDING`
+and `USE_BIOMETRIC`, all normal permissions granted at install, and `<queries>` entries for the
+root, remote-access, mock-location and cloner apps it looks for. Add these to your app's manifest
+only for the features you use:
 
 - **SIM call detection** (`DeviceSafety.calls`): `READ_PHONE_STATE`, a dangerous permission your
   app must also request at runtime. Without it, VoIP and audio-based detection still work.
@@ -480,7 +662,9 @@ manifest only for the features you use:
   ```
 - **Unknown sources check**: `REQUEST_INSTALL_PACKAGES`. Google Play asks you to justify it.
   Without it the check reports nothing on Android 8+.
-- **Version check and IOC feeds**: `INTERNET`.
+- **Version check, IOC feeds and pinned requests**: `INTERNET`.
+- **Mock location fix** (`location.mock_fix`): only checked when your app already holds
+  `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION`.
 - **Play Integrity**: add `implementation("com.google.android.play:integrity:1.6.0")` to your app.
   The plugin compiles against it but doesn't ship it.
 
@@ -488,6 +672,13 @@ manifest only for the features you use:
 
 - **Swift Package Manager** is required.
 - **App Attest** needs the `com.apple.developer.devicecheck.appattest-environment` entitlement.
+- **Biometric approval** needs `NSFaceIDUsageDescription` in `Info.plist`:
+  ```xml
+  <key>NSFaceIDUsageDescription</key>
+  <string>Face ID confirms payments.</string>
+  ```
+- **Blocking third-party keyboards** needs the `AppDelegate` override shown in
+  [Secure text fields](#secure-text-fields).
 - **Jailbreak URL schemes**: iOS only answers `canOpenURL` for schemes your app declares, so add
   them to `Info.plist` or the URL-scheme test (`root.jailbreak_urlSchemes`) never fires:
   ```xml
@@ -535,8 +726,9 @@ void main() {
 
 ## Example app
 
-[`example/`](example) shows every API on seven pages: Overview (`assess()`), All checks, Policy
-(change the policy and fail mode per check and see the effect immediately), Protection, Live
+[`example/`](example) shows every API on nine pages: Overview (`assess()`), All checks, Policy
+(change the policy and fail mode per check and see the effect immediately), Fraud signals, Strong
+auth (device key, biometric approval, a secure PIN field and a pinned request), Protection, Live
 events, Tools and App integrity.
 
 It renders in **Material or Cupertino** and starts in your platform's style. Tap the button on
@@ -562,6 +754,11 @@ flutter run --dart-define=INTEGRITY_SERVER_URL=http://192.168.1.10:5080 \
 | Screen lock, store install | ✅ | ✅ |
 | Developer mode, external storage, unknown sources, Play Protect | ✅ | unsupported |
 | Accessibility and notification-listener abuse, malware packages | ✅ | unsupported |
+| Remote access, GPS spoofing, app cloning, MITM certificates, keyboard check | ✅ | unsupported |
+| Blocking third-party keyboards | — | ✅ (`AppDelegate` line) |
+| Device-bound keys | ✅ (StrongBox / TEE, attestation) | ✅ (Secure Enclave) |
+| Biometric-approved actions | Android 10+ | ✅ |
+| Secure text fields, certificate pinning | ✅ | ✅ |
 | VPN / proxy, screen capture | ✅ | ✅ |
 | Recording state | Android 15+ | ✅ (same as capture) |
 | Screenshot blocking, capture overlay, app-switcher overlay | ✅ | ✅ |
@@ -581,7 +778,7 @@ Measured in profile mode on a Galaxy S21 FE (Android 16):
 |---|---|
 | Assessment of 6 checks, first call | about 108 ms |
 | The same, served from the cache | about 0.01 ms |
-| All 15 detection checks, uncached, one round trip | about 45 ms |
+| All 15 detection checks, uncached, one round trip (before the five fraud checks were added) | about 45 ms |
 | One uncached check | about 5 ms |
 
 Method and full numbers, including the 1.x comparison:

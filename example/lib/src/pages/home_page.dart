@@ -2,10 +2,12 @@ import 'package:flutter/widgets.dart';
 
 import '../sections/app_integrity_section.dart';
 import '../sections/checks_section.dart';
+import '../sections/fraud_signals_section.dart';
 import '../sections/live_events_section.dart';
 import '../sections/overview_section.dart';
 import '../sections/policy_section.dart';
 import '../sections/protection_section.dart';
+import '../sections/strong_auth_section.dart';
 import '../sections/tools_section.dart';
 import '../ui/adaptive.dart';
 
@@ -35,6 +37,20 @@ class HomePage extends StatelessWidget {
           Icons.tune,
           CupertinoIcons.slider_horizontal_3,
           PolicySection.new,
+        ),
+        (
+          'Fraud signals',
+          'Remote access, GPS spoofing, cloning, MITM, keyboard',
+          Icons.policy,
+          CupertinoIcons.exclamationmark_shield,
+          FraudSignalsSection.new,
+        ),
+        (
+          'Strong auth',
+          'Device key, biometric approval, secure PIN, pinning',
+          Icons.key,
+          CupertinoIcons.lock_shield,
+          StrongAuthSection.new,
         ),
         (
           'Protection',

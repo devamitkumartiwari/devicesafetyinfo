@@ -62,6 +62,47 @@ replacement.
   fake the platform side in app tests.
 * `PrivacyInfo.xcprivacy` for the iOS plugin.
 
+### Fraud signals (Android; iOS reports unsupported)
+
+* **`DeviceSafety.remoteAccess`** (`CheckType.remoteAccess`): remote-control apps used in
+  "support call" scams (AnyDesk, TeamViewer QuickSupport, RustDesk, AirDroid...). High risk when
+  one has an enabled accessibility service, which lets the remote side tap and type.
+  `DeviceSafetyConfig.remoteAccessAllowlist` for your own support or MDM tool.
+* **`DeviceSafety.locationSpoofing`** (`CheckType.locationSpoofing`): a mock-location app
+  selected in developer options, or a mock last-known fix (only if the app already holds a
+  location permission).
+* **`DeviceSafety.appCloning`** (`CheckType.appCloning`): the app running inside a cloner
+  (Parallel Space, VirtualXposed), a second user or dual-app space, or a work profile.
+* **`DeviceSafety.mitm`** (`CheckType.mitm`): user-installed CA certificates; high risk while a
+  VPN or proxy routes the traffic.
+* **`DeviceSafety.keyboard`** (`CheckType.keyboard`): a third-party default keyboard; high risk
+  when it also runs an accessibility service. System keyboards, Gboard and SwiftKey are trusted;
+  `DeviceSafetyConfig.keyboardAllowlist` for others. On iOS, `blockCustomKeyboards(true)` plus
+  one `AppDelegate` line refuses third-party keyboards.
+* All five are included in `assess()` and have plain-language `RiskFlag`s.
+
+### Protection and strong authentication
+
+* **`DeviceSafety.deviceKey`**: EC P-256 signing keys in StrongBox / TEE (Android, with key
+  attestation for a server challenge) or the Secure Enclave (iOS). `create`, `sign` (DER ECDSA /
+  SHA-256), `info`, `exists`, `delete`.
+* **`DeviceSafety.biometric`**: biometric-approved actions. `approve` returns a signature that
+  only a strong fingerprint or face match can produce, so hooking a success callback can't fake
+  it. Adding a fingerprint or face invalidates the key (`keyState` = `invalidated`, `approve`
+  throws `BiometricException(enrollmentChanged)`). Android 10+ and iOS; the plugin now declares
+  the normal `USE_BIOMETRIC` permission.
+* **Secure text fields**: `SecureInputConfig` (`.password()`, `.pin()`, `.otp()`) turns off
+  autocorrect, suggestions, IME learning, autofill and the clipboard menu; `SecureFieldGuard`
+  blocks screenshots while a field is focused (sharing `SecureScreen`'s block); and
+  `SecureEditableText` applies all of it.
+* **`DeviceSafety.pinning`**: an `HttpClient` that checks SPKI SHA-256 pins during the TLS
+  handshake, before any request bytes are sent. Works with `package:http` and dio. A mismatch
+  throws `PinningException` and emits a `pin_mismatch:<host>` threat event; `spkiPinOf` reads a
+  server's pin.
+* New exceptions in the sealed hierarchy: `BiometricException` (with `BiometricErrorCode`) and
+  `PinningException`.
+* New dependency: `crypto`.
+
 ### Platform attestation (developed as 1.7.0, first released here)
 
 Google Play Integrity on Android and Apple App Attest / DeviceCheck on iOS. The plugin gets the
@@ -136,9 +177,10 @@ tokens; your server verifies them.
 
 ### Example app
 
-* Rebuilt on `DeviceSafety.*` with seven pages: Overview (`assess()`), All checks, Policy (off /
-  standard / strict and fail mode per check, with live results), Protection, Live events, Tools
-  and App integrity.
+* Rebuilt on `DeviceSafety.*` with nine pages: Overview (`assess()`), All checks, Policy (off /
+  standard / strict and fail mode per check, with live results), Fraud signals, Strong auth
+  (device key, biometric approval, a secure PIN field and pinned requests), Protection, Live
+  events, Tools and App integrity.
 * **Material or Cupertino, switchable live.** It starts in the platform's style (Cupertino on
   iOS, Material on Android), and a button on the home page switches between them. Every page is
   written once against a small adaptive widget layer (`example/lib/src/ui/adaptive.dart`).

@@ -12,3 +12,5 @@ build/
 **/.cxx/
 # Server-side verification sample (not part of the Flutter package)
 example/server_dotnet/
+# Throwaway TLS key for the local pinning test server (test-only, not a secret)
+test/fixtures/pinning/localhost.key

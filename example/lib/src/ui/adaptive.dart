@@ -5,6 +5,9 @@ import 'dart:async';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:device_safety_info/device_safety_info.dart'
+    show SecureFieldGuard, SecureInputConfig;
+
 import '../app_state.dart';
 
 export 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
@@ -383,15 +386,22 @@ class AdaptiveTextField extends StatelessWidget {
     super.key,
     required this.controller,
     required this.label,
+    this.secure,
   });
 
   final TextEditingController controller;
   final String label;
 
+  /// When set, the field takes a secret: [SecureInputConfig] is applied to the Material or
+  /// Cupertino field, and [SecureFieldGuard] blocks screenshots while it's focused.
+  final SecureInputConfig? secure;
+
   @override
   Widget build(BuildContext context) {
+    final c = secure;
+    final Widget field;
     if (isCupertino) {
-      return CupertinoTextField(
+      field = CupertinoTextField(
         controller: controller,
         placeholder: label,
         prefix: Padding(
@@ -401,12 +411,32 @@ class AdaptiveTextField extends StatelessWidget {
             style: const TextStyle(color: CupertinoColors.systemGrey),
           ),
         ),
+        obscureText: c?.obscureText ?? false,
+        keyboardType: c?.keyboardType,
+        autocorrect: c?.autocorrect ?? true,
+        enableSuggestions: c?.enableSuggestions ?? true,
+        enableIMEPersonalizedLearning: c?.enableIMEPersonalizedLearning ?? true,
+        enableInteractiveSelection: c?.enableInteractiveSelection ?? true,
+        smartDashesType: c?.smartDashesType,
+        smartQuotesType: c?.smartQuotesType,
+        autofillHints: c == null ? const [] : c.autofillHints,
+      );
+    } else {
+      field = TextField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label),
+        obscureText: c?.obscureText ?? false,
+        keyboardType: c?.keyboardType,
+        autocorrect: c?.autocorrect ?? true,
+        enableSuggestions: c?.enableSuggestions ?? true,
+        enableIMEPersonalizedLearning: c?.enableIMEPersonalizedLearning ?? true,
+        enableInteractiveSelection: c?.enableInteractiveSelection ?? true,
+        smartDashesType: c?.smartDashesType,
+        smartQuotesType: c?.smartQuotesType,
+        autofillHints: c == null ? const [] : c.autofillHints,
       );
     }
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(labelText: label),
-    );
+    return c == null ? field : SecureFieldGuard(config: c, child: field);
   }
 }
 

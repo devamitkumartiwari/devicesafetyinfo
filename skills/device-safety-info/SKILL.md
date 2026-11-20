@@ -3,9 +3,12 @@ name: device-safety-info
 description: >-
   Set up and use the device_safety_info Flutter package (2.x): root, jailbreak,
   emulator, hooking and debugger detection with off/standard/strict policies,
-  fail modes, risk assessment, the threat stream, screenshot and clipboard
-  protection, and Play Integrity / App Attest tokens verified on a server. Use
-  when adding device security checks to a Flutter app or migrating from 1.x.
+  fail modes, risk assessment, fraud signals (remote access, GPS spoofing, app
+  cloning, MITM certificates, keyboards), the threat stream, screenshot,
+  clipboard and secure-input protection, certificate pinning, hardware-bound
+  keys, biometric-approved actions, and Play Integrity / App Attest tokens
+  verified on a server. Use when adding device security checks to a Flutter app
+  or migrating from 1.x.
 ---
 
 # device_safety_info
@@ -22,7 +25,9 @@ Dart 3.14+; iOS builds with Swift Package Manager only.
    defaults are the standard policy, fail open, a 30 s cache and a 5 s timeout.
 3. Add Android permissions only for features the app uses (see the package
    README): `READ_PHONE_STATE` for SIM call detection, `<queries>` entries for
-   malware packages, `INTERNET` for the version check.
+   malware packages, `INTERNET` for the version check and pinned requests.
+4. iOS: add `NSFaceIDUsageDescription` to `Info.plist` when using
+   `DeviceSafety.biometric`. Biometric approval on Android needs Android 10+.
 
 ## Choose policies
 
@@ -43,6 +48,8 @@ Dart 3.14+; iOS builds with Swift Package Manager only.
 - Allowlist trusted accessibility services and notification listeners, or they
   are reported. Preinstalled system apps are trusted by default
   (`trustSystemApps: true`); set it to `false` to report them too.
+- Allowlist your own remote-support or MDM tool (`remoteAccessAllowlist`) and
+  any company keyboard (`keyboardAllowlist`).
 
 ## Check
 
@@ -65,6 +72,14 @@ Dart 3.14+; iOS builds with Swift Package Manager only.
   `DeviceSafety.screen.blockScreenshots()` / `setOverlayMode(...)`.
 - Copy one-time codes with `DeviceSafety.clipboard.copySecure(text,
   clearAfter: ...)`.
+- For PIN, password and OTP fields apply `SecureInputConfig.pin()` /
+  `.password()` / `.otp()` to the `TextField` and wrap it in
+  `SecureFieldGuard`, or use `SecureEditableText`.
+- Pin your API with `DeviceSafety.pinning.createHttpClient(PinningConfig({host:
+  {currentPin, backupPin}}))` (two pins per host, leaf SPKI SHA-256 base64);
+  pass it to `IOClient` or dio's `IOHttpClientAdapter`.
+- During a call or with `remoteAccess` detected, pause OTP entry and payments:
+  this is the typical "support call" scam.
 
 ## Verify on a server
 
@@ -73,6 +88,14 @@ matters, also send `DeviceSafety.integrity` tokens (Play Integrity on Android,
 App Attest or DeviceCheck on iOS) to the backend and verify them there; the
 repository's `example/server_dotnet` is a reference verifier. Bind tokens to
 the request with a server-issued nonce or a request hash.
+
+For logins and payments, register a `DeviceSafety.deviceKey.create(...)`
+public key (Android: verify its attestation chain) and have the app sign a
+server nonce with `sign`. For approvals, use `DeviceSafety.biometric.enroll`
+once and `approve(alias, nonce + payload, title:, reason:)` per action; verify
+the DER ECDSA/SHA-256 signature on the server. On
+`BiometricException(enrollmentChanged)`, re-verify the user before enrolling
+again.
 
 ## Test
 

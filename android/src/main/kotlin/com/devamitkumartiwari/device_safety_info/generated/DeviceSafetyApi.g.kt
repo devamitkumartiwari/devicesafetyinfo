@@ -1469,6 +1469,13 @@ interface EnvironmentHostApi {
   suspend fun appCloning(): CheckReportMsg
   /** User-installed CA certificates that allow HTTPS interception. */
   suspend fun mitm(): CheckReportMsg
+  /** The default keyboard, when it's a third-party app. */
+  suspend fun keyboard(): CheckReportMsg
+  /**
+   * (iOS) Whether third-party keyboard extensions should be refused. Stored, so it applies from
+   * the next launch's first keyboard; the app's AppDelegate consults it. No-op on Android.
+   */
+  fun setBlockCustomKeyboards(block: Boolean)
 
   companion object {
     /** The codec used by EnvironmentHostApi. */
@@ -1542,6 +1549,41 @@ interface EnvironmentHostApi {
               }
               reply.reply(wrapped)
             }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.keyboard$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.keyboard())
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.setBlockCustomKeyboards$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val blockArg = args[0] as Boolean
+            val wrapped: List<Any?> = try {
+              api.setBlockCustomKeyboards(blockArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              DeviceSafetyApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

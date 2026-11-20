@@ -1317,6 +1317,11 @@ protocol EnvironmentHostApi {
   func appCloning() async throws -> CheckReportMsg
   /// User-installed CA certificates that allow HTTPS interception.
   func mitm() async throws -> CheckReportMsg
+  /// The default keyboard, when it's a third-party app.
+  func keyboard() async throws -> CheckReportMsg
+  /// (iOS) Whether third-party keyboard extensions should be refused. Stored, so it applies from
+  /// the next launch's first keyboard; the app's AppDelegate consults it. No-op on Android.
+  func setBlockCustomKeyboards(block: Bool) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -1388,6 +1393,39 @@ class EnvironmentHostApiSetup {
       }
     } else {
       mitmChannel.setMessageHandler(nil)
+    }
+    /// The default keyboard, when it's a third-party app.
+    let keyboardChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.keyboard\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      keyboardChannel.setMessageHandler { _, reply in
+        Task { @MainActor in
+          do {
+            let result = try await api.keyboard()
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      keyboardChannel.setMessageHandler(nil)
+    }
+    /// (iOS) Whether third-party keyboard extensions should be refused. Stored, so it applies from
+    /// the next launch's first keyboard; the app's AppDelegate consults it. No-op on Android.
+    let setBlockCustomKeyboardsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.setBlockCustomKeyboards\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      setBlockCustomKeyboardsChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let blockArg = args[0] as! Bool
+        do {
+          try api.setBlockCustomKeyboards(block: blockArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      setBlockCustomKeyboardsChannel.setMessageHandler(nil)
     }
   }
 }

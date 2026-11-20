@@ -65,7 +65,10 @@ enum CheckType {
   appCloning,
 
   /// User-installed CA certificates allow HTTPS interception (Android).
-  mitm;
+  mitm,
+
+  /// The default keyboard is a third-party app that sees everything typed (Android).
+  keyboard;
 
   /// Stable string id sent to the platform side (the enum name).
   String get id => name;

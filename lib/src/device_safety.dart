@@ -9,6 +9,7 @@ import 'core/platform/device_safety_platform.dart';
 import 'core/result/check_type.dart';
 import 'core/runner/check_runner.dart';
 import 'core/threats/threat_bus.dart';
+import 'features/pinning/presentation/pinning_api.dart';
 import 'features/accessibility_abuse/data/accessibility_repository_impl.dart';
 import 'features/accessibility_abuse/presentation/accessibility_api.dart';
 import 'features/app_integrity/data/integrity_repository_impl.dart';
@@ -207,6 +208,16 @@ final class DeviceSafetyClient {
   /// User-installed CA certificate (HTTPS interception) detection.
   late final MitmApi mitm = MitmApi(_runner, _environment);
 
+  /// TLS certificate pinning.
+  late final PinningApi pinning = PinningApi(_bus);
+
+  /// Third-party keyboard detection (Android) and blocking (iOS).
+  late final KeyboardApi keyboard = KeyboardApi(
+    _runner,
+    _environment,
+    () => _config,
+  );
+
   /// Hardware-bound signing keys.
   late final DeviceKeyApi deviceKey = DeviceKeyApi(
     DeviceKeyRepositoryImpl(_platform.deviceKey),
@@ -401,6 +412,12 @@ abstract final class DeviceSafety {
 
   /// User-installed CA certificate (HTTPS interception) detection.
   static MitmApi get mitm => instance.mitm;
+
+  /// TLS certificate pinning.
+  static PinningApi get pinning => instance.pinning;
+
+  /// Third-party keyboard detection (Android) and blocking (iOS).
+  static KeyboardApi get keyboard => instance.keyboard;
 
   /// Hardware-bound signing keys.
   static DeviceKeyApi get deviceKey => instance.deviceKey;

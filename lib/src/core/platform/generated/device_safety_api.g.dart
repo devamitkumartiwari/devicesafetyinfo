@@ -1449,6 +1449,46 @@ class EnvironmentHostApi {
     );
     return pigeonVar_replyValue! as CheckReportMsg;
   }
+
+  /// The default keyboard, when it's a third-party app.
+  Future<CheckReportMsg> keyboard() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.keyboard$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as CheckReportMsg;
+  }
+
+  /// (iOS) Whether third-party keyboard extensions should be refused. Stored, so it applies from
+  /// the next launch's first keyboard; the app's AppDelegate consults it. No-op on Android.
+  Future<void> setBlockCustomKeyboards(bool block) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.setBlockCustomKeyboards$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[block],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
+  }
 }
 
 /// Runs many checks in one round trip, in parallel on the platform side.

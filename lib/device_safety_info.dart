@@ -53,6 +53,10 @@ export 'src/features/tampering/domain/tampering_signals.dart'
     show SigningInfo, normalizeCertificateDigest;
 export 'src/features/tampering/presentation/tampering_api.dart';
 export 'src/features/environment/presentation/environment_apis.dart';
+export 'src/features/pinning/presentation/pinning_api.dart';
+export 'src/features/secure_input/domain/secure_input_config.dart';
+export 'src/features/secure_input/presentation/secure_editable_text.dart';
+export 'src/features/secure_input/presentation/secure_field_guard.dart';
 export 'src/core/result/device_key_info.dart';
 export 'src/features/device_key/presentation/device_key_api.dart';
 export 'src/features/biometric/presentation/biometric_api.dart';

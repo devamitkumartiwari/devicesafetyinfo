@@ -28,7 +28,7 @@ final class RemoteAccessApi extends DetectionApi {
   ) : super(
         CheckType.remoteAccess,
         runner,
-        () async => withoutAllowlistedRemoteAccess(
+        () async => withoutAllowlistedPackages(
           await _android(repository, CheckType.remoteAccess),
           config().remoteAccessAllowlist,
         ),
@@ -76,4 +76,49 @@ final class MitmApi extends DetectionApi {
   /// Created by `DeviceSafety`; apps use `DeviceSafety.mitm`.
   MitmApi(CheckRunner runner, EnvironmentRepository repository)
     : super(CheckType.mitm, runner, () => _android(repository, CheckType.mitm));
+}
+
+/// A third-party default keyboard, which sees everything typed (Android).
+///
+/// Low risk: `keyboard.third_party:<package>`; high risk when the same app also runs an enabled
+/// accessibility service. Preinstalled keyboards, Gboard, SwiftKey and
+/// `DeviceSafetyConfig.keyboardAllowlist` are not reported. iOS: the check is unsupported, but
+/// [blockCustomKeyboards] refuses third-party keyboards (see its docs for the AppDelegate line).
+/// For individual fields, `SecureInputConfig` turns off suggestions and learning.
+final class KeyboardApi extends DetectionApi {
+  /// Created by `DeviceSafety`; apps use `DeviceSafety.keyboard`.
+  KeyboardApi(
+    CheckRunner runner,
+    EnvironmentRepository repository,
+    DeviceSafetyConfig Function() config,
+  ) : _repository = repository,
+      super(
+        CheckType.keyboard,
+        runner,
+        () async => withoutAllowlistedPackages(
+          await _android(repository, CheckType.keyboard),
+          config().keyboardAllowlist,
+        ),
+      );
+
+  final EnvironmentRepository _repository;
+
+  /// (iOS) Refuses third-party keyboard extensions in this app when [block] is `true`; the
+  /// system keyboard is used instead. The setting is stored and applies from the next keyboard
+  /// shown. Requires this in your `AppDelegate`:
+  ///
+  /// ```swift
+  /// override func application(
+  ///   _ application: UIApplication,
+  ///   shouldAllowExtensionPointIdentifier id: UIApplication.ExtensionPointIdentifier
+  /// ) -> Bool {
+  ///   DeviceSafetyInfoPlugin.shouldAllowExtension(id)
+  /// }
+  /// ```
+  ///
+  /// No-op on other platforms.
+  Future<void> blockCustomKeyboards(bool block) async {
+    if (!PlatformGuard.isIOS) return;
+    await _repository.setBlockCustomKeyboards(block);
+  }
 }

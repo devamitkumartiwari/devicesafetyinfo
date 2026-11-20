@@ -7,17 +7,22 @@ const Set<CheckType> environmentChecks = {
   CheckType.locationSpoofing,
   CheckType.appCloning,
   CheckType.mitm,
+  CheckType.keyboard,
 };
 
-/// Source of raw fraud-environment reports (remote access, GPS spoofing, app cloning, MITM).
+/// Source of raw fraud-environment reports (remote access, GPS spoofing, app cloning, MITM,
+/// keyboard).
 abstract interface class EnvironmentRepository {
   /// The raw report for one of [environmentChecks].
   Future<CheckReport> report(CheckType type);
+
+  /// (iOS) Refuse third-party keyboards.
+  Future<void> setBlockCustomKeyboards(bool block);
 }
 
-/// Drops remote-access signals for packages on [allowlist] (e.g. the MDM or support tool your
-/// company uses). Other reports pass through unchanged.
-CheckReport withoutAllowlistedRemoteAccess(
+/// Drops signals whose detail (`<id>:<package>`) is a package on [allowlist], such as the MDM
+/// tool or keyboard your company uses.
+CheckReport withoutAllowlistedPackages(
   CheckReport report,
   Set<String> allowlist,
 ) {

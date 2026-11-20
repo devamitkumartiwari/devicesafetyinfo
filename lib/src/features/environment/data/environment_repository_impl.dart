@@ -18,8 +18,13 @@ final class EnvironmentRepositoryImpl implements EnvironmentRepository {
       CheckType.locationSpoofing => _platform.locationSpoofing(),
       CheckType.appCloning => _platform.appCloning(),
       CheckType.mitm => _platform.mitm(),
+      CheckType.keyboard => _platform.keyboard(),
       _ => throw ArgumentError.value(type, 'type', 'not an environment check'),
     };
     return msg.toDomain();
   }
+
+  @override
+  Future<void> setBlockCustomKeyboards(bool block) =>
+      _platform.setBlockCustomKeyboards(block);
 }

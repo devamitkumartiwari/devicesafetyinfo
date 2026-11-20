@@ -22,4 +22,8 @@ class EnvironmentHostApiImpl(
     override suspend fun locationSpoofing() = run(MockLocationDetector::report)
     override suspend fun appCloning() = run(CloneDetector::report)
     override suspend fun mitm() = run(UserCaDetector::report)
+    override suspend fun keyboard() = run(KeyboardDetector::report)
+
+    /** iOS only. */
+    override fun setBlockCustomKeyboards(block: Boolean) = Unit
 }

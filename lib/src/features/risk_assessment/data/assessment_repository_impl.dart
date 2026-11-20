@@ -87,11 +87,13 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
           t: value.toDomain(),
     };
 
-    if (out[CheckType.remoteAccess] case final r?) {
-      out[CheckType.remoteAccess] = withoutAllowlistedRemoteAccess(
-        r,
-        config.remoteAccessAllowlist,
-      );
+    for (final (type, allowlist) in [
+      (CheckType.remoteAccess, config.remoteAccessAllowlist),
+      (CheckType.keyboard, config.keyboardAllowlist),
+    ]) {
+      if (out[type] case final r?) {
+        out[type] = withoutAllowlistedPackages(r, allowlist);
+      }
     }
 
     for (final type in _ffiChecks) {

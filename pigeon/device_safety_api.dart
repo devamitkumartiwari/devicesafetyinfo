@@ -271,6 +271,14 @@ abstract class EnvironmentHostApi {
   /// User-installed CA certificates that allow HTTPS interception.
   @async
   CheckReportMsg mitm();
+
+  /// The default keyboard, when it's a third-party app.
+  @async
+  CheckReportMsg keyboard();
+
+  /// (iOS) Whether third-party keyboard extensions should be refused. Stored, so it applies from
+  /// the next launch's first keyboard; the app's AppDelegate consults it. No-op on Android.
+  void setBlockCustomKeyboards(bool block);
 }
 
 /// Runs many checks in one round trip, in parallel on the platform side.

@@ -44,6 +44,7 @@ void main() {
     'locationSpoofing': () => DeviceSafety.locationSpoofing,
     'appCloning': () => DeviceSafety.appCloning,
     'mitm': () => DeviceSafety.mitm,
+    'keyboard': () => DeviceSafety.keyboard,
     'tampering': () => DeviceSafety.tampering,
   };
 
@@ -217,6 +218,7 @@ void main() {
       DeviceSafety.locationSpoofing,
       DeviceSafety.appCloning,
       DeviceSafety.mitm,
+      DeviceSafety.keyboard,
     ]) {
       final r = await api.check(refresh: true);
       // ignore: avoid_print

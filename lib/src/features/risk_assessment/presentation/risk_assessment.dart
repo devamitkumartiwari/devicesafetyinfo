@@ -108,6 +108,10 @@ final class RiskFlag {
         'Network traffic can be intercepted',
         'A user-installed certificate lets another party read encrypted traffic.',
       ),
+      CheckType.keyboard => (
+        'Third-party keyboard in use',
+        'The keyboard sees everything typed, including passwords and one-time codes.',
+      ),
     };
     return RiskFlag(type: type, title: title, description: description);
   }

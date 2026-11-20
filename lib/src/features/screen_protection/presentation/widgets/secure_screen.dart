@@ -1,7 +1,10 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../../core/utils/screen_block.dart';
+
 /// Blocks screenshots and screen recording while it's in the tree. Nested or simultaneous
-/// [SecureScreen]s share one block, which is released when the last one is disposed.
+/// [SecureScreen]s (and focused secure text fields) share one block, which is released when the
+/// last one goes away.
 ///
 /// ```dart
 /// SecureScreen(child: PaymentPage())
@@ -14,31 +17,25 @@ class SecureScreen extends StatefulWidget {
   final Widget child;
 
   /// How [SecureScreen] blocks and unblocks; set by `DeviceSafety`. Exposed for tests.
-  static Future<void> Function(bool block) blocker = (_) async {};
+  static Future<void> Function(bool block) get blocker => ScreenBlock.blocker;
+  static set blocker(Future<void> Function(bool block) value) =>
+      ScreenBlock.blocker = value;
 
   @override
   State<SecureScreen> createState() => _SecureScreenState();
 }
 
 class _SecureScreenState extends State<SecureScreen> {
-  static int _activeCount = 0;
-
   @override
   void initState() {
     super.initState();
-    if (++_activeCount == 1) _set(true);
+    ScreenBlock.acquire();
   }
 
   @override
   void dispose() {
-    if (--_activeCount == 0) _set(false);
+    ScreenBlock.release();
     super.dispose();
-  }
-
-  // Fire-and-forget: a widget can't await, and a failure (e.g. no activity yet) must not
-  // break the build.
-  void _set(bool block) {
-    SecureScreen.blocker(block).catchError((Object _) {});
   }
 
   @override

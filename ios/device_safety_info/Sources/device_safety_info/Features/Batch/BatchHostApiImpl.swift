@@ -40,7 +40,7 @@ final class BatchHostApiImpl: BatchHostApi {
         case "screenCapture":
             return await MainActor.run { ScreenProtectionHostApiImpl.captureReport() }
         case "developerMode", "externalStorage", "unknownSources", "playProtect",
-            "remoteAccess", "locationSpoofing", "appCloning", "mitm":
+            "remoteAccess", "locationSpoofing", "appCloning", "mitm", "keyboard":
             return .unsupported
         default:
             // accessibility / notificationListener / malware are answered by the lists above.

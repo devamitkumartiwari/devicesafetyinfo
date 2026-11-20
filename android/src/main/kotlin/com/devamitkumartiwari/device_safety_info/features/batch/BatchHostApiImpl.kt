@@ -8,6 +8,7 @@ import com.devamitkumartiwari.device_safety_info.core.requireContext
 import com.devamitkumartiwari.device_safety_info.features.accessibility.AccessibilityAbuseDetector
 import com.devamitkumartiwari.device_safety_info.features.app_integrity.SigningInfoReader
 import com.devamitkumartiwari.device_safety_info.features.environment.CloneDetector
+import com.devamitkumartiwari.device_safety_info.features.environment.KeyboardDetector
 import com.devamitkumartiwari.device_safety_info.features.environment.MockLocationDetector
 import com.devamitkumartiwari.device_safety_info.features.environment.RemoteAccessDetector
 import com.devamitkumartiwari.device_safety_info.features.environment.UserCaDetector
@@ -56,6 +57,7 @@ class BatchHostApiImpl(
         "locationSpoofing" to MockLocationDetector::report,
         "appCloning" to CloneDetector::report,
         "mitm" to UserCaDetector::report,
+        "keyboard" to KeyboardDetector::report,
         "screenCapture" to { ctx -> ScreenProtectionHostApiImpl.captureReport(ctx, recording) },
     )
 

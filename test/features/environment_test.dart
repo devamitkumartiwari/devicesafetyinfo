@@ -58,13 +58,10 @@ void main() {
         RiskSignal('remote_access.app_installed:a', RiskLevel.low),
         RiskSignal('remote_access.app_installed:b', RiskLevel.low),
       ], supported: false);
-      final out = withoutAllowlistedRemoteAccess(report, {'a'});
+      final out = withoutAllowlistedPackages(report, {'a'});
       expect(out.signals.map((s) => s.id), ['remote_access.app_installed:b']);
       expect(out.supported, isFalse);
-      expect(
-        identical(withoutAllowlistedRemoteAccess(report, {}), report),
-        isTrue,
-      );
+      expect(identical(withoutAllowlistedPackages(report, {}), report), isTrue);
     });
   });
 
@@ -115,7 +112,7 @@ void main() {
       () => EnvironmentRepositoryImpl(f.environment).report(CheckType.root),
       throwsArgumentError,
     );
-    expect(environmentChecks, hasLength(4));
+    expect(environmentChecks, hasLength(5));
   });
 
   test(
@@ -157,8 +154,53 @@ void main() {
       CheckType.locationSpoofing,
       CheckType.appCloning,
       CheckType.mitm,
+      CheckType.keyboard,
     ]) {
       expect(RiskFlag.forType(t).title, isNotEmpty);
     }
+  });
+
+  group('keyboard', () {
+    test('third-party keyboard is low; with accessibility, high', () async {
+      f.environment.keyboardReport = report([
+        low('keyboard.third_party:com.example.kb'),
+      ]);
+      expect(await DeviceSafety.keyboard.isDetected(), isFalse);
+      f.environment.keyboardReport = report([
+        high('keyboard.third_party:com.example.kb'),
+      ]);
+      expect(await DeviceSafety.keyboard.isDetected(refresh: true), isTrue);
+    });
+
+    test('keyboardAllowlist drops the package, also in assess()', () async {
+      f.environment.keyboardReport = report([
+        high('keyboard.third_party:com.corp.kb'),
+      ]);
+      f.batch.result = BatchResultMsg(
+        reports: {
+          'keyboard': report([high('keyboard.third_party:com.corp.kb')]),
+        },
+        accessibilityServices: [],
+        notificationListeners: [],
+        installedPackages: [],
+        failedLists: [],
+      );
+      make(DeviceSafetyConfig(keyboardAllowlist: {'com.corp.kb'}));
+      expect((await DeviceSafety.keyboard.check()).signals, isEmpty);
+      final a = await DeviceSafety.assess(checks: [CheckType.keyboard]);
+      expect(a.results[CheckType.keyboard]!.signals, isEmpty);
+    });
+
+    test('blockCustomKeyboards reaches the platform only on iOS', () async {
+      await DeviceSafety.keyboard.blockCustomKeyboards(true);
+      expect(f.environment.blockedKeyboards, isNull);
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      await DeviceSafety.keyboard.blockCustomKeyboards(true);
+      expect(f.environment.blockedKeyboards, isTrue);
+      expect(
+        (await DeviceSafety.keyboard.check(refresh: true)).status,
+        CheckStatus.unsupported,
+      );
+    });
   });
 }

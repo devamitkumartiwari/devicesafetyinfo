@@ -257,6 +257,15 @@ class FakeEnvironmentApi extends Fake implements EnvironmentHostApi {
   Future<CheckReportMsg> appCloning() async => cloning;
   @override
   Future<CheckReportMsg> mitm() async => mitmReport;
+
+  CheckReportMsg keyboardReport = report([]);
+  bool? blockedKeyboards;
+
+  @override
+  Future<CheckReportMsg> keyboard() async => keyboardReport;
+  @override
+  Future<void> setBlockCustomKeyboards(bool block) async =>
+      blockedKeyboards = block;
 }
 
 /// In-memory keys: "signatures" are the alias bytes followed by the data.

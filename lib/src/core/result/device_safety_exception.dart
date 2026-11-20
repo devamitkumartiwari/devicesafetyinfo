@@ -189,3 +189,18 @@ final class BiometricException extends DeviceSafetyException {
   String toString() =>
       'BiometricException(${code.name})${message == null ? '' : ': $message'}';
 }
+
+/// A pinned host presented a certificate whose key isn't pinned (or was reached over plain
+/// HTTP). Thrown by clients from `DeviceSafety.pinning.createHttpClient`; the connection is
+/// closed before any request bytes are sent.
+final class PinningException extends DeviceSafetyException {
+  /// Creates the exception for [host].
+  const PinningException(this.host, [super.message]);
+
+  /// The host that failed the pin check.
+  final String host;
+
+  @override
+  String toString() =>
+      'PinningException($host)${message == null ? '' : ': $message'}';
+}

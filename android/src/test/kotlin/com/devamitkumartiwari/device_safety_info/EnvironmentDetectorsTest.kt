@@ -2,6 +2,7 @@ package com.devamitkumartiwari.device_safety_info
 
 import com.devamitkumartiwari.device_safety_info.core.RiskSignal
 import com.devamitkumartiwari.device_safety_info.features.environment.CloneDetector
+import com.devamitkumartiwari.device_safety_info.features.environment.KeyboardDetector
 import com.devamitkumartiwari.device_safety_info.features.environment.MockLocationDetector
 import com.devamitkumartiwari.device_safety_info.features.environment.RemoteAccessDetector
 import com.devamitkumartiwari.device_safety_info.features.environment.UserCaDetector
@@ -107,5 +108,35 @@ class UserCaDetectorTest {
             UserCaDetector.signals(listOf("Charles"), trafficRouted = true),
         )
         assertEquals(emptyList(), UserCaDetector.signals(emptyList(), trafficRouted = true))
+    }
+}
+
+class KeyboardDetectorTest {
+    private val system = setOf("com.oem.keyboard")
+    private fun signals(ime: String?, services: List<String> = emptyList()) =
+        KeyboardDetector.signals(ime, services) { it in system }
+
+    @Test
+    fun systemAndTrustedKeyboardsAreClean() {
+        assertEquals(emptyList(), signals(null))
+        assertEquals(emptyList(), signals(""))
+        assertEquals(emptyList(), signals("com.oem.keyboard/.Ime"))
+        assertEquals(
+            emptyList(),
+            signals("com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME"),
+        )
+        assertEquals(emptyList(), signals("com.touchtype.swiftkey/com.touchtype.KeyboardService"))
+    }
+
+    @Test
+    fun thirdPartyKeyboardIsLowAndHighWithAccessibility() {
+        assertEquals(
+            listOf(RiskSignal("keyboard.third_party:com.evil.kb", false)),
+            signals("com.evil.kb/.Ime", listOf("com.other/.Svc")),
+        )
+        assertEquals(
+            listOf(RiskSignal("keyboard.third_party:com.evil.kb", true)),
+            signals("com.evil.kb/.Ime", listOf("com.evil.kb/.Spy")),
+        )
     }
 }

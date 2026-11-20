@@ -1,4 +1,3 @@
-
 import 'package:device_safety_info/device_safety_info.dart';
 import 'package:device_safety_info/testing.dart';
 import 'package:flutter/foundation.dart';

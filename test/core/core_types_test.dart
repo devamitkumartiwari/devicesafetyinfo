@@ -120,6 +120,7 @@ void main() {
         NativeFailureException() => 'native',
         AttestationException() => 'attestation',
         BiometricException() => 'biometric',
+        PinningException() => 'pinning',
       };
       expect(describe(const NativeFailureException('x')), 'native');
     });

@@ -31,6 +31,7 @@ final class DeviceSafetyConfig {
     Set<String> expectedSigningCertificates = const {},
     this.expectedIosTeamId,
     Set<String> remoteAccessAllowlist = const {},
+    Set<String> keyboardAllowlist = const {},
     this.logger,
   }) : policies = Map.unmodifiable(policies),
        signalOverrides = Map.unmodifiable(signalOverrides),
@@ -42,6 +43,7 @@ final class DeviceSafetyConfig {
        malwarePackages = Set.unmodifiable(malwarePackages),
        iocBlocklist = Set.unmodifiable(iocBlocklist),
        remoteAccessAllowlist = Set.unmodifiable(remoteAccessAllowlist),
+       keyboardAllowlist = Set.unmodifiable(keyboardAllowlist),
        expectedSigningCertificates = Set.unmodifiable(
          expectedSigningCertificates,
        );
@@ -104,6 +106,10 @@ final class DeviceSafetyConfig {
   /// support or MDM tool your organization uses.
   final Set<String> remoteAccessAllowlist;
 
+  /// Keyboard apps (package names) the keyboard check doesn't report. Preinstalled keyboards,
+  /// Gboard and SwiftKey are already trusted.
+  final Set<String> keyboardAllowlist;
+
   /// Receives diagnostic messages. `null` discards them.
   final DeviceSafetyLogger? logger;
 
@@ -130,6 +136,7 @@ final class DeviceSafetyConfig {
     Set<String>? expectedSigningCertificates,
     String? expectedIosTeamId,
     Set<String>? remoteAccessAllowlist,
+    Set<String>? keyboardAllowlist,
     DeviceSafetyLogger? logger,
   }) => DeviceSafetyConfig(
     defaultPolicy: defaultPolicy ?? this.defaultPolicy,
@@ -150,6 +157,7 @@ final class DeviceSafetyConfig {
         expectedSigningCertificates ?? this.expectedSigningCertificates,
     expectedIosTeamId: expectedIosTeamId ?? this.expectedIosTeamId,
     remoteAccessAllowlist: remoteAccessAllowlist ?? this.remoteAccessAllowlist,
+    keyboardAllowlist: keyboardAllowlist ?? this.keyboardAllowlist,
     logger: logger ?? this.logger,
   );
 }

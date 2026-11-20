@@ -1031,6 +1031,101 @@ class PostureHostApi {
   }
 }
 
+/// Fraud-environment checks (Android; iOS reports unsupported).
+class EnvironmentHostApi {
+  /// Constructor for [EnvironmentHostApi]. The [binaryMessenger] named argument is
+  /// available for dependency injection. If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  EnvironmentHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
+
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  /// Remote-control apps installed or able to control the device.
+  Future<CheckReportMsg> remoteAccess() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.remoteAccess$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as CheckReportMsg;
+  }
+
+  /// Mock-location apps and spoofed location fixes.
+  Future<CheckReportMsg> locationSpoofing() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.locationSpoofing$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as CheckReportMsg;
+  }
+
+  /// The app running in a cloned / dual-app space or a work profile.
+  Future<CheckReportMsg> appCloning() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.appCloning$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as CheckReportMsg;
+  }
+
+  /// User-installed CA certificates that allow HTTPS interception.
+  Future<CheckReportMsg> mitm() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.mitm$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as CheckReportMsg;
+  }
+}
+
 /// Runs many checks in one round trip, in parallel on the platform side.
 class BatchHostApi {
   /// Constructor for [BatchHostApi]. The [binaryMessenger] named argument is

@@ -36,8 +36,15 @@ const Set<String> cLists = {
   'iosInjectedImages',
 };
 
-/// Packages that get a `<queries>` entry so the root-app check can see them on Android 11+.
-const List<String> queriedLists = ['rootManagerPackages', 'rootCloakPackages'];
+/// Packages that get a `<queries>` entry so the package-based checks (root apps, remote access,
+/// mock location, cloners) can see them on Android 11+.
+const List<String> queriedLists = [
+  'rootManagerPackages',
+  'rootCloakPackages',
+  'remoteAccessPackages',
+  'mockLocationPackages',
+  'clonerPackages',
+];
 
 const String _beginQueries =
     '<!-- BEGIN GENERATED QUERIES (tool/gen_signatures.dart) -->';

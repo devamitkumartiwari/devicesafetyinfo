@@ -1013,6 +1013,92 @@ class PostureHostApiSetup {
     }
   }
 }
+/// Fraud-environment checks (Android; iOS reports unsupported).
+///
+/// Generated protocol from Pigeon that represents a handler of messages from Flutter.
+protocol EnvironmentHostApi {
+  /// Remote-control apps installed or able to control the device.
+  func remoteAccess() async throws -> CheckReportMsg
+  /// Mock-location apps and spoofed location fixes.
+  func locationSpoofing() async throws -> CheckReportMsg
+  /// The app running in a cloned / dual-app space or a work profile.
+  func appCloning() async throws -> CheckReportMsg
+  /// User-installed CA certificates that allow HTTPS interception.
+  func mitm() async throws -> CheckReportMsg
+}
+
+/// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
+class EnvironmentHostApiSetup {
+  static var codec: FlutterStandardMessageCodec { DeviceSafetyApiPigeonCodec.shared }
+  /// Sets up an instance of `EnvironmentHostApi` to handle messages through the `binaryMessenger`.
+  static func setUp(binaryMessenger: FlutterBinaryMessenger, api: EnvironmentHostApi?, messageChannelSuffix: String = "") {
+    let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+    /// Remote-control apps installed or able to control the device.
+    let remoteAccessChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.remoteAccess\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      remoteAccessChannel.setMessageHandler { _, reply in
+        Task { @MainActor in
+          do {
+            let result = try await api.remoteAccess()
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      remoteAccessChannel.setMessageHandler(nil)
+    }
+    /// Mock-location apps and spoofed location fixes.
+    let locationSpoofingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.locationSpoofing\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      locationSpoofingChannel.setMessageHandler { _, reply in
+        Task { @MainActor in
+          do {
+            let result = try await api.locationSpoofing()
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      locationSpoofingChannel.setMessageHandler(nil)
+    }
+    /// The app running in a cloned / dual-app space or a work profile.
+    let appCloningChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.appCloning\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      appCloningChannel.setMessageHandler { _, reply in
+        Task { @MainActor in
+          do {
+            let result = try await api.appCloning()
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      appCloningChannel.setMessageHandler(nil)
+    }
+    /// User-installed CA certificates that allow HTTPS interception.
+    let mitmChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.mitm\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      mitmChannel.setMessageHandler { _, reply in
+        Task { @MainActor in
+          do {
+            let result = try await api.mitm()
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      mitmChannel.setMessageHandler(nil)
+    }
+  }
+}
 /// Runs many checks in one round trip, in parallel on the platform side.
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.

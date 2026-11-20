@@ -30,6 +30,7 @@ final class DeviceSafetyConfig {
     Set<String> iocBlocklist = const {},
     Set<String> expectedSigningCertificates = const {},
     this.expectedIosTeamId,
+    Set<String> remoteAccessAllowlist = const {},
     this.logger,
   }) : policies = Map.unmodifiable(policies),
        signalOverrides = Map.unmodifiable(signalOverrides),
@@ -40,6 +41,7 @@ final class DeviceSafetyConfig {
        ),
        malwarePackages = Set.unmodifiable(malwarePackages),
        iocBlocklist = Set.unmodifiable(iocBlocklist),
+       remoteAccessAllowlist = Set.unmodifiable(remoteAccessAllowlist),
        expectedSigningCertificates = Set.unmodifiable(
          expectedSigningCertificates,
        );
@@ -98,6 +100,10 @@ final class DeviceSafetyConfig {
   /// another team is reported as high risk.
   final String? expectedIosTeamId;
 
+  /// Remote-control apps (package names) the remote-access check doesn't report, e.g. the
+  /// support or MDM tool your organization uses.
+  final Set<String> remoteAccessAllowlist;
+
   /// Receives diagnostic messages. `null` discards them.
   final DeviceSafetyLogger? logger;
 
@@ -123,6 +129,7 @@ final class DeviceSafetyConfig {
     Set<String>? iocBlocklist,
     Set<String>? expectedSigningCertificates,
     String? expectedIosTeamId,
+    Set<String>? remoteAccessAllowlist,
     DeviceSafetyLogger? logger,
   }) => DeviceSafetyConfig(
     defaultPolicy: defaultPolicy ?? this.defaultPolicy,
@@ -142,6 +149,7 @@ final class DeviceSafetyConfig {
     expectedSigningCertificates:
         expectedSigningCertificates ?? this.expectedSigningCertificates,
     expectedIosTeamId: expectedIosTeamId ?? this.expectedIosTeamId,
+    remoteAccessAllowlist: remoteAccessAllowlist ?? this.remoteAccessAllowlist,
     logger: logger ?? this.logger,
   );
 }

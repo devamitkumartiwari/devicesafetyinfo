@@ -13,6 +13,7 @@ public class DeviceSafetyInfoPlugin: NSObject, FlutterPlugin {
         RootHostApiSetup.setUp(binaryMessenger: m, api: RootHostApiImpl())
         HookingHostApiSetup.setUp(binaryMessenger: m, api: HookingHostApiImpl())
         PostureHostApiSetup.setUp(binaryMessenger: m, api: PostureHostApiImpl())
+        EnvironmentHostApiSetup.setUp(binaryMessenger: m, api: EnvironmentHostApiImpl())
         BatchHostApiSetup.setUp(binaryMessenger: m, api: BatchHostApiImpl())
         VpnHostApiSetup.setUp(binaryMessenger: m, api: VpnHostApiImpl())
         MalwareHostApiSetup.setUp(binaryMessenger: m, api: MalwareHostApiImpl())

@@ -200,6 +200,26 @@ abstract class PostureHostApi {
   List<NotificationListenerMsg> enabledNotificationListeners();
 }
 
+/// Fraud-environment checks (Android; iOS reports unsupported).
+@HostApi()
+abstract class EnvironmentHostApi {
+  /// Remote-control apps installed or able to control the device.
+  @async
+  CheckReportMsg remoteAccess();
+
+  /// Mock-location apps and spoofed location fixes.
+  @async
+  CheckReportMsg locationSpoofing();
+
+  /// The app running in a cloned / dual-app space or a work profile.
+  @async
+  CheckReportMsg appCloning();
+
+  /// User-installed CA certificates that allow HTTPS interception.
+  @async
+  CheckReportMsg mitm();
+}
+
 /// Runs many checks in one round trip, in parallel on the platform side.
 @HostApi()
 abstract class BatchHostApi {

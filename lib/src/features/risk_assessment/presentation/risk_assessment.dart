@@ -92,6 +92,22 @@ final class RiskFlag {
         'App has been modified',
         'This copy of the app was re-signed, possibly after being altered.',
       ),
+      CheckType.remoteAccess => (
+        'Remote-control app on this device',
+        'Scammers use remote-control apps to operate a victim\'s phone during a "support" call.',
+      ),
+      CheckType.locationSpoofing => (
+        'Location is being faked',
+        'A mock-location app can make the device report a location it isn\'t at.',
+      ),
+      CheckType.appCloning => (
+        'App is running in a cloned space',
+        'Cloned or dual-app spaces are often used to run several accounts for fraud.',
+      ),
+      CheckType.mitm => (
+        'Network traffic can be intercepted',
+        'A user-installed certificate lets another party read encrypted traffic.',
+      ),
     };
     return RiskFlag(type: type, title: title, description: description);
   }

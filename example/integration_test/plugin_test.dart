@@ -40,6 +40,10 @@ void main() {
     'vpn': () => DeviceSafety.vpn,
     'screenCapture': () => DeviceSafety.screen,
     'malware': () => DeviceSafety.malware,
+    'remoteAccess': () => DeviceSafety.remoteAccess,
+    'locationSpoofing': () => DeviceSafety.locationSpoofing,
+    'appCloning': () => DeviceSafety.appCloning,
+    'mitm': () => DeviceSafety.mitm,
     'tampering': () => DeviceSafety.tampering,
   };
 
@@ -199,4 +203,24 @@ void main() {
       print('listeners: $listeners; flagged: $flagged');
     },
   );
+
+  test('fraud-environment checks report what they find', () async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final clone = await DeviceSafety.appCloning.check(refresh: true);
+    expect(
+      clone.signals.where((s) => s.key == 'clone.virtual_container'),
+      isEmpty,
+      reason: 'the test app runs as a normal install',
+    );
+    for (final api in <DetectionApi>[
+      DeviceSafety.remoteAccess,
+      DeviceSafety.locationSpoofing,
+      DeviceSafety.appCloning,
+      DeviceSafety.mitm,
+    ]) {
+      final r = await api.check(refresh: true);
+      // ignore: avoid_print
+      print('${api.type.name}: ${r.status.name} ${r.signals}');
+    }
+  });
 }

@@ -210,5 +210,56 @@
     "SubstrateInserter",
     "ellekit",
     "/var/jb/"
+  ],
+
+  "remoteAccessPackages": [
+    "com.anydesk.anydeskandroid",
+    "com.anydesk.adcontrol.ad1",
+    "com.teamviewer.quicksupport.market",
+    "com.teamviewer.host.market",
+    "com.teamviewer.quicksupport.addon.universal",
+    "com.rustdesk.rustdesk",
+    "com.carriez.flutter_hbb",
+    "com.sand.airdroid",
+    "com.sand.airdroidbiz",
+    "com.sand.airmirror",
+    "com.splashtop.sos",
+    "com.splashtop.streamer.addon.knox",
+    "com.zoho.assist.agent",
+    "com.logmein.rescuemobile",
+    "com.remotepc.viewer"
+  ],
+
+  "mockLocationPackages": [
+    "com.lexa.fakegps",
+    "com.incorporateapps.fakegps.fre",
+    "com.blogspot.newapphorizons.fakegps",
+    "com.theappninjas.fakegpsjoystick",
+    "com.theappninjas.gpsjoystick",
+    "com.rosteam.gpsemulator",
+    "ru.gavrikov.mocklocations",
+    "com.evezzon.fakegps",
+    "com.gsmartstudio.fakegps",
+    "com.lkr.fakelocation",
+    "com.just4funtools.fakegpslocationprofessional",
+    "com.fakegps.mock",
+    "com.divi.fakeGPS",
+    "com.usefullapps.fakegpslocationpro"
+  ],
+
+  "clonerPackages": [
+    "com.lbe.parallel.intl",
+    "com.lbe.parallel.intl.arm64",
+    "com.parallel.space.lite",
+    "com.parallel.space.pro",
+    "com.excelliance.dualaid",
+    "com.ludashi.dualspace",
+    "com.polestar.multiaccount",
+    "com.applisto.appcloner",
+    "io.va.exposed",
+    "io.va.exposed64",
+    "com.dualspace.multispace.android",
+    "info.cloneapp.mochat.in.goast",
+    "com.cloneapp.parallelspace.dualspace"
   ]
 }

@@ -1114,6 +1114,101 @@ interface PostureHostApi {
   }
 }
 /**
+ * Fraud-environment checks (Android; iOS reports unsupported).
+ *
+ * Generated interface from Pigeon that represents a handler of messages from Flutter.
+ */
+interface EnvironmentHostApi {
+  /** Remote-control apps installed or able to control the device. */
+  suspend fun remoteAccess(): CheckReportMsg
+  /** Mock-location apps and spoofed location fixes. */
+  suspend fun locationSpoofing(): CheckReportMsg
+  /** The app running in a cloned / dual-app space or a work profile. */
+  suspend fun appCloning(): CheckReportMsg
+  /** User-installed CA certificates that allow HTTPS interception. */
+  suspend fun mitm(): CheckReportMsg
+
+  companion object {
+    /** The codec used by EnvironmentHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      DeviceSafetyApiPigeonCodec()
+    }
+    /** Sets up an instance of `EnvironmentHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: EnvironmentHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.remoteAccess$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.remoteAccess())
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.locationSpoofing$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.locationSpoofing())
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.appCloning$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.appCloning())
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.EnvironmentHostApi.mitm$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.mitm())
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/**
  * Runs many checks in one round trip, in parallel on the platform side.
  *
  * Generated interface from Pigeon that represents a handler of messages from Flutter.

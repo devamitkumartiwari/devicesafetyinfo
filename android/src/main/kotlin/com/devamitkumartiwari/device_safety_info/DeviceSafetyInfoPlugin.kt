@@ -17,6 +17,7 @@ import com.devamitkumartiwari.device_safety_info.features.hooking.HookingHostApi
 import com.devamitkumartiwari.device_safety_info.features.malware.MalwareHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.overlay_attack.OverlayAttackHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.overlay_attack.OverlayAttackMonitor
+import com.devamitkumartiwari.device_safety_info.features.environment.EnvironmentHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.posture.PostureHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.root.RootHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.screen_protection.ScreenCaptureMonitor
@@ -37,6 +38,7 @@ import com.devamitkumartiwari.device_safety_info.generated.IntegrityHostApi
 import com.devamitkumartiwari.device_safety_info.generated.MalwareHostApi
 import com.devamitkumartiwari.device_safety_info.generated.OverlayAttackHostApi
 import com.devamitkumartiwari.device_safety_info.generated.OverlayAttackStreamHandler
+import com.devamitkumartiwari.device_safety_info.generated.EnvironmentHostApi
 import com.devamitkumartiwari.device_safety_info.generated.PostureHostApi
 import com.devamitkumartiwari.device_safety_info.generated.RootHostApi
 import com.devamitkumartiwari.device_safety_info.generated.ScreenCaptureChangedStreamHandler
@@ -91,6 +93,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, ActivityAware, PluginHost {
         RootHostApi.setUp(m, RootHostApiImpl(this, runner))
         HookingHostApi.setUp(m, HookingHostApiImpl(this, runner))
         PostureHostApi.setUp(m, PostureHostApiImpl(this, runner))
+        EnvironmentHostApi.setUp(m, EnvironmentHostApiImpl(this, runner))
         BatchHostApi.setUp(m, BatchHostApiImpl(this, runner, recording))
         VpnHostApi.setUp(m, VpnHostApiImpl(this, runner))
         MalwareHostApi.setUp(m, MalwareHostApiImpl(this, runner))
@@ -123,6 +126,7 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, ActivityAware, PluginHost {
             RootHostApi.setUp(m, null)
             HookingHostApi.setUp(m, null)
             PostureHostApi.setUp(m, null)
+            EnvironmentHostApi.setUp(m, null)
             BatchHostApi.setUp(m, null)
             VpnHostApi.setUp(m, null)
             MalwareHostApi.setUp(m, null)

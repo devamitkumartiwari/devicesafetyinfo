@@ -7,6 +7,10 @@ import com.devamitkumartiwari.device_safety_info.core.RiskReport
 import com.devamitkumartiwari.device_safety_info.core.requireContext
 import com.devamitkumartiwari.device_safety_info.features.accessibility.AccessibilityAbuseDetector
 import com.devamitkumartiwari.device_safety_info.features.app_integrity.SigningInfoReader
+import com.devamitkumartiwari.device_safety_info.features.environment.CloneDetector
+import com.devamitkumartiwari.device_safety_info.features.environment.MockLocationDetector
+import com.devamitkumartiwari.device_safety_info.features.environment.RemoteAccessDetector
+import com.devamitkumartiwari.device_safety_info.features.environment.UserCaDetector
 import com.devamitkumartiwari.device_safety_info.features.emulator.RealDeviceCheck
 import com.devamitkumartiwari.device_safety_info.features.hooking.HookDetector
 import com.devamitkumartiwari.device_safety_info.features.malware.MalwarePackageDetector
@@ -48,6 +52,10 @@ class BatchHostApiImpl(
         "unknownSources" to PostureReports::unknownSources,
         "playProtect" to PostureReports::playProtect,
         "vpn" to VpnReport::evaluate,
+        "remoteAccess" to RemoteAccessDetector::report,
+        "locationSpoofing" to MockLocationDetector::report,
+        "appCloning" to CloneDetector::report,
+        "mitm" to UserCaDetector::report,
         "screenCapture" to { ctx -> ScreenProtectionHostApiImpl.captureReport(ctx, recording) },
     )
 

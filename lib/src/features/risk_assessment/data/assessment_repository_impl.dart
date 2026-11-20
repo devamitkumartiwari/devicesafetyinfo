@@ -9,6 +9,7 @@ import '../../../core/utils/platform_guard.dart';
 import '../../accessibility_abuse/domain/accessibility_signals.dart';
 import '../../malware/domain/malware_repository.dart';
 import '../../notification_listener/domain/notification_listener_signals.dart';
+import '../../environment/domain/environment_repository.dart';
 import '../../tampering/data/tampering_repository_impl.dart';
 import '../../tampering/domain/tampering_signals.dart';
 import '../domain/assessment_repository.dart';
@@ -85,6 +86,13 @@ final class AssessmentRepositoryImpl implements AssessmentRepository {
         if (CheckType.fromId(key) case final t? when types.contains(t))
           t: value.toDomain(),
     };
+
+    if (out[CheckType.remoteAccess] case final r?) {
+      out[CheckType.remoteAccess] = withoutAllowlistedRemoteAccess(
+        r,
+        config.remoteAccessAllowlist,
+      );
+    }
 
     for (final type in _ffiChecks) {
       if (!types.contains(type)) continue;

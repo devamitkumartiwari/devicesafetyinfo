@@ -20,6 +20,7 @@ final class DeviceSafetyPlatform {
     api.CallHostApi? call,
     api.AppInfoHostApi? appInfo,
     api.IntegrityHostApi? integrity,
+    api.EnvironmentHostApi? environment,
     PlatformEvents? events,
     NativeChecksSource? ffi,
   }) : root = root ?? api.RootHostApi(),
@@ -35,6 +36,7 @@ final class DeviceSafetyPlatform {
        call = call ?? api.CallHostApi(),
        appInfo = appInfo ?? api.AppInfoHostApi(),
        integrity = integrity ?? api.IntegrityHostApi(),
+       environment = environment ?? api.EnvironmentHostApi(),
        events = events ?? const PlatformEvents(),
        ffi = ffi ?? const NativeChecksFfi();
 
@@ -51,6 +53,7 @@ final class DeviceSafetyPlatform {
   final api.CallHostApi call;
   final api.AppInfoHostApi appInfo;
   final api.IntegrityHostApi integrity;
+  final api.EnvironmentHostApi environment;
   final PlatformEvents events;
   final NativeChecksSource ffi;
 }

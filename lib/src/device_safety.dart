@@ -44,6 +44,8 @@ import 'features/root/presentation/root_api.dart';
 import 'features/screen_protection/data/screen_protection_repository_impl.dart';
 import 'features/screen_protection/presentation/screen_protection_api.dart';
 import 'features/screen_protection/presentation/widgets/secure_screen.dart';
+import 'features/environment/data/environment_repository_impl.dart';
+import 'features/environment/presentation/environment_apis.dart';
 import 'features/tampering/data/tampering_repository_impl.dart';
 import 'features/tampering/presentation/tampering_api.dart';
 import 'features/version_check/data/version_repository_impl.dart';
@@ -177,6 +179,29 @@ final class DeviceSafetyClient {
     TamperingRepositoryImpl(_platform.appInfo),
     () => _config,
   );
+
+  late final EnvironmentRepositoryImpl _environment = EnvironmentRepositoryImpl(
+    _platform.environment,
+  );
+
+  /// Remote-control app detection.
+  late final RemoteAccessApi remoteAccess = RemoteAccessApi(
+    _runner,
+    _environment,
+    () => _config,
+  );
+
+  /// GPS spoofing detection.
+  late final LocationSpoofingApi locationSpoofing = LocationSpoofingApi(
+    _runner,
+    _environment,
+  );
+
+  /// Cloned / dual-app space detection.
+  late final AppCloningApi appCloning = AppCloningApi(_runner, _environment);
+
+  /// User-installed CA certificate (HTTPS interception) detection.
+  late final MitmApi mitm = MitmApi(_runner, _environment);
 
   /// Live call detection.
   late final CallActivityApi calls = CallActivityApi(
@@ -350,6 +375,18 @@ abstract final class DeviceSafety {
 
   /// Repackaged / re-signed app detection.
   static TamperingApi get tampering => instance.tampering;
+
+  /// Remote-control app detection.
+  static RemoteAccessApi get remoteAccess => instance.remoteAccess;
+
+  /// GPS spoofing detection.
+  static LocationSpoofingApi get locationSpoofing => instance.locationSpoofing;
+
+  /// Cloned / dual-app space detection.
+  static AppCloningApi get appCloning => instance.appCloning;
+
+  /// User-installed CA certificate (HTTPS interception) detection.
+  static MitmApi get mitm => instance.mitm;
 
   /// Live call detection.
   static CallActivityApi get calls => instance.calls;

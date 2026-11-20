@@ -238,6 +238,50 @@ internal object Signatures {
         )
     }
 
+    /** 15 entries. */
+    val remoteAccessPackages: List<String> by lazy {
+        decode(
+            0x9d,
+            "fe2b86bc588efe4ab00f48e41076c60268c73063c73485f12c8893598ee501b7135daf176aab496fd13f6cc4258af02a" +
+            "c3f55fd38953b8130bb8167bac1e66d32a61d97c88d52e8dfe4f96fa41b70d52e3197ab00275c35e66c33ed4d52d8efb" +
+            "4b8dee45bcf209a61a6fb7447cd92d6dc820fbc1269db94a80ed5eace84db8136fea1a67d0036cdd208cd32583ec1187" +
+            "e950b4ec07a51977b30961c90064af3592c96580ec3393ea50afe804a30d6cb20971c80909d338938b2f92e83381ea4c" +
+            "f3e247a70d54a21c4ad40168b13b90cb6387fa2c8dbe56b7f748a11548ac6f75d20925c1386ec36094f5318ee357b6e2" +
+            "4fbd0122aa1f7a90166ddd3e2fc92684f02d99e05692874dba110db90174de1565c03472872398ed458ffc57cffb5fba" +
+            "1c57a30676b0497dc12e66cb3c9ded688cf05f8de71ebc104ab47379ae0521cc326cc47c98d33487e648cdeb56bd1152" +
+            "cd1774af477cd83968c93a948f3a8ae55e91ee5fb6e24ea2101ca0057c962d63c03b8fc73993b9488ce944bff3",
+        )
+    }
+
+    /** 14 entries. */
+    val mockLocationPackages: List<String> by lazy {
+        decode(
+            0x35,
+            "56b3ee04bd1d67a74372da096cd7278da52f9cf76f81e155b2f65bbd0b41b30b74cc13799f3e9ecd2893eb31c7f645bb" +
+            "854fbc170faa0379da177bdd2d2ec92b82fd339af957adef57bb1551e71676d5006bc32901cb209bb33083f75890f740" +
+            "bc1249ab0236d90766d13c72da3a98e73698fa598a884cb9100abf1a7ca1177edb356dc0308bb1219de7518df043a317" +
+            "46a77379ae0521c43277df3798cd6989e54f86e744b41e52a2061bb01c3ed03f73de3a91ce3ec1fb5287e05eb6e346ba" +
+            "1c73ad1911db306b83318dc7338af850cbea52b1e44fbf051da7047f970774c3348ed73985ed5b8fe21abde342b5106e" +
+            "b66c70d50c26c33d8f8a2d93f2258be156bdf743be161fa5027995087cc323cac3399dee2e87e345f3e24ab91c47b71d" +
+            "79d3006bc53190c83d86f4248ce344b7ea42b21621ab007b93026ad93c67d73ddbf12c89fa38bce940fa1f4bbf1939d8" +
+            "0467d61d51fb4f95f229c5e74a85e15bb91042ba016b91006cdf3e65d9239bf1268de7538ee65fa412",
+        )
+    }
+
+    /** 13 entries. */
+    val clonerPackages: List<String> by lazy {
+        decode(
+            0x69,
+            "0a7fda7069ce36d4d1299df75188ee5ef7e949ba191ca0057c963364c87a8bc33b91fb5280e01db3ef5ca3587cb60624" +
+            "8d6064c138d2d32b83f9538ae858f5f159b1147beb007ace0408cc39908a3b93eb218be250b0ad59a1197ca34364c90d" +
+            "09d338938b298bf92484e35fbcea48b75744b20f79dd0a6eb13b90cb6398ee2688e35fb7ab48a61b4dbb1f77de010bd1" +
+            "366d893e9af02699e559ada840a11756a01174dd0a79dd2e01cb209bb3259be25589f45aba5242ba017bd30963d12902" +
+            "c03fd9e824c2f64291e75cb31924a21d37b60620d02473c5229dfb70d994588de41eb30b44a0006aa00b6a983071c726" +
+            "90d3378ff659cdeb5fbc0d49a4101bab0776d87066c03c94c4299fe61389e451b1e153e01c72ed0d7ed92c72ad3794cf" +
+            "6793fb518be952aaf106bf176fa5077edc0c74de349fc66495ed5e8afe44bae14c",
+        )
+    }
+
     private fun decode(seed: Int, hex: String): List<String> {
         val bytes = ByteArray(hex.length / 2) { i ->
             val b = hex.substring(i * 2, i * 2 + 2).toInt(16)

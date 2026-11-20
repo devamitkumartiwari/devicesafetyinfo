@@ -39,7 +39,8 @@ final class BatchHostApiImpl: BatchHostApi {
             return try? await PluginSupport.background { VpnSignals.report() }
         case "screenCapture":
             return await MainActor.run { ScreenProtectionHostApiImpl.captureReport() }
-        case "developerMode", "externalStorage", "unknownSources", "playProtect":
+        case "developerMode", "externalStorage", "unknownSources", "playProtect",
+            "remoteAccess", "locationSpoofing", "appCloning", "mitm":
             return .unsupported
         default:
             // accessibility / notificationListener / malware are answered by the lists above.

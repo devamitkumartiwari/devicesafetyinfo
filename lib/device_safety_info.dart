@@ -52,5 +52,6 @@ export 'src/features/screen_protection/presentation/widgets/secure_screen.dart';
 export 'src/features/tampering/domain/tampering_signals.dart'
     show SigningInfo, normalizeCertificateDigest;
 export 'src/features/tampering/presentation/tampering_api.dart';
+export 'src/features/environment/presentation/environment_apis.dart';
 export 'src/features/version_check/presentation/version_check_api.dart';
 export 'src/features/vpn/presentation/vpn_api.dart';

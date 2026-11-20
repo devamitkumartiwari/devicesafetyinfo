@@ -52,7 +52,20 @@ enum CheckType {
 
   /// The app was repackaged or re-signed: an unexpected signing certificate (Android) or
   /// provisioning profile (iOS).
-  tampering;
+  tampering,
+
+  /// A remote-control app (AnyDesk, TeamViewer QuickSupport, ...) is installed or can control
+  /// the device (Android).
+  remoteAccess,
+
+  /// A mock-location app is selected or the location is spoofed (Android).
+  locationSpoofing,
+
+  /// The app runs in a cloned / dual-app space or a work profile (Android).
+  appCloning,
+
+  /// User-installed CA certificates allow HTTPS interception (Android).
+  mitm;
 
   /// Stable string id sent to the platform side (the enum name).
   String get id => name;

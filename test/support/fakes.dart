@@ -243,6 +243,22 @@ class FakeIntegrityApi extends Fake implements IntegrityHostApi {
   Future<String> generateDeviceCheckToken() async => 'dc';
 }
 
+class FakeEnvironmentApi extends Fake implements EnvironmentHostApi {
+  CheckReportMsg remote = report([]);
+  CheckReportMsg location = report([]);
+  CheckReportMsg cloning = report([]);
+  CheckReportMsg mitmReport = report([]);
+
+  @override
+  Future<CheckReportMsg> remoteAccess() async => remote;
+  @override
+  Future<CheckReportMsg> locationSpoofing() async => location;
+  @override
+  Future<CheckReportMsg> appCloning() async => cloning;
+  @override
+  Future<CheckReportMsg> mitm() async => mitmReport;
+}
+
 /// Live streams driven by the test.
 class FakeEvents implements PlatformEvents {
   final screenshotsCtl = StreamController<int>.broadcast();
@@ -284,6 +300,7 @@ class Fakes {
   final call = FakeCallApi();
   final appInfo = FakeAppInfoApi();
   final integrity = FakeIntegrityApi();
+  final environment = FakeEnvironmentApi();
   final events = FakeEvents();
   FakeNativeChecks ffi = const FakeNativeChecks();
 
@@ -301,6 +318,7 @@ class Fakes {
     call: call,
     appInfo: appInfo,
     integrity: integrity,
+    environment: environment,
     events: events,
     ffi: ffi,
   );

@@ -204,6 +204,19 @@ enum CallSourceMsg: Int, CaseIterable {
   case unknown = 4
 }
 
+enum KeySecurityLevelMsg: Int, CaseIterable {
+  case strongBox = 0
+  case tee = 1
+  case secureEnclave = 2
+  case software = 3
+}
+
+enum BiometricKeyStateMsg: Int, CaseIterable {
+  case valid = 0
+  case invalidated = 1
+  case missing = 2
+}
+
 /// One indicator. `id` is `<check>.<signal>` optionally followed by `:<detail>`, e.g.
 /// `root.su_executable:/system/xbin/su`.
 ///
@@ -676,6 +689,53 @@ struct CallEventMsg: Hashable, CustomStringConvertible {
   }
 }
 
+/// Generated class from Pigeon that represents data sent in messages.
+struct DeviceKeyInfoMsg: Hashable, CustomStringConvertible {
+  /// SubjectPublicKeyInfo (DER), base64.
+  var publicKey: String
+  var securityLevel: KeySecurityLevelMsg
+  /// (Android) Key attestation certificate chain, leaf first, each DER base64. Empty on iOS.
+  var attestationChain: [String]
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> DeviceKeyInfoMsg? {
+    let publicKey = pigeonVar_list[0] as! String
+    let securityLevel = pigeonVar_list[1] as! KeySecurityLevelMsg
+    let attestationChain = pigeonVar_list[2] as! [String]
+
+    return DeviceKeyInfoMsg(
+      publicKey: publicKey,
+      securityLevel: securityLevel,
+      attestationChain: attestationChain
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      publicKey,
+      securityLevel,
+      attestationChain,
+    ]
+  }
+  static func == (lhs: DeviceKeyInfoMsg, rhs: DeviceKeyInfoMsg) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return DeviceSafetyApiPigeonInternal.deepEquals(lhs.publicKey, rhs.publicKey) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.securityLevel, rhs.securityLevel) && DeviceSafetyApiPigeonInternal.deepEquals(lhs.attestationChain, rhs.attestationChain)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("DeviceKeyInfoMsg")
+    DeviceSafetyApiPigeonInternal.deepHash(value: publicKey, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: securityLevel, hasher: &hasher)
+    DeviceSafetyApiPigeonInternal.deepHash(value: attestationChain, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "DeviceKeyInfoMsg(publicKey: \(String(describing: publicKey)), securityLevel: \(String(describing: securityLevel)), attestationChain: \(String(describing: attestationChain)))"
+  }
+}
+
 private class DeviceSafetyApiPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
@@ -698,25 +758,39 @@ private class DeviceSafetyApiPigeonCodecReader: FlutterStandardReader {
       }
       return nil
     case 132:
-      return SignalMsg.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return KeySecurityLevelMsg(rawValue: enumResultAsInt)
+      }
+      return nil
     case 133:
-      return CheckReportMsg.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return BiometricKeyStateMsg(rawValue: enumResultAsInt)
+      }
+      return nil
     case 134:
-      return AccessibilityServiceMsg.fromList(self.readValue() as! [Any?])
+      return SignalMsg.fromList(self.readValue() as! [Any?])
     case 135:
-      return NotificationListenerMsg.fromList(self.readValue() as! [Any?])
+      return CheckReportMsg.fromList(self.readValue() as! [Any?])
     case 136:
-      return BatchRequestMsg.fromList(self.readValue() as! [Any?])
+      return AccessibilityServiceMsg.fromList(self.readValue() as! [Any?])
     case 137:
-      return SigningInfoMsg.fromList(self.readValue() as! [Any?])
+      return NotificationListenerMsg.fromList(self.readValue() as! [Any?])
     case 138:
-      return BatchResultMsg.fromList(self.readValue() as! [Any?])
+      return BatchRequestMsg.fromList(self.readValue() as! [Any?])
     case 139:
-      return OverlayConfigMsg.fromList(self.readValue() as! [Any?])
+      return SigningInfoMsg.fromList(self.readValue() as! [Any?])
     case 140:
-      return AppInfoMsg.fromList(self.readValue() as! [Any?])
+      return BatchResultMsg.fromList(self.readValue() as! [Any?])
     case 141:
+      return OverlayConfigMsg.fromList(self.readValue() as! [Any?])
+    case 142:
+      return AppInfoMsg.fromList(self.readValue() as! [Any?])
+    case 143:
       return CallEventMsg.fromList(self.readValue() as! [Any?])
+    case 144:
+      return DeviceKeyInfoMsg.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -734,35 +808,44 @@ private class DeviceSafetyApiPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? CallSourceMsg {
       super.writeByte(131)
       super.writeValue(value.rawValue)
-    } else if let value = value as? SignalMsg {
+    } else if let value = value as? KeySecurityLevelMsg {
       super.writeByte(132)
-      super.writeValue(value.toList())
-    } else if let value = value as? CheckReportMsg {
+      super.writeValue(value.rawValue)
+    } else if let value = value as? BiometricKeyStateMsg {
       super.writeByte(133)
-      super.writeValue(value.toList())
-    } else if let value = value as? AccessibilityServiceMsg {
+      super.writeValue(value.rawValue)
+    } else if let value = value as? SignalMsg {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? NotificationListenerMsg {
+    } else if let value = value as? CheckReportMsg {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? BatchRequestMsg {
+    } else if let value = value as? AccessibilityServiceMsg {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? SigningInfoMsg {
+    } else if let value = value as? NotificationListenerMsg {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? BatchResultMsg {
+    } else if let value = value as? BatchRequestMsg {
       super.writeByte(138)
       super.writeValue(value.toList())
-    } else if let value = value as? OverlayConfigMsg {
+    } else if let value = value as? SigningInfoMsg {
       super.writeByte(139)
       super.writeValue(value.toList())
-    } else if let value = value as? AppInfoMsg {
+    } else if let value = value as? BatchResultMsg {
       super.writeByte(140)
       super.writeValue(value.toList())
-    } else if let value = value as? CallEventMsg {
+    } else if let value = value as? OverlayConfigMsg {
       super.writeByte(141)
+      super.writeValue(value.toList())
+    } else if let value = value as? AppInfoMsg {
+      super.writeByte(142)
+      super.writeValue(value.toList())
+    } else if let value = value as? CallEventMsg {
+      super.writeByte(143)
+      super.writeValue(value.toList())
+    } else if let value = value as? DeviceKeyInfoMsg {
+      super.writeByte(144)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -1010,6 +1093,215 @@ class PostureHostApiSetup {
       }
     } else {
       enabledNotificationListenersChannel.setMessageHandler(nil)
+    }
+  }
+}
+/// Hardware-bound signing keys (EC P-256, ECDSA with SHA-256). Errors use the codes
+/// UNSUPPORTED, KEY_MISSING and FAILED.
+///
+/// Generated protocol from Pigeon that represents a handler of messages from Flutter.
+protocol DeviceKeyHostApi {
+  func create(alias: String, challenge: FlutterStandardTypedData?, preferStrongBox: Bool) async throws -> DeviceKeyInfoMsg
+  func info(alias: String) async throws -> DeviceKeyInfoMsg?
+  /// DER-encoded ECDSA signature over [data].
+  func sign(alias: String, data: FlutterStandardTypedData) async throws -> FlutterStandardTypedData
+  func exists(alias: String) throws -> Bool
+  func delete(alias: String) throws
+}
+
+/// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
+class DeviceKeyHostApiSetup {
+  static var codec: FlutterStandardMessageCodec { DeviceSafetyApiPigeonCodec.shared }
+  /// Sets up an instance of `DeviceKeyHostApi` to handle messages through the `binaryMessenger`.
+  static func setUp(binaryMessenger: FlutterBinaryMessenger, api: DeviceKeyHostApi?, messageChannelSuffix: String = "") {
+    let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+    let createChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.create\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      createChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        let challengeArg: FlutterStandardTypedData? = nilOrValue(args[1])
+        let preferStrongBoxArg = args[2] as! Bool
+        Task { @MainActor in
+          do {
+            let result = try await api.create(alias: aliasArg, challenge: challengeArg, preferStrongBox: preferStrongBoxArg)
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      createChannel.setMessageHandler(nil)
+    }
+    let infoChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.info\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      infoChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        Task { @MainActor in
+          do {
+            let result = try await api.info(alias: aliasArg)
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      infoChannel.setMessageHandler(nil)
+    }
+    /// DER-encoded ECDSA signature over [data].
+    let signChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.sign\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      signChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        let dataArg = args[1] as! FlutterStandardTypedData
+        Task { @MainActor in
+          do {
+            let result = try await api.sign(alias: aliasArg, data: dataArg)
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      signChannel.setMessageHandler(nil)
+    }
+    let existsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.exists\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      existsChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        do {
+          let result = try api.exists(alias: aliasArg)
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      existsChannel.setMessageHandler(nil)
+    }
+    let deleteChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.delete\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      deleteChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        do {
+          try api.delete(alias: aliasArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      deleteChannel.setMessageHandler(nil)
+    }
+  }
+}
+/// Biometric-bound keys: signing requires a fresh strong-biometric match, and enrolling a new
+/// fingerprint or face invalidates the key. Errors use the codes UNSUPPORTED, NOT_ENROLLED,
+/// CANCELLED, LOCKED_OUT, ENROLLMENT_CHANGED, KEY_MISSING and FAILED.
+///
+/// Generated protocol from Pigeon that represents a handler of messages from Flutter.
+protocol BiometricHostApi {
+  func isAvailable() throws -> Bool
+  func enroll(alias: String) async throws -> DeviceKeyInfoMsg
+  /// Shows the biometric prompt and, on success, signs [payload] with the biometric-bound key.
+  func approve(alias: String, payload: FlutterStandardTypedData, title: String, reason: String) async throws -> FlutterStandardTypedData
+  func keyState(alias: String) throws -> BiometricKeyStateMsg
+  func delete(alias: String) throws
+}
+
+/// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
+class BiometricHostApiSetup {
+  static var codec: FlutterStandardMessageCodec { DeviceSafetyApiPigeonCodec.shared }
+  /// Sets up an instance of `BiometricHostApi` to handle messages through the `binaryMessenger`.
+  static func setUp(binaryMessenger: FlutterBinaryMessenger, api: BiometricHostApi?, messageChannelSuffix: String = "") {
+    let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+    let isAvailableChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.BiometricHostApi.isAvailable\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      isAvailableChannel.setMessageHandler { _, reply in
+        do {
+          let result = try api.isAvailable()
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      isAvailableChannel.setMessageHandler(nil)
+    }
+    let enrollChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.BiometricHostApi.enroll\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      enrollChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        Task { @MainActor in
+          do {
+            let result = try await api.enroll(alias: aliasArg)
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      enrollChannel.setMessageHandler(nil)
+    }
+    /// Shows the biometric prompt and, on success, signs [payload] with the biometric-bound key.
+    let approveChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.BiometricHostApi.approve\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      approveChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        let payloadArg = args[1] as! FlutterStandardTypedData
+        let titleArg = args[2] as! String
+        let reasonArg = args[3] as! String
+        Task { @MainActor in
+          do {
+            let result = try await api.approve(alias: aliasArg, payload: payloadArg, title: titleArg, reason: reasonArg)
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      approveChannel.setMessageHandler(nil)
+    }
+    let keyStateChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.BiometricHostApi.keyState\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      keyStateChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        do {
+          let result = try api.keyState(alias: aliasArg)
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      keyStateChannel.setMessageHandler(nil)
+    }
+    let deleteChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.device_safety_info.BiometricHostApi.delete\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      deleteChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let aliasArg = args[0] as! String
+        do {
+          try api.delete(alias: aliasArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      deleteChannel.setMessageHandler(nil)
     }
   }
 }

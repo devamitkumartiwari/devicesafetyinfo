@@ -259,6 +259,88 @@ class FakeEnvironmentApi extends Fake implements EnvironmentHostApi {
   Future<CheckReportMsg> mitm() async => mitmReport;
 }
 
+/// In-memory keys: "signatures" are the alias bytes followed by the data.
+class FakeDeviceKeyApi extends Fake implements DeviceKeyHostApi {
+  final Map<String, DeviceKeyInfoMsg> keys = {};
+  Uint8List? lastChallenge;
+  bool? lastPreferStrongBox;
+
+  @override
+  Future<DeviceKeyInfoMsg> create(
+    String alias,
+    Uint8List? challenge,
+    bool preferStrongBox,
+  ) async {
+    lastChallenge = challenge;
+    lastPreferStrongBox = preferStrongBox;
+    return keys[alias] = DeviceKeyInfoMsg(
+      publicKey: 'AQID',
+      securityLevel: preferStrongBox
+          ? KeySecurityLevelMsg.strongBox
+          : KeySecurityLevelMsg.tee,
+      attestationChain: challenge != null ? ['BAUG', 'BwgJ'] : [],
+    );
+  }
+
+  @override
+  Future<DeviceKeyInfoMsg?> info(String alias) async => keys[alias];
+
+  @override
+  Future<Uint8List> sign(String alias, Uint8List data) async {
+    if (!keys.containsKey(alias)) {
+      throw PlatformException(code: 'KEY_MISSING');
+    }
+    return Uint8List.fromList([...alias.codeUnits, ...data]);
+  }
+
+  @override
+  Future<bool> exists(String alias) async => keys.containsKey(alias);
+
+  @override
+  Future<void> delete(String alias) async => keys.remove(alias);
+}
+
+class FakeBiometricApi extends Fake implements BiometricHostApi {
+  bool available = true;
+  final Map<String, BiometricKeyStateMsg> states = {};
+  PlatformException? approveError;
+
+  @override
+  Future<bool> isAvailable() async => available;
+
+  @override
+  Future<DeviceKeyInfoMsg> enroll(String alias) async {
+    if (!available) throw PlatformException(code: 'NOT_ENROLLED');
+    states[alias] = BiometricKeyStateMsg.valid;
+    return DeviceKeyInfoMsg(
+      publicKey: 'AQID',
+      securityLevel: KeySecurityLevelMsg.tee,
+      attestationChain: [],
+    );
+  }
+
+  @override
+  Future<Uint8List> approve(
+    String alias,
+    Uint8List payload,
+    String title,
+    String reason,
+  ) async {
+    if (approveError case final e?) throw e;
+    if (states[alias] == BiometricKeyStateMsg.invalidated) {
+      throw PlatformException(code: 'ENROLLMENT_CHANGED');
+    }
+    return Uint8List.fromList(payload.reversed.toList());
+  }
+
+  @override
+  Future<BiometricKeyStateMsg> keyState(String alias) async =>
+      states[alias] ?? BiometricKeyStateMsg.missing;
+
+  @override
+  Future<void> delete(String alias) async => states.remove(alias);
+}
+
 /// Live streams driven by the test.
 class FakeEvents implements PlatformEvents {
   final screenshotsCtl = StreamController<int>.broadcast();
@@ -301,6 +383,8 @@ class Fakes {
   final appInfo = FakeAppInfoApi();
   final integrity = FakeIntegrityApi();
   final environment = FakeEnvironmentApi();
+  final deviceKey = FakeDeviceKeyApi();
+  final biometric = FakeBiometricApi();
   final events = FakeEvents();
   FakeNativeChecks ffi = const FakeNativeChecks();
 
@@ -319,6 +403,8 @@ class Fakes {
     appInfo: appInfo,
     integrity: integrity,
     environment: environment,
+    deviceKey: deviceKey,
+    biometric: biometric,
     events: events,
     ffi: ffi,
   );

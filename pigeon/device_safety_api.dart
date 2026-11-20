@@ -200,6 +200,59 @@ abstract class PostureHostApi {
   List<NotificationListenerMsg> enabledNotificationListeners();
 }
 
+enum KeySecurityLevelMsg { strongBox, tee, secureEnclave, software }
+
+class DeviceKeyInfoMsg {
+  DeviceKeyInfoMsg(this.publicKey, this.securityLevel, this.attestationChain);
+
+  /// SubjectPublicKeyInfo (DER), base64.
+  String publicKey;
+  KeySecurityLevelMsg securityLevel;
+
+  /// (Android) Key attestation certificate chain, leaf first, each DER base64. Empty on iOS.
+  List<String> attestationChain;
+}
+
+/// Hardware-bound signing keys (EC P-256, ECDSA with SHA-256). Errors use the codes
+/// UNSUPPORTED, KEY_MISSING and FAILED.
+@HostApi()
+abstract class DeviceKeyHostApi {
+  @async
+  DeviceKeyInfoMsg create(String alias, Uint8List? challenge, bool preferStrongBox);
+
+  @async
+  DeviceKeyInfoMsg? info(String alias);
+
+  /// DER-encoded ECDSA signature over [data].
+  @async
+  Uint8List sign(String alias, Uint8List data);
+
+  bool exists(String alias);
+
+  void delete(String alias);
+}
+
+enum BiometricKeyStateMsg { valid, invalidated, missing }
+
+/// Biometric-bound keys: signing requires a fresh strong-biometric match, and enrolling a new
+/// fingerprint or face invalidates the key. Errors use the codes UNSUPPORTED, NOT_ENROLLED,
+/// CANCELLED, LOCKED_OUT, ENROLLMENT_CHANGED, KEY_MISSING and FAILED.
+@HostApi()
+abstract class BiometricHostApi {
+  bool isAvailable();
+
+  @async
+  DeviceKeyInfoMsg enroll(String alias);
+
+  /// Shows the biometric prompt and, on success, signs [payload] with the biometric-bound key.
+  @async
+  Uint8List approve(String alias, Uint8List payload, String title, String reason);
+
+  BiometricKeyStateMsg keyState(String alias);
+
+  void delete(String alias);
+}
+
 /// Fraud-environment checks (Android; iOS reports unsupported).
 @HostApi()
 abstract class EnvironmentHostApi {

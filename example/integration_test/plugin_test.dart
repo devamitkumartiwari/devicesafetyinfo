@@ -223,4 +223,71 @@ void main() {
       print('${api.type.name}: ${r.status.name} ${r.signals}');
     }
   });
+
+  test('device key: hardware-backed, attested, signs DER ECDSA', () async {
+    const alias = 'it.device_key';
+    final key = await DeviceSafety.deviceKey.create(
+      alias,
+      challenge: Uint8List.fromList(List.generate(16, (i) => i)),
+    );
+    try {
+      expect(key.publicKey.first, 0x30, reason: 'SPKI is a DER SEQUENCE');
+      expect(key.publicKey.length, 91, reason: 'P-256 SPKI');
+      expect(key.securityLevel.isHardwareBacked, isTrue);
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        expect(key.attestationChain, isNotEmpty);
+        for (final cert in key.attestationChain) {
+          expect(cert.first, 0x30);
+        }
+      }
+      expect(await DeviceSafety.deviceKey.exists(alias), isTrue);
+      final info = await DeviceSafety.deviceKey.info(alias);
+      expect(info?.publicKey, key.publicKey);
+      final sig = await DeviceSafety.deviceKey.sign(
+        alias,
+        Uint8List.fromList('hello'.codeUnits),
+      );
+      expect(sig.first, 0x30, reason: 'DER ECDSA signature');
+      expect(sig.length, inInclusiveRange(8, 72));
+      // ignore: avoid_print
+      print(
+        'deviceKey: ${key.securityLevel.name}, '
+        'chain ${key.attestationChain.length}, sig ${sig.length} bytes',
+      );
+    } finally {
+      await DeviceSafety.deviceKey.delete(alias);
+    }
+    expect(await DeviceSafety.deviceKey.exists(alias), isFalse);
+    await expectLater(
+      DeviceSafety.deviceKey.sign(alias, Uint8List(1)),
+      throwsA(isA<NativeFailureException>()),
+    );
+  });
+
+  test('biometric: availability and key lifecycle (no prompt)', () async {
+    const alias = 'it.biometric';
+    final available = await DeviceSafety.biometric.isAvailable();
+    // ignore: avoid_print
+    print('biometric available: $available');
+    expect(
+      await DeviceSafety.biometric.keyState(alias),
+      BiometricKeyState.missing,
+    );
+    if (!available) return;
+    final key = await DeviceSafety.biometric.enroll(alias);
+    try {
+      expect(key.publicKey.first, 0x30);
+      expect(key.securityLevel.isHardwareBacked, isTrue);
+      expect(
+        await DeviceSafety.biometric.keyState(alias),
+        BiometricKeyState.valid,
+      );
+    } finally {
+      await DeviceSafety.biometric.delete(alias);
+    }
+    expect(
+      await DeviceSafety.biometric.keyState(alias),
+      BiometricKeyState.missing,
+    );
+  });
 }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import '../result/device_key_info.dart';
 import '../result/risk_signal.dart';
 import 'generated/device_safety_api.g.dart';
 
@@ -16,4 +19,19 @@ extension SignalMsgMapping on SignalMsg {
     SignalLevelMsg.high => RiskLevel.high,
     SignalLevelMsg.low => RiskLevel.low,
   });
+}
+
+/// Converts the platform message.
+extension DeviceKeyInfoMsgMapping on DeviceKeyInfoMsg {
+  /// The domain entity.
+  DeviceKeyInfo toDomain() => DeviceKeyInfo(
+    publicKey: base64.decode(publicKey),
+    securityLevel: switch (securityLevel) {
+      KeySecurityLevelMsg.strongBox => KeySecurityLevel.strongBox,
+      KeySecurityLevelMsg.tee => KeySecurityLevel.tee,
+      KeySecurityLevelMsg.secureEnclave => KeySecurityLevel.secureEnclave,
+      KeySecurityLevelMsg.software => KeySecurityLevel.software,
+    },
+    attestationChain: [for (final c in attestationChain) base64.decode(c)],
+  );
 }

@@ -242,6 +242,35 @@ enum class CallSourceMsg(val raw: Int) {
   }
 }
 
+enum class KeySecurityLevelMsg(val raw: Int) {
+  STRONG_BOX(0),
+  TEE(1),
+  SECURE_ENCLAVE(2),
+  SOFTWARE(3);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): KeySecurityLevelMsg? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
+enum class BiometricKeyStateMsg(val raw: Int) {
+  VALID(0),
+  INVALIDATED(1),
+  MISSING(2);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): BiometricKeyStateMsg? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 /**
  * One indicator. `id` is `<check>.<signal>` optionally followed by `:<detail>`, e.g.
  * `root.su_executable:/system/xbin/su`.
@@ -721,6 +750,53 @@ data class CallEventMsg (
     return "CallEventMsg(source=$source, started=$started, timestampMs=$timestampMs)"
   }
 }
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class DeviceKeyInfoMsg (
+  /** SubjectPublicKeyInfo (DER), base64. */
+  val publicKey: String,
+  val securityLevel: KeySecurityLevelMsg,
+  /** (Android) Key attestation certificate chain, leaf first, each DER base64. Empty on iOS. */
+  val attestationChain: List<String>
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): DeviceKeyInfoMsg {
+      val publicKey = pigeonVar_list[0] as String
+      val securityLevel = pigeonVar_list[1] as KeySecurityLevelMsg
+      val attestationChain = pigeonVar_list[2] as List<String>
+      return DeviceKeyInfoMsg(publicKey, securityLevel, attestationChain)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      publicKey,
+      securityLevel,
+      attestationChain,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as DeviceKeyInfoMsg
+    return DeviceSafetyApiPigeonUtils.deepEquals(this.publicKey, other.publicKey) && DeviceSafetyApiPigeonUtils.deepEquals(this.securityLevel, other.securityLevel) && DeviceSafetyApiPigeonUtils.deepEquals(this.attestationChain, other.attestationChain)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.publicKey)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.securityLevel)
+    result = 31 * result + DeviceSafetyApiPigeonUtils.deepHash(this.attestationChain)
+    return result
+  }
+  override fun toString(): String {
+    return "DeviceKeyInfoMsg(publicKey=$publicKey, securityLevel=$securityLevel, attestationChain=$attestationChain)"
+  }
+}
 private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -740,53 +816,68 @@ private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
         }
       }
       132.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          SignalMsg.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          KeySecurityLevelMsg.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          CheckReportMsg.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          BiometricKeyStateMsg.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AccessibilityServiceMsg.fromList(it)
+          SignalMsg.fromList(it)
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          NotificationListenerMsg.fromList(it)
+          CheckReportMsg.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BatchRequestMsg.fromList(it)
+          AccessibilityServiceMsg.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          SigningInfoMsg.fromList(it)
+          NotificationListenerMsg.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          BatchResultMsg.fromList(it)
+          BatchRequestMsg.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          OverlayConfigMsg.fromList(it)
+          SigningInfoMsg.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          AppInfoMsg.fromList(it)
+          BatchResultMsg.fromList(it)
         }
       }
       141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
+          OverlayConfigMsg.fromList(it)
+        }
+      }
+      142.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          AppInfoMsg.fromList(it)
+        }
+      }
+      143.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
           CallEventMsg.fromList(it)
+        }
+      }
+      144.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          DeviceKeyInfoMsg.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -806,44 +897,56 @@ private open class DeviceSafetyApiPigeonCodec : StandardMessageCodec() {
         stream.write(131)
         writeValue(stream, value.raw.toLong())
       }
-      is SignalMsg -> {
+      is KeySecurityLevelMsg -> {
         stream.write(132)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is CheckReportMsg -> {
+      is BiometricKeyStateMsg -> {
         stream.write(133)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is AccessibilityServiceMsg -> {
+      is SignalMsg -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is NotificationListenerMsg -> {
+      is CheckReportMsg -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is BatchRequestMsg -> {
+      is AccessibilityServiceMsg -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is SigningInfoMsg -> {
+      is NotificationListenerMsg -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is BatchResultMsg -> {
+      is BatchRequestMsg -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is OverlayConfigMsg -> {
+      is SigningInfoMsg -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is AppInfoMsg -> {
+      is BatchResultMsg -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is CallEventMsg -> {
+      is OverlayConfigMsg -> {
         stream.write(141)
+        writeValue(stream, value.toList())
+      }
+      is AppInfoMsg -> {
+        stream.write(142)
+        writeValue(stream, value.toList())
+      }
+      is CallEventMsg -> {
+        stream.write(143)
+        writeValue(stream, value.toList())
+      }
+      is DeviceKeyInfoMsg -> {
+        stream.write(144)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1105,6 +1208,245 @@ interface PostureHostApi {
               }
               reply.reply(wrapped)
             }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/**
+ * Hardware-bound signing keys (EC P-256, ECDSA with SHA-256). Errors use the codes
+ * UNSUPPORTED, KEY_MISSING and FAILED.
+ *
+ * Generated interface from Pigeon that represents a handler of messages from Flutter.
+ */
+interface DeviceKeyHostApi {
+  suspend fun create(alias: String, challenge: ByteArray?, preferStrongBox: Boolean): DeviceKeyInfoMsg
+  suspend fun info(alias: String): DeviceKeyInfoMsg?
+  /** DER-encoded ECDSA signature over [data]. */
+  suspend fun sign(alias: String, data: ByteArray): ByteArray
+  fun exists(alias: String): Boolean
+  fun delete(alias: String)
+
+  companion object {
+    /** The codec used by DeviceKeyHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      DeviceSafetyApiPigeonCodec()
+    }
+    /** Sets up an instance of `DeviceKeyHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: DeviceKeyHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.create$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val challengeArg = args[1] as ByteArray?
+            val preferStrongBoxArg = args[2] as Boolean
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.create(aliasArg, challengeArg, preferStrongBoxArg))
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.info$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.info(aliasArg))
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.sign$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val dataArg = args[1] as ByteArray
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.sign(aliasArg, dataArg))
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.exists$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val wrapped: List<Any?> = try {
+              listOf(api.exists(aliasArg))
+            } catch (exception: Throwable) {
+              DeviceSafetyApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.delete$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val wrapped: List<Any?> = try {
+              api.delete(aliasArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              DeviceSafetyApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/**
+ * Biometric-bound keys: signing requires a fresh strong-biometric match, and enrolling a new
+ * fingerprint or face invalidates the key. Errors use the codes UNSUPPORTED, NOT_ENROLLED,
+ * CANCELLED, LOCKED_OUT, ENROLLMENT_CHANGED, KEY_MISSING and FAILED.
+ *
+ * Generated interface from Pigeon that represents a handler of messages from Flutter.
+ */
+interface BiometricHostApi {
+  fun isAvailable(): Boolean
+  suspend fun enroll(alias: String): DeviceKeyInfoMsg
+  /** Shows the biometric prompt and, on success, signs [payload] with the biometric-bound key. */
+  suspend fun approve(alias: String, payload: ByteArray, title: String, reason: String): ByteArray
+  fun keyState(alias: String): BiometricKeyStateMsg
+  fun delete(alias: String)
+
+  companion object {
+    /** The codec used by BiometricHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      DeviceSafetyApiPigeonCodec()
+    }
+    /** Sets up an instance of `BiometricHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: BiometricHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.BiometricHostApi.isAvailable$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.isAvailable())
+            } catch (exception: Throwable) {
+              DeviceSafetyApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.BiometricHostApi.enroll$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.enroll(aliasArg))
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.BiometricHostApi.approve$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val payloadArg = args[1] as ByteArray
+            val titleArg = args[2] as String
+            val reasonArg = args[3] as String
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.approve(aliasArg, payloadArg, titleArg, reasonArg))
+              } catch (exception: Throwable) {
+                DeviceSafetyApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.BiometricHostApi.keyState$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val wrapped: List<Any?> = try {
+              listOf(api.keyState(aliasArg))
+            } catch (exception: Throwable) {
+              DeviceSafetyApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.device_safety_info.BiometricHostApi.delete$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val aliasArg = args[0] as String
+            val wrapped: List<Any?> = try {
+              api.delete(aliasArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              DeviceSafetyApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

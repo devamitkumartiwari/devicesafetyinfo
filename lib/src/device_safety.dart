@@ -44,6 +44,10 @@ import 'features/root/presentation/root_api.dart';
 import 'features/screen_protection/data/screen_protection_repository_impl.dart';
 import 'features/screen_protection/presentation/screen_protection_api.dart';
 import 'features/screen_protection/presentation/widgets/secure_screen.dart';
+import 'features/biometric/data/biometric_repository_impl.dart';
+import 'features/biometric/presentation/biometric_api.dart';
+import 'features/device_key/data/device_key_repository_impl.dart';
+import 'features/device_key/presentation/device_key_api.dart';
 import 'features/environment/data/environment_repository_impl.dart';
 import 'features/environment/presentation/environment_apis.dart';
 import 'features/tampering/data/tampering_repository_impl.dart';
@@ -202,6 +206,16 @@ final class DeviceSafetyClient {
 
   /// User-installed CA certificate (HTTPS interception) detection.
   late final MitmApi mitm = MitmApi(_runner, _environment);
+
+  /// Hardware-bound signing keys.
+  late final DeviceKeyApi deviceKey = DeviceKeyApi(
+    DeviceKeyRepositoryImpl(_platform.deviceKey),
+  );
+
+  /// Biometric-approved actions.
+  late final BiometricApi biometric = BiometricApi(
+    BiometricRepositoryImpl(_platform.biometric),
+  );
 
   /// Live call detection.
   late final CallActivityApi calls = CallActivityApi(
@@ -387,6 +401,12 @@ abstract final class DeviceSafety {
 
   /// User-installed CA certificate (HTTPS interception) detection.
   static MitmApi get mitm => instance.mitm;
+
+  /// Hardware-bound signing keys.
+  static DeviceKeyApi get deviceKey => instance.deviceKey;
+
+  /// Biometric-approved actions.
+  static BiometricApi get biometric => instance.biometric;
 
   /// Live call detection.
   static CallActivityApi get calls => instance.calls;

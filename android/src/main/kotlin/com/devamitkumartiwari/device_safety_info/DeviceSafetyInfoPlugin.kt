@@ -17,6 +17,8 @@ import com.devamitkumartiwari.device_safety_info.features.hooking.HookingHostApi
 import com.devamitkumartiwari.device_safety_info.features.malware.MalwareHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.overlay_attack.OverlayAttackHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.overlay_attack.OverlayAttackMonitor
+import com.devamitkumartiwari.device_safety_info.features.biometric.BiometricHostApiImpl
+import com.devamitkumartiwari.device_safety_info.features.device_key.DeviceKeyHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.environment.EnvironmentHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.posture.PostureHostApiImpl
 import com.devamitkumartiwari.device_safety_info.features.root.RootHostApiImpl
@@ -38,6 +40,8 @@ import com.devamitkumartiwari.device_safety_info.generated.IntegrityHostApi
 import com.devamitkumartiwari.device_safety_info.generated.MalwareHostApi
 import com.devamitkumartiwari.device_safety_info.generated.OverlayAttackHostApi
 import com.devamitkumartiwari.device_safety_info.generated.OverlayAttackStreamHandler
+import com.devamitkumartiwari.device_safety_info.generated.BiometricHostApi
+import com.devamitkumartiwari.device_safety_info.generated.DeviceKeyHostApi
 import com.devamitkumartiwari.device_safety_info.generated.EnvironmentHostApi
 import com.devamitkumartiwari.device_safety_info.generated.PostureHostApi
 import com.devamitkumartiwari.device_safety_info.generated.RootHostApi
@@ -94,6 +98,8 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, ActivityAware, PluginHost {
         HookingHostApi.setUp(m, HookingHostApiImpl(this, runner))
         PostureHostApi.setUp(m, PostureHostApiImpl(this, runner))
         EnvironmentHostApi.setUp(m, EnvironmentHostApiImpl(this, runner))
+        DeviceKeyHostApi.setUp(m, DeviceKeyHostApiImpl(runner))
+        BiometricHostApi.setUp(m, BiometricHostApiImpl(this, runner))
         BatchHostApi.setUp(m, BatchHostApiImpl(this, runner, recording))
         VpnHostApi.setUp(m, VpnHostApiImpl(this, runner))
         MalwareHostApi.setUp(m, MalwareHostApiImpl(this, runner))
@@ -127,6 +133,8 @@ class DeviceSafetyInfoPlugin : FlutterPlugin, ActivityAware, PluginHost {
             HookingHostApi.setUp(m, null)
             PostureHostApi.setUp(m, null)
             EnvironmentHostApi.setUp(m, null)
+            DeviceKeyHostApi.setUp(m, null)
+            BiometricHostApi.setUp(m, null)
             BatchHostApi.setUp(m, null)
             VpnHostApi.setUp(m, null)
             MalwareHostApi.setUp(m, null)

@@ -109,6 +109,10 @@ enum CallSourceMsg {
   unknown,
 }
 
+enum KeySecurityLevelMsg { strongBox, tee, secureEnclave, software }
+
+enum BiometricKeyStateMsg { valid, invalidated, missing }
+
 /// One indicator. `id` is `<check>.<signal>` optionally followed by `:<detail>`, e.g.
 /// `root.su_executable:/system/xbin/su`.
 class SignalMsg {
@@ -666,6 +670,62 @@ class CallEventMsg {
   }
 }
 
+class DeviceKeyInfoMsg {
+  DeviceKeyInfoMsg({
+    required this.publicKey,
+    required this.securityLevel,
+    required this.attestationChain,
+  });
+
+  /// SubjectPublicKeyInfo (DER), base64.
+  String publicKey;
+
+  KeySecurityLevelMsg securityLevel;
+
+  /// (Android) Key attestation certificate chain, leaf first, each DER base64. Empty on iOS.
+  List<String> attestationChain;
+
+  List<Object?> _toList() {
+    return <Object?>[publicKey, securityLevel, attestationChain];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static DeviceKeyInfoMsg decode(Object result) {
+    result as List<Object?>;
+    return DeviceKeyInfoMsg(
+      publicKey: result[0]! as String,
+      securityLevel: result[1]! as KeySecurityLevelMsg,
+      attestationChain: (result[2]! as List<Object?>).cast<String>(),
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! DeviceKeyInfoMsg || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(publicKey, other.publicKey) &&
+        _deepEquals(securityLevel, other.securityLevel) &&
+        _deepEquals(attestationChain, other.attestationChain);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'DeviceKeyInfoMsg(publicKey: $publicKey, securityLevel: $securityLevel, attestationChain: $attestationChain)';
+  }
+}
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -682,35 +742,44 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is CallSourceMsg) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    } else if (value is SignalMsg) {
+    } else if (value is KeySecurityLevelMsg) {
       buffer.putUint8(132);
-      writeValue(buffer, value.encode());
-    } else if (value is CheckReportMsg) {
+      writeValue(buffer, value.index);
+    } else if (value is BiometricKeyStateMsg) {
       buffer.putUint8(133);
-      writeValue(buffer, value.encode());
-    } else if (value is AccessibilityServiceMsg) {
+      writeValue(buffer, value.index);
+    } else if (value is SignalMsg) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    } else if (value is NotificationListenerMsg) {
+    } else if (value is CheckReportMsg) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is BatchRequestMsg) {
+    } else if (value is AccessibilityServiceMsg) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is SigningInfoMsg) {
+    } else if (value is NotificationListenerMsg) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is BatchResultMsg) {
+    } else if (value is BatchRequestMsg) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is OverlayConfigMsg) {
+    } else if (value is SigningInfoMsg) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    } else if (value is AppInfoMsg) {
+    } else if (value is BatchResultMsg) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    } else if (value is CallEventMsg) {
+    } else if (value is OverlayConfigMsg) {
       buffer.putUint8(141);
+      writeValue(buffer, value.encode());
+    } else if (value is AppInfoMsg) {
+      buffer.putUint8(142);
+      writeValue(buffer, value.encode());
+    } else if (value is CallEventMsg) {
+      buffer.putUint8(143);
+      writeValue(buffer, value.encode());
+    } else if (value is DeviceKeyInfoMsg) {
+      buffer.putUint8(144);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -730,25 +799,33 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : CallSourceMsg.values[value];
       case 132:
-        return SignalMsg.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : KeySecurityLevelMsg.values[value];
       case 133:
-        return CheckReportMsg.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : BiometricKeyStateMsg.values[value];
       case 134:
-        return AccessibilityServiceMsg.decode(readValue(buffer)!);
+        return SignalMsg.decode(readValue(buffer)!);
       case 135:
-        return NotificationListenerMsg.decode(readValue(buffer)!);
+        return CheckReportMsg.decode(readValue(buffer)!);
       case 136:
-        return BatchRequestMsg.decode(readValue(buffer)!);
+        return AccessibilityServiceMsg.decode(readValue(buffer)!);
       case 137:
-        return SigningInfoMsg.decode(readValue(buffer)!);
+        return NotificationListenerMsg.decode(readValue(buffer)!);
       case 138:
-        return BatchResultMsg.decode(readValue(buffer)!);
+        return BatchRequestMsg.decode(readValue(buffer)!);
       case 139:
-        return OverlayConfigMsg.decode(readValue(buffer)!);
+        return SigningInfoMsg.decode(readValue(buffer)!);
       case 140:
-        return AppInfoMsg.decode(readValue(buffer)!);
+        return BatchResultMsg.decode(readValue(buffer)!);
       case 141:
+        return OverlayConfigMsg.decode(readValue(buffer)!);
+      case 142:
+        return AppInfoMsg.decode(readValue(buffer)!);
+      case 143:
         return CallEventMsg.decode(readValue(buffer)!);
+      case 144:
+        return DeviceKeyInfoMsg.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -1028,6 +1105,254 @@ class PostureHostApi {
     );
     return (pigeonVar_replyValue! as List<Object?>)
         .cast<NotificationListenerMsg>();
+  }
+}
+
+/// Hardware-bound signing keys (EC P-256, ECDSA with SHA-256). Errors use the codes
+/// UNSUPPORTED, KEY_MISSING and FAILED.
+class DeviceKeyHostApi {
+  /// Constructor for [DeviceKeyHostApi]. The [binaryMessenger] named argument is
+  /// available for dependency injection. If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  DeviceKeyHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
+
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  Future<DeviceKeyInfoMsg> create(
+    String alias,
+    Uint8List? challenge,
+    bool preferStrongBox,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.create$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias, challenge, preferStrongBox],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as DeviceKeyInfoMsg;
+  }
+
+  Future<DeviceKeyInfoMsg?> info(String alias) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.info$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
+    return pigeonVar_replyValue as DeviceKeyInfoMsg?;
+  }
+
+  /// DER-encoded ECDSA signature over [data].
+  Future<Uint8List> sign(String alias, Uint8List data) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.sign$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias, data],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as Uint8List;
+  }
+
+  Future<bool> exists(String alias) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.exists$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<void> delete(String alias) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.DeviceKeyHostApi.delete$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
+  }
+}
+
+/// Biometric-bound keys: signing requires a fresh strong-biometric match, and enrolling a new
+/// fingerprint or face invalidates the key. Errors use the codes UNSUPPORTED, NOT_ENROLLED,
+/// CANCELLED, LOCKED_OUT, ENROLLMENT_CHANGED, KEY_MISSING and FAILED.
+class BiometricHostApi {
+  /// Constructor for [BiometricHostApi]. The [binaryMessenger] named argument is
+  /// available for dependency injection. If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  BiometricHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
+
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  Future<bool> isAvailable() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.BiometricHostApi.isAvailable$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<DeviceKeyInfoMsg> enroll(String alias) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.BiometricHostApi.enroll$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as DeviceKeyInfoMsg;
+  }
+
+  /// Shows the biometric prompt and, on success, signs [payload] with the biometric-bound key.
+  Future<Uint8List> approve(
+    String alias,
+    Uint8List payload,
+    String title,
+    String reason,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.BiometricHostApi.approve$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias, payload, title, reason],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as Uint8List;
+  }
+
+  Future<BiometricKeyStateMsg> keyState(String alias) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.BiometricHostApi.keyState$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as BiometricKeyStateMsg;
+  }
+
+  Future<void> delete(String alias) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.device_safety_info.BiometricHostApi.delete$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[alias],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 }
 

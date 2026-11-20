@@ -119,6 +119,7 @@ void main() {
         PermissionMissingException() => 'permission',
         NativeFailureException() => 'native',
         AttestationException() => 'attestation',
+        BiometricException() => 'biometric',
       };
       expect(describe(const NativeFailureException('x')), 'native');
     });

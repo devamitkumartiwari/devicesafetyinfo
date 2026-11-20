@@ -9,6 +9,8 @@
          ScreenRecordingFeature catches SecurityException and fails soft rather than assuming this
          always succeeds just because it's declared. -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
+    <!-- Normal permission (granted at install) for DeviceSafety.biometric approvals. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Root-manager and root-cloaking apps the root check looks for. Android 11+ hides other
          apps unless they're declared here; listing specific packages needs no Play policy
          declaration (unlike QUERY_ALL_PACKAGES). -->

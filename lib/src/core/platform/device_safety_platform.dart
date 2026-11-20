@@ -21,6 +21,8 @@ final class DeviceSafetyPlatform {
     api.AppInfoHostApi? appInfo,
     api.IntegrityHostApi? integrity,
     api.EnvironmentHostApi? environment,
+    api.DeviceKeyHostApi? deviceKey,
+    api.BiometricHostApi? biometric,
     PlatformEvents? events,
     NativeChecksSource? ffi,
   }) : root = root ?? api.RootHostApi(),
@@ -37,6 +39,8 @@ final class DeviceSafetyPlatform {
        appInfo = appInfo ?? api.AppInfoHostApi(),
        integrity = integrity ?? api.IntegrityHostApi(),
        environment = environment ?? api.EnvironmentHostApi(),
+       deviceKey = deviceKey ?? api.DeviceKeyHostApi(),
+       biometric = biometric ?? api.BiometricHostApi(),
        events = events ?? const PlatformEvents(),
        ffi = ffi ?? const NativeChecksFfi();
 
@@ -54,6 +58,8 @@ final class DeviceSafetyPlatform {
   final api.AppInfoHostApi appInfo;
   final api.IntegrityHostApi integrity;
   final api.EnvironmentHostApi environment;
+  final api.DeviceKeyHostApi deviceKey;
+  final api.BiometricHostApi biometric;
   final PlatformEvents events;
   final NativeChecksSource ffi;
 }

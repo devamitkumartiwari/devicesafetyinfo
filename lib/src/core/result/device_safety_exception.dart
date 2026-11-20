@@ -131,3 +131,61 @@ final class AttestationException extends DeviceSafetyException {
       'AttestationException(${code.name}${platformCode == null ? '' : ', $platformCode'})'
       '${message == null ? '' : ': $message'}';
 }
+
+/// Why a biometric operation failed.
+enum BiometricErrorCode {
+  /// No usable strong biometric hardware, or the OS is too old (Android 10+ is required).
+  unavailable,
+
+  /// No fingerprint or face is enrolled.
+  notEnrolled,
+
+  /// The user cancelled the prompt.
+  cancelled,
+
+  /// Too many failed attempts; biometrics are locked for now.
+  lockedOut,
+
+  /// A fingerprint or face was added (or all were removed) since the key was enrolled. The key
+  /// is permanently unusable: confirm the user's identity another way, then enroll again.
+  enrollmentChanged,
+
+  /// No key exists for the alias; call `enroll` first.
+  keyMissing,
+
+  /// Anything else; see [BiometricException.platformCode].
+  failed,
+}
+
+/// Thrown by `DeviceSafety.biometric` operations.
+final class BiometricException extends DeviceSafetyException {
+  /// Creates the exception.
+  const BiometricException(this.code, {String? message, this.platformCode})
+    : super(message);
+
+  /// Maps a platform error from the biometric host API.
+  factory BiometricException.fromPlatform(PlatformException e) =>
+      BiometricException(
+        switch (e.code) {
+          'UNSUPPORTED' => .unavailable,
+          'NOT_ENROLLED' => .notEnrolled,
+          'CANCELLED' => .cancelled,
+          'LOCKED_OUT' => .lockedOut,
+          'ENROLLMENT_CHANGED' => .enrollmentChanged,
+          'KEY_MISSING' => .keyMissing,
+          _ => .failed,
+        },
+        message: e.message,
+        platformCode: e.code,
+      );
+
+  /// The normalized failure reason.
+  final BiometricErrorCode code;
+
+  /// The raw native error code.
+  final String? platformCode;
+
+  @override
+  String toString() =>
+      'BiometricException(${code.name})${message == null ? '' : ': $message'}';
+}

@@ -10,6 +10,15 @@ import '../support/fakes.dart';
 
 // Self-signed P-256 certificate for localhost / 127.0.0.1 and its throwaway key, in
 // test/fixtures/pinning. The key is left out of the published package (.pubignore).
+//
+// The certificate must be valid for at most 825 days and carry the serverAuth EKU: macOS
+// rejects longer-lived TLS server certificates even from a trusted custom root, so a longer
+// validity makes the TLS tests below fail on Mac only. It expires 2029-02-22. Renew it from the
+// same key (keeps every pin in this file unchanged) with:
+//   cd test/fixtures/pinning && openssl req -x509 -key localhost.key -out localhost.crt \
+//     -days 820 -subj "/CN=localhost" \
+//     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+//     -addext "extendedKeyUsage=serverAuth" -addext "basicConstraints=critical,CA:TRUE"
 const _fixtures = 'test/fixtures/pinning';
 final _certPem = File('$_fixtures/localhost.crt').readAsStringSync();
 final _keyFile = File('$_fixtures/localhost.key');

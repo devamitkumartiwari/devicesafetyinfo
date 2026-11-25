@@ -598,7 +598,7 @@ flutter run
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/devamitkumartiwari/devicesafetyinfo/blob/main/CONTRIBUTING.md).
 
 ## License
 

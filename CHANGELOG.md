@@ -10,6 +10,9 @@ replacement.
 
 * **Minimum Flutter 3.50 / Dart 3.14.**
 * **iOS: Swift Package Manager only.** The podspec is gone; CocoaPods is no longer supported.
+* **iOS: IOSSecuritySuite 2.3.0 or newer** (was 1.9.11). 2.x ships its own privacy manifest
+  for the `stat`/`statfs` calls it makes, which App Store uploads require; the API this plugin
+  uses is unchanged.
 * **Android: built-in Kotlin.** The plugin no longer applies the Kotlin Gradle plugin, ships no
   Gradle wrapper and no longer filters ABIs (Flutter decides).
 * **`READ_PHONE_STATE` is no longer declared by the plugin.** Apps that want SIM call detection
@@ -60,7 +63,8 @@ replacement.
   `AttestationException`.
 * **Testing support**: `package:device_safety_info/testing.dart` and `DeviceSafety.forTesting`
   fake the platform side in app tests.
-* `PrivacyInfo.xcprivacy` for the iOS plugin.
+* `PrivacyInfo.xcprivacy` for the iOS plugin, declaring its `UserDefaults` use (reason
+  `CA92.1`: the stored "block third-party keyboards" setting).
 
 ### Fraud signals (Android; iOS reports unsupported)
 

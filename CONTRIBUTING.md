@@ -43,7 +43,8 @@ cd example && flutter build ios --no-codesign
 # lib/ must not depend on material or cupertino
 grep -rnE "package:flutter/(material|cupertino)\.dart" lib && echo "fix these imports"
 # generated code is up to date
-dart run pigeon --input pigeon/device_safety_api.dart && git diff --exit-code
+dart run pigeon --input pigeon/device_safety_api.dart \
+  && dart format lib/src/core/platform/generated && git diff --exit-code   # Pigeon output is unformatted
 dart run ffigen --config ffigen.yaml && git diff --exit-code   # needs libclang (see below)
 dart run tool/gen_signatures.dart --check                     # detection strings (also a unit test)
 # Kotlin unit tests (after building the example once)

@@ -57,6 +57,7 @@ public sealed class PlayIntegrityVerifier
             appLicensingVerdict = p.AccountDetails?.AppLicensingVerdict,
             playProtectVerdict = p.EnvironmentDetails?.PlayProtectVerdict,
             appsDetected = p.EnvironmentDetails?.AppAccessRiskVerdict?.AppsDetected,
+            deviceActivityLevel = p.DeviceIntegrity?.RecentDeviceActivity?.DeviceActivityLevel,
         };
 
         // (a) Bound to the challenge this server issued for this request.
@@ -82,6 +83,26 @@ public sealed class PlayIntegrityVerifier
 
         if (!device.Contains(_opts.RequiredDeviceVerdict))
             return VerificationResult.Fail($"device verdict lacks {_opts.RequiredDeviceVerdict}", details);
+
+        // (e) Optional environment policies.
+        if (_opts.RequireLicensed && p.AccountDetails?.AppLicensingVerdict != "LICENSED")
+            return VerificationResult.Fail($"not licensed ({p.AccountDetails?.AppLicensingVerdict})", details);
+
+        if (p.EnvironmentDetails?.PlayProtectVerdict is { } protect &&
+            _opts.RejectedPlayProtectVerdicts.Contains(protect))
+            return VerificationResult.Fail($"Play Protect verdict {protect}", details);
+
+        var risky = (p.EnvironmentDetails?.AppAccessRiskVerdict?.AppsDetected ?? [])
+            .Intersect(_opts.RejectedAppAccessRisks)
+            .ToList();
+        if (risky.Count > 0)
+            return VerificationResult.Fail($"risky apps detected ({string.Join(", ", risky)})", details);
+
+        if (_opts.MaxDeviceActivityLevel.Length > 0 &&
+            p.DeviceIntegrity?.RecentDeviceActivity?.DeviceActivityLevel is { } level &&
+            level.StartsWith("LEVEL_") &&
+            string.CompareOrdinal(level, _opts.MaxDeviceActivityLevel) > 0)
+            return VerificationResult.Fail($"device activity {level} above {_opts.MaxDeviceActivityLevel}", details);
 
         return VerificationResult.Pass(details);
     }

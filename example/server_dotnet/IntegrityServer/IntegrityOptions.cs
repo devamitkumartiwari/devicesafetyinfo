@@ -23,6 +23,28 @@ public sealed class IntegrityOptions
     /// <summary>Reject tokens whose request timestamp is older than this.</summary>
     public int TokenMaxAgeSeconds { get; set; } = 120;
 
+    /// <summary>Require appLicensingVerdict == LICENSED (the user got the app from Play).</summary>
+    public bool RequireLicensed { get; set; }
+
+    /// <summary>
+    /// playProtectVerdict values to reject, e.g. ["HIGH_RISK"] or ["HIGH_RISK", "POSSIBLE_RISK"].
+    /// Only present when the Play Console opts in to environment details.
+    /// </summary>
+    public List<string> RejectedPlayProtectVerdicts { get; set; } = [];
+
+    /// <summary>
+    /// appAccessRiskVerdict.appsDetected values to reject, e.g. ["UNKNOWN_CONTROLLING",
+    /// "UNKNOWN_CAPTURING"]: an app not from Play that can control or capture the screen.
+    /// </summary>
+    public List<string> RejectedAppAccessRisks { get; set; } = [];
+
+    /// <summary>
+    /// Highest recentDeviceActivity level allowed (LEVEL_1 lowest ... LEVEL_4 highest), or empty
+    /// to ignore it. High levels mean this device requested unusually many tokens, typical of a
+    /// device farm or token-replay setup.
+    /// </summary>
+    public string MaxDeviceActivityLevel { get; set; } = "";
+
     // ---- iOS: App Attest / DeviceCheck ----
 
     /// <summary>10-character Apple Developer Team ID.</summary>

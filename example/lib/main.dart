@@ -1,46 +1,68 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:device_safety_info/device_safety_info.dart';
+import 'package:material_ui/material_ui.dart';
 
-import 'src/pages/home_page.dart';
+import 'home_page.dart';
 
-void main() {
-  runApp(const MyApp());
+/// Optional: your signing certificate, to try the tampering check.
+/// `flutter run --dart-define=EXPECTED_SIGNING_CERT=<sha-256>`
+const _expectedCert = String.fromEnvironment('EXPECTED_SIGNING_CERT');
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Optional. Without it, every check uses safe defaults.
+  await DeviceSafety.initialize(
+    DeviceSafetyConfig(
+      // Trusted apps that should never be reported:
+      accessibilityAllowlist: {'com.google.android.marvin.talkback'},
+      // Your list of known malware and bad domains:
+      malwarePackages: {'com.example.fakemalware'},
+      iocBlocklist: {'malicious.example', '*.phishing.example'},
+      // Your real signing certificate, for the tampering check:
+      expectedSigningCertificates: {
+        if (_expectedCert.isNotEmpty) _expectedCert,
+      },
+    ),
+  );
+
+  runApp(const ExampleApp());
 }
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  /// Shared with whichever page hosts [StreamsSection] (only mounted while that page
-  /// is open). [IdleTimeoutGuard] below wraps every page via [MaterialApp.builder], so
-  /// this counter stays correct no matter which page is on screen when it fires.
-  final ValueNotifier<int> _idleTimeoutCount = ValueNotifier<int>(0);
-
-  @override
-  void dispose() {
-    _idleTimeoutCount.dispose();
-    super.dispose();
-  }
+class ExampleApp extends StatelessWidget {
+  const ExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Device Safety Info',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-      ),
-      builder: (context, child) => IdleTimeoutGuard(
-        timeout: const Duration(seconds: 30),
-        onTimeout: () => _idleTimeoutCount.value++,
-        child: child!,
-      ),
-      home: HomePage(idleTimeoutCount: _idleTimeoutCount),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
+      home: const HomePage(),
     );
   }
+}
+
+/// Teal from the app icon. Problems and errors use the scheme's red `error` color.
+const _iconTeal = Color(0xFF00796B);
+
+ThemeData _theme(Brightness brightness) {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: _iconTeal,
+    brightness: brightness,
+    // Keep teal vivid like the icon instead of Material's muted tone.
+    dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+  );
+  return ThemeData(
+    colorScheme: scheme,
+    // Teal app bar, like the icon background.
+    appBarTheme: AppBarTheme(
+      backgroundColor: brightness == Brightness.light
+          ? _iconTeal
+          : scheme.surfaceContainer,
+      foregroundColor: brightness == Brightness.light
+          ? Colors.white
+          : scheme.onSurface,
+    ),
+  );
 }

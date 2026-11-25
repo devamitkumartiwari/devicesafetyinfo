@@ -9,8 +9,87 @@
          ScreenRecordingFeature catches SecurityException and fails soft rather than assuming this
          always succeeds just because it's declared. -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
-    <!-- Dangerous/runtime permission — the host app must request runtime grant itself (this plugin
-         has no permission-request dependency). Backs the SIM-call signal for onCallActivityChanged
-         / isCallActive; the plugin degrades to VoIP-only detection if never granted. -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- Normal permission (granted at install) for DeviceSafety.biometric approvals. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Root-manager and root-cloaking apps the root check looks for. Android 11+ hides other
+         apps unless they're declared here; listing specific packages needs no Play policy
+         declaration (unlike QUERY_ALL_PACKAGES). -->
+    <!-- BEGIN GENERATED QUERIES (tool/gen_signatures.dart) -->
+    <queries>
+        <package android:name="com.topjohnwu.magisk" />
+        <package android:name="io.github.huskydg.magisk" />
+        <package android:name="io.github.vvb2060.magisk" />
+        <package android:name="eu.chainfire.supersu" />
+        <package android:name="com.koushikdutta.superuser" />
+        <package android:name="com.noshufou.android.su" />
+        <package android:name="com.noshufou.android.su.elite" />
+        <package android:name="com.thirdparty.superuser" />
+        <package android:name="com.yellowes.su" />
+        <package android:name="com.kingroot.kinguser" />
+        <package android:name="com.kingo.root" />
+        <package android:name="com.smedialink.oneclickroot" />
+        <package android:name="com.zhiqupk.root.global" />
+        <package android:name="com.alephzain.framaroot" />
+        <package android:name="me.weishu.kernelsu" />
+        <package android:name="me.bmax.apatch" />
+        <package android:name="org.lsposed.manager" />
+        <package android:name="de.robv.android.xposed.installer" />
+        <package android:name="org.meowcat.edxposed.manager" />
+        <package android:name="com.saurik.substrate" />
+        <package android:name="com.devadvance.rootcloak" />
+        <package android:name="com.devadvance.rootcloakplus" />
+        <package android:name="com.amphoras.hidemyroot" />
+        <package android:name="com.amphoras.hidemyrootadfree" />
+        <package android:name="com.formyhm.hiderootPremium" />
+        <package android:name="com.formyhm.hideroot" />
+        <package android:name="com.zachspong.temprootremovejb" />
+        <package android:name="com.ramdroid.appquarantine" />
+        <package android:name="com.tsng.hidemyapplist" />
+        <package android:name="com.chelpus.lackypatch" />
+        <package android:name="com.dimonvideo.luckypatcher" />
+        <package android:name="com.android.vending.billing.InAppBillingService.LUCK" />
+        <package android:name="com.anydesk.anydeskandroid" />
+        <package android:name="com.anydesk.adcontrol.ad1" />
+        <package android:name="com.teamviewer.quicksupport.market" />
+        <package android:name="com.teamviewer.host.market" />
+        <package android:name="com.teamviewer.quicksupport.addon.universal" />
+        <package android:name="com.rustdesk.rustdesk" />
+        <package android:name="com.carriez.flutter_hbb" />
+        <package android:name="com.sand.airdroid" />
+        <package android:name="com.sand.airdroidbiz" />
+        <package android:name="com.sand.airmirror" />
+        <package android:name="com.splashtop.sos" />
+        <package android:name="com.splashtop.streamer.addon.knox" />
+        <package android:name="com.zoho.assist.agent" />
+        <package android:name="com.logmein.rescuemobile" />
+        <package android:name="com.remotepc.viewer" />
+        <package android:name="com.lexa.fakegps" />
+        <package android:name="com.incorporateapps.fakegps.fre" />
+        <package android:name="com.blogspot.newapphorizons.fakegps" />
+        <package android:name="com.theappninjas.fakegpsjoystick" />
+        <package android:name="com.theappninjas.gpsjoystick" />
+        <package android:name="com.rosteam.gpsemulator" />
+        <package android:name="ru.gavrikov.mocklocations" />
+        <package android:name="com.evezzon.fakegps" />
+        <package android:name="com.gsmartstudio.fakegps" />
+        <package android:name="com.lkr.fakelocation" />
+        <package android:name="com.just4funtools.fakegpslocationprofessional" />
+        <package android:name="com.fakegps.mock" />
+        <package android:name="com.divi.fakeGPS" />
+        <package android:name="com.usefullapps.fakegpslocationpro" />
+        <package android:name="com.lbe.parallel.intl" />
+        <package android:name="com.lbe.parallel.intl.arm64" />
+        <package android:name="com.parallel.space.lite" />
+        <package android:name="com.parallel.space.pro" />
+        <package android:name="com.excelliance.dualaid" />
+        <package android:name="com.ludashi.dualspace" />
+        <package android:name="com.polestar.multiaccount" />
+        <package android:name="com.applisto.appcloner" />
+        <package android:name="io.va.exposed" />
+        <package android:name="io.va.exposed64" />
+        <package android:name="com.dualspace.multispace.android" />
+        <package android:name="info.cloneapp.mochat.in.goast" />
+        <package android:name="com.cloneapp.parallelspace.dualspace" />
+    </queries>
+    <!-- END GENERATED QUERIES -->
 </manifest>

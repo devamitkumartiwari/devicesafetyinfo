@@ -4,24 +4,24 @@ description: Demonstrates how to use the device_safety_info plugin.
 publish_to: 'none'
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
 
 dependencies:
   flutter:
     sdk: flutter
   device_safety_info:
     path: ../
-  cupertino_icons: ^1.0.8
-
-  material_ui: any
+  material_ui: ^1.8.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  patrol: ^4.6.1
+  patrol: ^4.11.0
+  # Imported by the Patrol-generated patrol_test/test_bundle.dart.
+  test_api: ^0.7.14
 
-  test_api: any
 flutter:
   uses-material-design: true

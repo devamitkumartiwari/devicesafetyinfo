@@ -13,3 +13,16 @@ interface PluginHost {
     val context: Context?
     val activity: Activity?
 }
+
+/** The application context, or a [com.devamitkumartiwari.device_safety_info.generated.FlutterError]
+ *  if the plugin isn't attached. */
+fun PluginHost.requireContext(): Context =
+    context ?: throw com.devamitkumartiwari.device_safety_info.generated.FlutterError(
+        "NO_CONTEXT", "Application context not attached",
+    )
+
+/** The foreground activity, or a FlutterError if none is attached. */
+fun PluginHost.requireActivity(): Activity =
+    activity ?: throw com.devamitkumartiwari.device_safety_info.generated.FlutterError(
+        "NO_ACTIVITY", "Activity not attached",
+    )

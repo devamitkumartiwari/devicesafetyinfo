@@ -1,38 +1,221 @@
-## 1.7.0
+## 2.0.0
 
-Adds **platform attestation**: Google Play Integrity on Android and Apple App Attest / DeviceCheck
-on iOS. The plugin gets the tokens; your server verifies them.
+A rewrite around one entry point, `DeviceSafety`, with typed results, configurable policies,
+stronger native detection and a type-safe platform layer.
 
-### New API
+**This is a breaking release.** See [MIGRATION.md](MIGRATION.md) for every 1.x API and its 2.0
+replacement.
 
-* `AppIntegrity` (exported from `package:device_safety_info/device_safety_info.dart` and
-  `package:device_safety_info/app_integrity.dart`):
-  * Android: `isPlayIntegrityAvailable`, `preparePlayIntegrity({cloudProjectNumber})`,
-    `requestPlayIntegrityToken({requestHash})` (Play Integrity standard requests).
-  * iOS: `isAppAttestSupported`, `generateAppAttestKey()`, `attestAppAttestKey({keyId, challenge})`,
-    `generateAppAttestAssertion({keyId, clientData})`, `isDeviceCheckSupported`,
-    `generateDeviceCheckToken()`.
-* `AttestationException` / `AttestationErrorCode`: typed failures (`unsupported`, `notPrepared`,
+### Breaking changes
+
+* **Minimum Flutter 3.50 / Dart 3.14.**
+* **iOS: Swift Package Manager only.** The podspec is gone; CocoaPods is no longer supported.
+* **iOS: IOSSecuritySuite 2.3.0 or newer** (was 1.9.11). 2.x ships its own privacy manifest
+  for the `stat`/`statfs` calls it makes, which App Store uploads require; the API this plugin
+  uses is unchanged.
+* **Android: built-in Kotlin.** The plugin no longer applies the Kotlin Gradle plugin, ships no
+  Gradle wrapper and no longer filters ABIs (Flutter decides).
+* **`READ_PHONE_STATE` is no longer declared by the plugin.** Apps that want SIM call detection
+  declare and request it themselves; without it, call detection uses VoIP and audio signals only.
+* **One entry point.** `DeviceSafetyInfo`, `VPNCheck`, `RiskSummary`, `NewVersionChecker`,
+  `IOCDomainBlocker`, `MalwarePackageDetector`, `ScreenCapture`, `ScreenRecordingDetector`,
+  `AppIntegrity` and the top-level `lib/*.dart` libraries are removed. Use `DeviceSafety.*` from
+  `package:device_safety_info/device_safety_info.dart`.
+* **Results instead of booleans.** Detection APIs return a `CheckResult` and never throw. Failures
+  are reported as `CheckStatus.error` or `timedOut` instead of silently returning `false`.
+* **`isRealDevice`, `isScreenLock` and `isInstalledFromStore` flip meaning.** They became the risk
+  checks `emulator`, `posture.screenLock` and `posture.storeInstall`, which are *detected* in the
+  risky state.
+* **The plugin never closes or uninstalls the app.** `exitProcessIfTrue` and `uninstallIfTrue` are
+  removed. Listen to `DeviceSafety.threats`; `DeviceSafety.terminateApp()` exists as an explicit
+  opt-in.
+* `checkFridaByMaps()`, `checkRootFilesNative()` and the per-check FFI symbols are removed. The
+  native checks are part of `root`, `hooking` and `debugger`.
+* Signal ids are stable `check.signal[:detail]` strings (`root.su_executable:/sbin/su`) instead of
+  1.x's `su:/sbin/su` style.
+
+### New
+
+* **`DeviceSafetyConfig`**: per-check policy (`off` / `standard` / `strict`), per-signal level
+  overrides, per-check fail mode (`open` / `closed`), cache TTL, timeout, allowlists for
+  accessibility services and notification listeners, `trustSystemApps`, malware package list,
+  IOC blocklist, expected signing certificates / iOS team id, and a logger.
+* **Tiered results everywhere.** Every detection check (root, emulator, hooking, debugger,
+  tampering, developer mode, screen lock, store install, external storage, unknown sources, Play
+  Protect, accessibility, notification listeners, VPN/proxy, screen capture, malware) reports high
+  and low signals and honors the policy.
+* **`DeviceSafety.assess()`**: every check in one platform round trip, run in parallel natively
+  and alongside the C checks, returning a `RiskAssessment` with plain-language `flags`.
+* **`DeviceSafety.threats`**: a stream of checks that became detected plus live events
+  (screenshot, capture or recording started, tapjacking touch, VPN connected).
+* **`DeviceSafety.tampering`** (`CheckType.tampering`): detects a repackaged or re-signed app by
+  its signing certificate (Android, `expectedSigningCertificates`) or provisioning-profile team
+  (iOS, `expectedIosTeamId`). `signingInfo()` returns the values to configure.
+* **Caching and de-duplication.** Results are cached (30 s by default), concurrent calls share one
+  native call, and every check has a timeout (5 s by default). `hooking` and `debugger` are never
+  cached.
+* **`trustSystemApps`** (default `true`): the accessibility and notification-listener checks don't
+  report preinstalled system apps, which were false positives on stock phones (for example the
+  Samsung launcher's notification listener). `enabledListeners()` returns
+  `NotificationListenerInfo`, and `AccessibilityService` has `isSystemApp`.
+* **Typed exceptions** for action APIs: a sealed `DeviceSafetyException` with
+  `UnsupportedPlatformException`, `PermissionMissingException`, `NativeFailureException` and
+  `AttestationException`.
+* **Testing support**: `package:device_safety_info/testing.dart` and `DeviceSafety.forTesting`
+  fake the platform side in app tests.
+* `PrivacyInfo.xcprivacy` for the iOS plugin, declaring its `UserDefaults` use (reason
+  `CA92.1`: the stored "block third-party keyboards" setting).
+
+### Fraud signals (Android; iOS reports unsupported)
+
+* **`DeviceSafety.remoteAccess`** (`CheckType.remoteAccess`): remote-control apps used in
+  "support call" scams (AnyDesk, TeamViewer QuickSupport, RustDesk, AirDroid...). High risk when
+  one has an enabled accessibility service, which lets the remote side tap and type.
+  `DeviceSafetyConfig.remoteAccessAllowlist` for your own support or MDM tool.
+* **`DeviceSafety.locationSpoofing`** (`CheckType.locationSpoofing`): a mock-location app
+  selected in developer options, or a mock last-known fix (only if the app already holds a
+  location permission).
+* **`DeviceSafety.appCloning`** (`CheckType.appCloning`): the app running inside a cloner
+  (Parallel Space, VirtualXposed), a second user or dual-app space, or a work profile.
+* **`DeviceSafety.mitm`** (`CheckType.mitm`): user-installed CA certificates; high risk while a
+  VPN or proxy routes the traffic.
+* **`DeviceSafety.keyboard`** (`CheckType.keyboard`): a third-party default keyboard; high risk
+  when it also runs an accessibility service. System keyboards, Gboard and SwiftKey are trusted;
+  `DeviceSafetyConfig.keyboardAllowlist` for others. On iOS, `blockCustomKeyboards(true)` plus
+  one `AppDelegate` line refuses third-party keyboards.
+* All five are included in `assess()` and have plain-language `RiskFlag`s.
+
+### Protection and strong authentication
+
+* **`DeviceSafety.deviceKey`**: EC P-256 signing keys in StrongBox / TEE (Android, with key
+  attestation for a server challenge) or the Secure Enclave (iOS). `create`, `sign` (DER ECDSA /
+  SHA-256), `info`, `exists`, `delete`.
+* **`DeviceSafety.biometric`**: biometric-approved actions. `approve` returns a signature that
+  only a strong fingerprint or face match can produce, so hooking a success callback can't fake
+  it. Adding a fingerprint or face invalidates the key (`keyState` = `invalidated`, `approve`
+  throws `BiometricException(enrollmentChanged)`). Android 10+ and iOS; the plugin now declares
+  the normal `USE_BIOMETRIC` permission.
+* **Secure text fields**: `SecureInputConfig` (`.password()`, `.pin()`, `.otp()`) turns off
+  autocorrect, suggestions, IME learning, autofill and the clipboard menu; `SecureFieldGuard`
+  blocks screenshots while a field is focused (sharing `SecureScreen`'s block); and
+  `SecureEditableText` applies all of it.
+* **`DeviceSafety.pinning`**: an `HttpClient` that checks SPKI SHA-256 pins during the TLS
+  handshake, before any request bytes are sent. Works with `package:http` and dio. A mismatch
+  throws `PinningException` and emits a `pin_mismatch:<host>` threat event; `spkiPinOf` reads a
+  server's pin.
+* New exceptions in the sealed hierarchy: `BiometricException` (with `BiometricErrorCode`) and
+  `PinningException`.
+* New dependency: `crypto`.
+
+### Platform attestation (developed as 1.7.0, first released here)
+
+Google Play Integrity on Android and Apple App Attest / DeviceCheck on iOS. The plugin gets the
+tokens; your server verifies them.
+
+* `DeviceSafety.integrity`:
+  * Android: `isPlayIntegrityAvailable()`, `preparePlayIntegrity(cloudProjectNumber:)`,
+    `requestPlayIntegrityToken(requestHash:)` (standard requests).
+  * iOS: `isAppAttestSupported()`, `generateAppAttestKey()`,
+    `attestAppAttestKey(keyId:, challenge:)`, `generateAppAttestAssertion(keyId:, clientData:)`,
+    `isDeviceCheckSupported()`, `generateDeviceCheckToken()`.
+* `AttestationException` / `AttestationErrorCode`: `unsupported`, `notPrepared`,
   `providerInvalid`, `playServicesUnavailable`, `network`, `tooManyRequests`, `invalidKey`,
-  `invalidInput`, `serverUnavailable`, `unknown`).
-
-### Setup notes
-
+  `invalidInput`, `serverUnavailable`, `unknown`.
 * **Play Integrity is opt-in.** The plugin compiles against `com.google.android.play:integrity` but
-  doesn't ship it. Apps that use it add
-  `implementation("com.google.android.play:integrity:1.6.0")`. Without it, the calls throw
-  `AttestationErrorCode.unsupported` and nothing crashes. Apps that don't use `AppIntegrity` gain no
-  new dependency.
-* **App Attest** needs the `com.apple.developer.devicecheck.appattest-environment` entitlement in
-  the app. iOS links the system `DeviceCheck` framework; there's no new third-party dependency.
-* **Server verification is required.** `example/server_dotnet` is a reference ASP.NET Core verifier
-  covering Play Integrity decode and policy, App Attest attestation and assertion validation, and the
-  DeviceCheck APIs.
+  doesn't ship it; apps that use it add
+  `implementation("com.google.android.play:integrity:1.6.0")`. Without it the calls throw
+  `AttestationErrorCode.unsupported`; nothing crashes.
+* **App Attest** needs the `com.apple.developer.devicecheck.appattest-environment` entitlement.
+  iOS links the system `DeviceCheck` framework; there's no third-party dependency.
+* `example/server_dotnet` is a reference ASP.NET Core verifier: Play Integrity decoding and policy
+  (including optional licensing, Play Protect, app access risk and recent device activity
+  verdicts), App Attest attestation and assertion validation, and the DeviceCheck APIs.
 
-### Example app
+### Stronger detection
 
-* New **App Integrity** screen under Device Integrity. It runs the full round trip when given
+* **Modern root (Android):** KernelSU, APatch and Magisk 24+ files and binaries (`ksud`, `apd`,
+  `resetprop`); systemless-root mounts and read-write system partitions (`root.mount_marker`,
+  `root.system_rw`, `root.system_overlay`); installed root-manager apps (`root.manager_app`,
+  high) and root-cloaking or patching apps (`root.cloak_app`, low); build properties
+  `service.adb.root`, SELinux permissive, LineageOS root access and `ro.debuggable=1` on a `user`
+  build (high), and `ro.build.type` eng/userdebug, unlocked vbmeta and
+  `ro.allow.mock.location` (low).
+* **Frida, Xposed and Zygisk (Android):** the C library finds Frida's agent threads
+  (`hooking.frida_threads`), injector file descriptors (`hooking.frida_fds`) and inline hooks in
+  libc by comparing its code with the file on disk (`hooking.text_patched`). Kotlin finds
+  LSPosed, EdXposed, Riru, Zygisk and Shamiko mappings (`hooking.framework_mapped`), Xposed frames
+  in the call stack (`hooking.stack_frame`), Xposed classes in the process
+  (`hooking.xposed_class`) and libraries mapped writable and executable (`hooking.rwx_library`,
+  low). Frida server probes in `/data/local/tmp`, which apps can't see on Android 10+, were
+  removed. `hooking.xposed`, `hooking.substrate` and `hooking.shadowhook` became one signal,
+  `hooking.system_library:<lib>`.
+* **Emulators:** QEMU pipes and vendor emulator files (Genymotion, BlueStacks, Nox, MEmu,
+  LDPlayer, ttVM) and QEMU-only properties (high); x86-only CPU, no motion sensors and a network
+  operator named "Android" (low).
+* **iOS:** a C jailbreak-file check (`root.native_jailbreak_files`) running off the main thread,
+  a dyld image scan for injected libraries and `DYLD_INSERT_LIBRARIES` detection
+  (`hooking.dyld_injection`).
+* **Other new signals:** ADB enabled, HTTP proxy, external presentation display, debuggable
+  build, and accessibility services that can read window content.
+* **Hardened C library:** on arm64 and x86_64 Android it reads files with direct system calls, so
+  hooking libc doesn't blind it. Detection strings for Kotlin and C come from one source
+  (`tool/signatures.json`) and are stored encoded, so they don't appear in `strings libdsi.so` or
+  the DEX. It's built with stack protector, `_FORTIFY_SOURCE`, full RELRO and a stripped symbol
+  table. C ABI version 2.
+
+### Hardening against bypasses
+
+* `root`, `hooking` and `debugger`: if the Kotlin/Swift half of a check fails but the C half found
+  high-risk evidence, the check still completes as detected (adding
+  `integrity.platform_check_failed`) instead of discarding the evidence with the error. This also
+  applies to `assess()`.
+* Android root: a checker that throws adds `root.checker_error:<checker>` instead of silently
+  counting as clean; if every checker throws, the check reports `CheckStatus.error`.
+* `integrity.layer_mismatch:root_files` (low) when the Kotlin and C root-file checks disagree,
+  which means one layer is being hooked.
+* `integrity.native_unavailable` (low) when the bundled C library can't run on Android or iOS.
+* `assess()`: an accessibility, notification-listener or malware list the platform couldn't read
+  is an error, never an empty (clean) list.
+* Android system properties no longer spawn a `getprop` process when a property is simply unset,
+  and a `getprop` that times out is no longer read.
+
+### Example app and docs
+
+* **One small page per feature** (31 pages in `example/lib/features/`), grouped like the
+  README: device checks, fraud signals, screen protection, proving the device and user, live
+  events and tools, and policy settings. Each page shows what the feature does, the code to copy,
+  and a live demo. The app is plain Material.
+* App integrity runs the full server round trip with
   `--dart-define=INTEGRITY_SERVER_URL=...` (plus `PLAY_CLOUD_PROJECT_NUMBER` on Android).
+* **Simpler README:** install, a three-step quick start, then one short example per feature.
+  Reference material (every option, every signal, fail modes, platform setup, limits,
+  performance) moved to [docs/advanced.md](docs/advanced.md).
+
+### Internals
+
+* Platform calls go through Pigeon-generated, type-checked APIs (one host API per feature) and
+  event channels, replacing about 50 string-dispatched method names and 7 hand-wired event
+  channels.
+* Dart code is organized as `lib/src/core` plus
+  `lib/src/features/<feature>/{domain,data,presentation}`; Kotlin and Swift as `core/` plus
+  `features/<feature>/`.
+* The C checks are one `dsi_collect_signals(mask)` call (`src/dsi.c`), built for Android and iOS
+  by a Dart build hook and bound with FFIgen `@Native` bindings. They run on a background isolate
+  and are ABI-version checked.
+* All blocking Android work runs on one shared, bounded background pool; nothing blocking runs on
+  the Android main thread or the Flutter UI isolate.
+
+### Performance
+
+Measured with `example/integration_test/perf_test.dart` in profile mode on a Galaxy S21 FE
+(Android 16); full numbers and method in `example/integration_test/PERF_BASELINE.md`.
+
+* A cold assessment of the 6 checks 1.x's `RiskSummary` ran takes about the same as 1.x (about
+  108 ms).
+* Repeat calls within the cache TTL take about 0.01 ms.
+* All 15 detection checks, uncached, take about 45 ms in one round trip.
+* A single uncached check is slower than 1.x (about 5 ms vs 1.5 ms), because checks now run on a
+  background pool instead of the Android main thread.
 
 ## 1.6.0
 

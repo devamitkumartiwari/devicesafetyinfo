@@ -1,0 +1,19 @@
+# Regenerate with `dart run ffigen --config ffigen.yaml` (needs libclang).
+name: DsiBindings
+description: Bindings for src/dsi.h. Do not edit; regenerate with ffigen.
+output: 'lib/src/core/platform/generated/dsi_bindings.g.dart'
+headers:
+  entry-points:
+    - 'src/dsi.h'
+  include-directives:
+    - 'src/dsi.h'
+functions:
+  include:
+    - 'dsi_.*'
+macros:
+  include:
+    - 'DSI_.*'
+ffi-native:
+comments:
+  style: any
+  length: full

@@ -1,207 +1,66 @@
-// Patrol integration tests for all boolean-returning detection methods and
-// the two synchronous FFI methods. These run against real native implementations
-// on device/emulator — no mocked channels.
+// Patrol tests: every detection check answers through the real native code (no fakes).
 //
-// Expected environment: non-rooted device or standard Android emulator,
-// no Frida/Xposed attached, no VPN active, no external display connected.
-
+// Expected environment: a normal (not rooted, no Frida) device or emulator.
 import 'package:device_safety_info/device_safety_info.dart';
-import 'package:flutter/foundation.dart';
+import 'package:device_safety_info_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
-import 'package:device_safety_info_example/main.dart';
+const _ok = {CheckStatus.completed, CheckStatus.unsupported};
 
 void main() {
-  // ── Synchronous FFI checks ──────────────────────────────────────────────
+  final checks = <String, DetectionApi Function()>{
+    'root': () => DeviceSafety.root,
+    'emulator': () => DeviceSafety.emulator,
+    'hooking': () => DeviceSafety.hooking,
+    'debugger': () => DeviceSafety.debugger,
+    'developerMode': () => DeviceSafety.posture.developerMode,
+    'screenLock': () => DeviceSafety.posture.screenLock,
+    'storeInstall': () => DeviceSafety.posture.storeInstall,
+    'externalStorage': () => DeviceSafety.posture.externalStorage,
+    'unknownSources': () => DeviceSafety.posture.unknownSources,
+    'playProtect': () => DeviceSafety.posture.playProtect,
+    'accessibility': () => DeviceSafety.accessibility,
+    'notificationListeners': () => DeviceSafety.notificationListeners,
+    'vpn': () => DeviceSafety.vpn,
+    'screenCapture': () => DeviceSafety.screen,
+    'malware': () => DeviceSafety.malware,
+  };
 
-  group('FFI sync methods', () {
-    test('checkFridaByMaps returns false on clean device', () {
-      // Scans /proc/self/maps + port 27042/27043 (Android). Always false on iOS.
-      expect(DeviceSafetyInfo.checkFridaByMaps(), isFalse);
+  for (final MapEntry(:key, :value) in checks.entries) {
+    patrolTest('$key answers without error', ($) async {
+      await $.pumpWidgetAndSettle(const ExampleApp());
+      final r = await value().check(refresh: true);
+      expect(_ok, contains(r.status), reason: '$r');
     });
+  }
 
-    test('checkRootFilesNative returns false on clean device', () {
-      // Native stat() check for su/magisk paths (Android). Always false on iOS.
-      expect(DeviceSafetyInfo.checkRootFilesNative(), isFalse);
-    });
+  patrolTest('clean device: not rooted or hooked', ($) async {
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    expect(await DeviceSafety.root.isDetected(), isFalse);
+    expect(await DeviceSafety.hooking.isDetected(), isFalse);
   });
 
-  // ── Async detection checks ──────────────────────────────────────────────
-
-  patrolTest('isRealDevice returns a bool', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final result = await DeviceSafetyInfo.isRealDevice;
-    // false on emulator, true on physical device — assert type only
-    expect(result, isA<bool>());
-  });
-
-  patrolTest('isRootedDevice is false on standard device', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final result = await DeviceSafetyInfo.isRootedDevice;
-    expect(result, isA<bool>());
-    expect(
-      result,
-      isFalse,
-      reason: 'Should be false on a non-rooted device/emulator',
-    );
-  });
-
-  patrolTest('isHooked is false on standard device', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final result = await DeviceSafetyInfo.isHooked;
-    expect(result, isA<bool>());
-    expect(
-      result,
-      isFalse,
-      reason: 'Should be false when no hooking framework is attached',
-    );
-  });
-
-  patrolTest('checkHooked() with default params returns false', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    // Calls the same logic as isHooked but via explicit method
-    final result = await DeviceSafetyInfo.checkHooked();
-    expect(result, isA<bool>());
-    expect(result, isFalse);
-  });
-
-  patrolTest('isDebuggerAttached returns a bool', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    // Will be true when Patrol runs with a debugger attached — type check only
-    final result = await DeviceSafetyInfo.isDebuggerAttached;
-    expect(result, isA<bool>());
-  });
-
-  patrolTest('isScreenCaptured is false with no external display', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final result = await DeviceSafetyInfo.isScreenCaptured;
-    expect(result, isA<bool>());
-    expect(
-      result,
-      isFalse,
-      reason: 'No external display should be connected during test',
-    );
-  });
-
-  patrolTest('isVPNCheck is false when no VPN is active', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final result = await DeviceSafetyInfo.isVPNCheck;
-    expect(result, isA<bool>());
-    expect(
-      result,
-      isFalse,
-      reason: 'No VPN should be active on the test device',
-    );
-  });
-
-  patrolTest('isInstalledFromStore is false for sideloaded test APK', (
+  patrolTest('assess() answers every check and the Quick check page shows it', (
     $,
   ) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final result = await DeviceSafetyInfo.isInstalledFromStore;
-    expect(result, isA<bool>());
-    expect(
-      result,
-      isFalse,
-      reason: 'Test APKs are sideloaded, not installed from Play/App Store',
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    final a = await DeviceSafety.assess(refresh: true);
+    expect(a.failed, isEmpty);
+    await $(#menu_quick_check).tap();
+    await $.pumpAndSettle();
+    expect($(#assessment_summary), findsOneWidget);
+  });
+
+  patrolTest('strict policy is applied from the Policy page', ($) async {
+    await $.pumpWidgetAndSettle(const ExampleApp());
+    await $(#menu_settings).scrollTo().tap();
+    await $.pumpAndSettle();
+    expect($(#policy_root), findsOneWidget);
+    await DeviceSafety.initialize(
+      DeviceSafetyConfig(policies: {CheckType.root: RiskPolicy.off}),
     );
-  });
-
-  patrolTest('isScreenLock returns a bool', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    // Result depends on whether the test device has a screen lock configured
-    final result = await DeviceSafetyInfo.isScreenLock;
-    expect(result, isA<bool>());
-  });
-
-  patrolTest('isExternalStorage returns false on standard install (Android)', (
-    $,
-  ) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final result = await DeviceSafetyInfo.isExternalStorage;
-      expect(result, isA<bool>());
-      expect(
-        result,
-        isFalse,
-        reason: 'Example app is installed on internal storage',
-      );
-    } else {
-      // iOS: always returns false (not applicable)
-      final result = await DeviceSafetyInfo.isExternalStorage;
-      expect(result, isFalse);
-    }
-  });
-
-  patrolTest('isDeveloperMode returns a bool (Android)', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      // Returns true on physical devices with USB debugging, false on locked devices
-      final result = await DeviceSafetyInfo.isDeveloperMode;
-      expect(result, isA<bool>());
-    } else {
-      // iOS: always returns false (not accessible via public iOS API)
-      final result = await DeviceSafetyInfo.isDeveloperMode;
-      expect(result, isFalse);
-    }
-  });
-
-  // ── ScreenCapture wrapper ───────────────────────────────────────────────
-
-  patrolTest(
-    'ScreenCapture.isScreenCaptured() matches DeviceSafetyInfo.isScreenCaptured',
-    ($) async {
-      await $.pumpWidgetAndSettle(const MyApp());
-      final fromWrapper = await ScreenCapture.isScreenCaptured();
-      final fromPlugin = await DeviceSafetyInfo.isScreenCaptured;
-      expect(
-        fromWrapper,
-        equals(fromPlugin),
-        reason: 'ScreenCapture.isScreenCaptured() is a thin delegate',
-      );
-      expect(
-        fromWrapper,
-        isFalse,
-        reason: 'No external display connected during test',
-      );
-    },
-  );
-
-  // ── VPNCheck static helper ──────────────────────────────────────────────
-
-  patrolTest('VPNCheck.isVpnActive matches DeviceSafetyInfo.isVPNCheck', (
-    $,
-  ) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    final fromPlugin = await DeviceSafetyInfo.isVPNCheck;
-    final fromVpnCheck = await VPNCheck.isVpnActive;
-    expect(
-      fromVpnCheck,
-      equals(fromPlugin),
-      reason: 'Both APIs read from the same platform channel',
-    );
-  });
-
-  // ── Parallel all-checks smoke test ──────────────────────────────────────
-
-  patrolTest('all detection checks complete without throwing', ($) async {
-    await $.pumpWidgetAndSettle(const MyApp());
-    // Runs all checks in parallel — verifies none throw a PlatformException
-    await expectLater(
-      Future.wait([
-        DeviceSafetyInfo.isRealDevice,
-        DeviceSafetyInfo.isRootedDevice,
-        DeviceSafetyInfo.isHooked,
-        DeviceSafetyInfo.isDebuggerAttached,
-        DeviceSafetyInfo.isScreenCaptured,
-        DeviceSafetyInfo.isVPNCheck,
-        DeviceSafetyInfo.isInstalledFromStore,
-        DeviceSafetyInfo.isScreenLock,
-        DeviceSafetyInfo.isExternalStorage,
-        DeviceSafetyInfo.isDeveloperMode,
-      ]),
-      completes,
-    );
+    expect((await DeviceSafety.root.check()).status, CheckStatus.skipped);
+    await DeviceSafety.initialize();
   });
 }

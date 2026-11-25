@@ -4,8 +4,6 @@
 .DS_Store
 CODE_REVIEW.md
 android/build/
-ios/.symlinks/
-ios/Pods/
 example/build/
 pubspec.lock
 # Build outputs and tool caches (e.g. created by `flutter test`)
@@ -14,3 +12,20 @@ build/
 **/.cxx/
 # Server-side verification sample (not part of the Flutter package)
 example/server_dotnet/
+# Example app's icon generator and its 1024 px output (a dev tool; the icons it writes into
+# the example's ios/ and android/ folders still ship)
+example/tool/
+# Tests (package users never run them)
+/test/
+/android/src/test/
+example/test/
+example/integration_test/
+example/patrol_test/
+example/test_driver/
+# Code-generation inputs and dev docs (the generated output is what ships)
+/tool/
+/pigeon/
+/ffigen.yaml
+/CONTRIBUTING.md
+# Throwaway TLS key for the local pinning test server (test-only, not a secret)
+test/fixtures/pinning/localhost.key
